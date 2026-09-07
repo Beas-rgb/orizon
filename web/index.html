@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Horizon — entrar</title>
+    <link rel="stylesheet" href="estilo.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Horizon</h1>
+      <p class="nota" id="aviso-email"></p>
+      <p class="nota">E-mail e senha. O painel abre conforme a conta.</p>
+      <form id="entrar">
+        <label>E-mail<input name="email" type="email" required /></label>
+        <label>Senha<input name="senha" type="password" required /></label>
+        <button type="submit">Entrar</button>
+        <p id="erro" class="erro"></p>
+      </form>
+      <form id="criar">
+        <h2>Primeira consultora</h2>
+        <p class="nota">Só a primeira conta. Depois, use entrar.</p>
+        <label>Nome<input name="nome" required /></label>
+        <label>E-mail<input name="email" type="email" required /></label>
+        <label>Senha<input name="senha" type="password" minlength="8" required /></label>
+        <button type="submit">Criar conta</button>
+        <p id="erro-criar" class="erro"></p>
+      </form>
+    </main>
+    <script src="horizon.js"></script>
+    <script>
+      if (location.protocol === "file:") {
+        document.getElementById("erro").textContent =
+          "Abra http://127.0.0.1:8000/app no navegador. Não abra o arquivo direto.";
+      }
+      api("/health/email")
+        .then((dados) => {
+          const aviso = document.getElementById("aviso-email");
+          if (dados.modo === "local") {
+            aviso.textContent =
+              "O e-mail ainda não sai para a caixa. Preencha SMTP no .env e reinicie a API.";
+          }
+        })
+        .catch(() => {});
+
+      document.getElementById("criar").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const form = evento.currentTarget;
+        const erro = document.getElementById("erro-criar");
+        erro.textContent = "";
+        try {
+          const dados = await api("/auth/bootstrap", {
+            method: "POST",
+            json: {
+              nome: form.nome.value,
+              email: form.email.value,
+              senha: form.senha.value,
+            },
+          });
+          guardarSessao(dados);
+          window.location.href = "painel.html";
+        } catch (exc) {
+          erro.textContent = exc.message;
+        }
+      });
+
+      document.getElementById("entrar").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const form = evento.currentTarget;
+        const erro = document.getElementById("erro");
+        erro.textContent = "";
+        try {
+          const dados = await api("/auth/login", {
+            method: "POST",
+            json: {
+              email: form.email.value,
+              senha: form.senha.value,
+            },
+          });
+          guardarSessao(dados);
+          if (dados.painel !== "consultora") {
+            erro.textContent = "Esta tela é o painel da consultora.";
+            return;
+          }
+          window.location.href = "painel.html";
+        } catch (exc) {
+          erro.textContent = exc.message;
+        }
+      });
+    </script>
+  </body>
+</html>

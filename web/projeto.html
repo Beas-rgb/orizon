@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orizon — projeto</title>
+    <link rel="stylesheet" href="estilo.css" />
+  </head>
+  <body class="painel">
+    <header class="topo">
+      <a class="marca" href="painel.html">
+        <span class="selo">OR</span>
+        <div>Orizon<small>Consultora</small></div>
+      </a>
+      <label class="busca">
+        <span aria-hidden="true">⌕</span>
+        <input id="busca" type="search" placeholder="Buscar nesta página..." disabled />
+      </label>
+      <p class="conta">
+        <span class="avatar" id="iniciais">—</span>
+        <span id="quem"></span>
+        <button type="button" id="sair">Sair</button>
+      </p>
+    </header>
+
+    <div class="grade">
+      <aside class="coluna">
+        <section class="cartao">
+          <h2>Projeto</h2>
+          <p class="sub" id="resumo-lateral">Escolha uma aba.</p>
+          <button class="atalho" type="button" data-aba="criar">
+            <span class="icone azul">+</span>
+            <span><strong>Criar</strong><span>Novo projeto</span></span>
+          </button>
+          <button class="atalho" type="button" data-aba="editar">
+            <span class="icone azul">✎</span>
+            <span><strong>Editar</strong><span>Estado e título</span></span>
+          </button>
+          <button class="atalho" type="button" data-aba="ferramentas">
+            <span class="icone verde">▣</span>
+            <span><strong>Ferramentas</strong><span>Ligar ou desligar</span></span>
+          </button>
+        </section>
+      </aside>
+
+      <main class="principal">
+        <section class="cartao">
+          <div class="abas" role="tablist">
+            <button type="button" role="tab" id="aba-criar" data-aba="criar" aria-selected="true">Criar</button>
+            <button type="button" role="tab" id="aba-editar" data-aba="editar" aria-selected="false">Editar</button>
+            <button type="button" role="tab" id="aba-ferramentas" data-aba="ferramentas" aria-selected="false">Ferramentas</button>
+          </div>
+          <p class="aviso-form" id="aviso"></p>
+
+          <div id="painel-criar">
+            <h2>Criar projeto</h2>
+            <p class="sub">O convite vai para o e-mail do órgão. A senha não sai neste formulário.</p>
+            <form class="formulario" id="form-criar">
+              <label>Rótulo
+                <select name="rotulo_id" id="rotulo" required></select>
+              </label>
+              <label>CNPJ
+                <input name="cnpj" inputmode="numeric" placeholder="00.000.000/0000-00" required />
+              </label>
+              <label>E-mail do órgão
+                <input name="email_orgao" type="email" placeholder="contato@orgao.gov.br" required />
+              </label>
+              <fieldset class="escolha">
+                <legend>Vínculo</legend>
+                <label><input type="radio" name="vinculo_tipo" value="EDITAL" checked /> Edital</label>
+                <label><input type="radio" name="vinculo_tipo" value="DOCUMENTO" /> Documento</label>
+              </fieldset>
+              <label>Título do vínculo
+                <input name="vinculo_titulo" minlength="2" required />
+              </label>
+              <button class="acao" type="submit">Criar projeto</button>
+            </form>
+          </div>
+
+          <div id="painel-editar" hidden>
+            <h2>Editar projeto</h2>
+            <p class="sub" id="editar-orgao"></p>
+            <form class="formulario" id="form-editar">
+              <label>Título do vínculo
+                <input name="vinculo_titulo" id="titulo" minlength="2" required />
+              </label>
+              <label>Estado
+                <select name="estado" id="estado">
+                  <option value="ABERTO">Aberto</option>
+                  <option value="EM_ANDAMENTO">Em andamento</option>
+                  <option value="ENCERRADO">Encerrado</option>
+                  <option value="ARQUIVADO">Arquivado</option>
+                </select>
+              </label>
+              <button class="acao" type="submit">Salvar edição</button>
+              <button class="acao secundaria" type="button" id="reenviar">Reenviar convite</button>
+            </form>
+          </div>
+
+          <div id="painel-ferramentas" hidden>
+            <h2>Ferramentas</h2>
+            <p class="sub">O que estiver desmarcado fica desligado neste projeto.</p>
+            <form id="form-ferramentas">
+              <label class="ferramenta">
+                <input type="checkbox" id="pesquisas" />
+                <span>
+                  <strong>Pesquisas</strong>
+                  <span>Desmarque para desabilitar a ferramenta de pesquisa neste projeto.</span>
+                </span>
+              </label>
+              <label class="ferramenta travada">
+                <input type="checkbox" id="ia" disabled />
+                <span>
+                  <strong>IA</strong>
+                  <span>Desabilitada nesta etapa. A caixa não aceita clique.</span>
+                </span>
+              </label>
+              <button class="acao" type="submit">Salvar ferramentas</button>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="horizon.js"></script>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const previa = params.get("ver") === "1";
+      let projetoId = params.get("id") || "";
+      let projeto = null;
+      let rotulos = [];
+
+      function iniciais(nome) {
+        const partes = (nome || "").trim().split(/\s+/).filter(Boolean);
+        return ((partes[0]?.[0] || "") + (partes[1]?.[0] || "")).toUpperCase();
+      }
+
+      function aviso(texto) {
+        document.getElementById("aviso").textContent = texto;
+      }
+
+      function mostrar(aba) {
+        ["criar", "editar", "ferramentas"].forEach((nome) => {
+          document.getElementById("painel-" + nome).hidden = nome !== aba;
+          document.getElementById("aba-" + nome).setAttribute("aria-selected", String(nome === aba));
+        });
+        const precisaProjeto = aba !== "criar" && !projetoId && !previa;
+        document.getElementById("aba-editar").disabled = !projetoId && !previa;
+        document.getElementById("aba-ferramentas").disabled = !projetoId && !previa;
+        if (precisaProjeto) {
+          aviso("Crie o projeto antes de editar ou desligar ferramentas.");
+          mostrar("criar");
+        }
+      }
+
+      function preencherEditar() {
+        if (!projeto) return;
+        document.getElementById("titulo").value = projeto.vinculo_titulo || "";
+        document.getElementById("estado").value = projeto.estado || "ABERTO";
+        document.getElementById("editar-orgao").textContent =
+          (projeto.nome_fantasia || projeto.razao_social || "") + " · " + (projeto.rotulo || "");
+        document.getElementById("resumo-lateral").textContent =
+          projeto.vinculo_titulo || "Projeto aberto";
+      }
+
+      function preencherRotulos() {
+        const select = document.getElementById("rotulo");
+        select.replaceChildren();
+        rotulos.forEach((item) => {
+          const opcao = document.createElement("option");
+          opcao.value = item.id;
+          opcao.textContent = item.nome;
+          select.appendChild(opcao);
+        });
+      }
+
+      function exemplo() {
+        document.getElementById("quem").textContent = "Ana Lima";
+        document.getElementById("iniciais").textContent = "AL";
+        rotulos = [
+          { id: "clima", nome: "Clima" },
+          { id: "desempenho", nome: "Desempenho" },
+          { id: "cargos", nome: "Cargos e salários" },
+        ];
+        preencherRotulos();
+        projeto = {
+          nome_fantasia: "TechCorp S.A.",
+          razao_social: "TechCorp S.A.",
+          rotulo: "Clima",
+          estado: "EM_ANDAMENTO",
+          vinculo_titulo: "Pesquisa de clima organizacional",
+          email_orgao: "gabinete@techcorp.exemplo",
+          convite_entrega: "ENVIADO",
+        };
+        projetoId = "exemplo";
+        document.getElementById("pesquisas").checked = true;
+        document.getElementById("ia").checked = false;
+        preencherEditar();
+        const aba = params.get("aba") || "criar";
+        mostrar(aba);
+      }
+
+      async function exigirConta() {
+        if (previa) return true;
+        if (!tokenAtual() || sessionStorage.getItem("horizon_painel") !== "consultora") {
+          window.location.href = "index.html";
+          return false;
+        }
+        const eu = await api("/auth/eu");
+        document.getElementById("quem").textContent = eu.nome;
+        document.getElementById("iniciais").textContent = iniciais(eu.nome);
+        return true;
+      }
+
+      async function carregar() {
+        if (!(await exigirConta())) return;
+        if (previa) {
+          exemplo();
+          return;
+        }
+        rotulos = await api("/projetos/rotulos");
+        preencherRotulos();
+        if (projetoId) {
+          projeto = await api("/projetos/" + projetoId);
+          const config = await api("/projetos/" + projetoId + "/configuracao");
+          document.getElementById("pesquisas").checked = config.pesquisas_habilitadas;
+          document.getElementById("ia").checked = false;
+          preencherEditar();
+          mostrar(params.get("aba") || "editar");
+          return;
+        }
+        mostrar("criar");
+      }
+
+      document.querySelectorAll("[data-aba]").forEach((botao) => {
+        botao.addEventListener("click", () => mostrar(botao.dataset.aba));
+      });
+
+      document.getElementById("sair").addEventListener("click", () => {
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      });
+
+      document.getElementById("form-criar").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        aviso("");
+        if (previa) {
+          aviso("Exemplo visual. Nada foi salvo.");
+          mostrar("editar");
+          return;
+        }
+        const form = evento.currentTarget;
+        try {
+          const criado = await api("/projetos", {
+            method: "POST",
+            json: {
+              rotulo_id: form.rotulo_id.value,
+              cnpj: form.cnpj.value,
+              email_orgao: form.email_orgao.value,
+              vinculo_tipo: form.vinculo_tipo.value,
+              vinculo_titulo: form.vinculo_titulo.value,
+            },
+          });
+          window.location.href = "projeto.html?id=" + encodeURIComponent(criado.id) + "&aba=editar";
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("form-editar").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        aviso("");
+        if (previa) {
+          aviso("Exemplo visual. A edição não foi salva.");
+          return;
+        }
+        const form = evento.currentTarget;
+        try {
+          projeto = await api("/projetos/" + projetoId, {
+            method: "PATCH",
+            json: {
+              estado: form.estado.value,
+              vinculo_titulo: form.vinculo_titulo.value,
+            },
+          });
+          preencherEditar();
+          aviso("Edição salva.");
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("reenviar").addEventListener("click", async () => {
+        aviso("");
+        if (previa) {
+          aviso("Exemplo visual. O convite não foi reenviado.");
+          return;
+        }
+        try {
+          const resposta = await api("/projetos/" + projetoId + "/reenviar-convite", { method: "POST" });
+          aviso(resposta.mensagem);
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("form-ferramentas").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        aviso("");
+        if (previa) {
+          aviso("Exemplo visual. As ferramentas não foram gravadas.");
+          return;
+        }
+        try {
+          await api("/projetos/" + projetoId + "/configuracao", {
+            method: "PATCH",
+            json: { pesquisas_habilitadas: document.getElementById("pesquisas").checked },
+          });
+          aviso("Ferramentas salvas. A IA continua desabilitada.");
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      carregar().catch(() => {
+        window.location.href = "index.html";
+      });
+    </script>
+  </body>
+</html>

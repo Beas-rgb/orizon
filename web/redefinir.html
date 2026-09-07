@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Horizon — nova senha</title>
+    <link rel="stylesheet" href="estilo.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Nova senha</h1>
+      <form id="trocar">
+        <label>Senha<input name="senha" type="password" minlength="8" required /></label>
+        <button type="submit">Salvar</button>
+        <p id="erro" class="erro"></p>
+      </form>
+    </main>
+    <script src="horizon.js"></script>
+    <script>
+      const token = tokenDoLink();
+      document.getElementById("trocar").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const erro = document.getElementById("erro");
+        erro.textContent = "";
+        if (!token) {
+          erro.textContent = "Abra o link que chegou no e-mail.";
+          return;
+        }
+        try {
+          await api("/auth/redefinir-senha", {
+            method: "POST",
+            json: { token, senha: evento.currentTarget.senha.value },
+          });
+          window.location.href = "index.html";
+        } catch (exc) {
+          erro.textContent = exc.message;
+        }
+      });
+    </script>
+  </body>
+</html>

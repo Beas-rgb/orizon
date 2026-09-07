@@ -1,0 +1,641 @@
+:root {
+  color: #1c1917;
+  background: #f6f3ee;
+  font-family: "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 42rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin-bottom: 0.25rem;
+}
+
+p.nota {
+  color: #57534e;
+}
+
+form,
+.cartao {
+  background: #fff;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+label {
+  display: block;
+  margin-top: 0.8rem;
+  font-size: 0.9rem;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.25rem;
+  padding: 0.6rem;
+  border: 1px solid #d6d3d1;
+  border-radius: 8px;
+}
+
+button {
+  margin-top: 1rem;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: #1c1917;
+  color: #fff;
+  cursor: pointer;
+}
+
+.erro {
+  color: #9f1239;
+}
+
+.lista {
+  list-style: none;
+  padding: 0;
+}
+
+.lista li {
+  padding: 0.8rem 0;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+/* Painel da consultora, igual ao Figma: topo, acesso rápido, métricas e histórico. */
+body.painel {
+  background: #e8edf3;
+  color: #1c2430;
+}
+
+body.painel main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+body.painel button {
+  margin: 0;
+  background: none;
+  color: inherit;
+}
+
+body.painel .topo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 22px;
+  background: #f7f9fb;
+  border-bottom: 1px solid #e3e8ee;
+}
+
+body.painel .marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: inherit;
+  text-decoration: none;
+}
+
+body.painel .selo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #105faf;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+body.painel .marca small {
+  display: block;
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+body.painel .busca {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #e1e6ec;
+  border-radius: 999px;
+  background: #fff;
+  color: #8b95a1;
+}
+
+body.painel .busca input {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: #1c2430;
+}
+
+body.painel .busca input:focus {
+  outline: none;
+}
+
+body.painel .conta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #4d5968;
+  font-size: 14px;
+}
+
+body.painel .conta button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #105faf;
+  font: inherit;
+  cursor: pointer;
+}
+
+body.painel .avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #d9e6f5;
+  color: #105faf;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+body.painel .grade {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+body.painel .coluna,
+body.painel .principal {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+body.painel .cartao {
+  background: #fff;
+  border: 1px solid #e6ebf0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 0 rgba(28, 36, 48, 0.03);
+}
+
+body.painel .cartao h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+body.painel .atalho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #e7edf3;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #1c2430;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+body.painel .atalho strong,
+body.painel .atalho span {
+  display: block;
+}
+
+body.painel .atalho span {
+  color: #6b7684;
+  font-size: 12px;
+}
+
+body.painel .icone {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 14px;
+  flex: none;
+}
+
+body.painel .azul { background: #105faf; }
+body.painel .verde { background: #1e7a4a; }
+body.painel .ambar { background: #a07020; }
+
+body.painel .vista,
+body.painel .recentes,
+body.painel .historico {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.painel .vista {
+  display: grid;
+  gap: 10px;
+}
+
+body.painel .vista li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+body.painel .vista strong {
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+
+body.painel .vista span,
+body.painel .recente,
+body.painel .sub,
+body.painel .quando,
+body.painel .vazio {
+  color: #6b7684;
+  font-size: 13px;
+}
+
+body.painel .recentes li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f3f6;
+}
+
+body.painel .cabeca-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+body.painel .cabeca-card p,
+body.painel .rotulo-grafico {
+  margin: 4px 0 0;
+  color: #6b7684;
+  font-size: 13px;
+}
+
+body.painel .metricas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+body.painel .metrica {
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 92px;
+}
+
+body.painel .metrica em {
+  display: block;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+body.painel .metrica strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+body.painel .metrica span {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+body.painel .ini { background: #e7f1fb; color: #105faf; }
+body.painel .and { background: #f6f1e6; color: #8a5a16; }
+body.painel .con { background: #e7f4ec; color: #1e7a4a; }
+
+body.painel .grafico {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  height: 140px;
+  margin-top: 18px;
+}
+
+body.painel .mes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+body.painel .barras {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 110px;
+}
+
+body.painel .barras i {
+  display: block;
+  width: 14px;
+  border-radius: 4px 4px 2px 2px;
+}
+
+body.painel .mes span {
+  color: #6b7684;
+  font-size: 12px;
+}
+
+body.painel .legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 10px 0 0;
+  color: #6b7684;
+  font-size: 12px;
+}
+
+body.painel .legenda i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+body.painel .historico li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1.4fr) minmax(120px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f3f6;
+}
+
+body.painel .historico li:last-child {
+  border-bottom: 0;
+}
+
+body.painel .iniciais {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #eef3f8;
+  color: #105faf;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+body.painel .historico h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+body.painel .faixa {
+  height: 6px;
+  border-radius: 99px;
+  background: #e8edf2;
+  overflow: hidden;
+}
+
+body.painel .faixa i {
+  display: block;
+  height: 6px;
+  border-radius: 99px;
+  background: #105faf;
+}
+
+body.painel .faixa.ok i { background: #1e7a4a; }
+body.painel .faixa.meio i { background: #a07020; }
+
+body.painel .selo-estado {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef3f8;
+  color: #105faf;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+body.painel .selo-estado.ok { background: #e7f4ec; color: #1e7a4a; }
+body.painel .selo-estado.alerta { background: #f8efe4; color: #8a5a16; }
+
+body.painel .quando {
+  text-align: right;
+}
+
+@media (min-width: 980px) {
+  body.painel .grade {
+    grid-template-columns: 280px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+@media (max-width: 760px) {
+  body.painel .topo {
+    flex-wrap: wrap;
+  }
+
+  body.painel .busca {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  body.painel .metricas {
+    grid-template-columns: 1fr;
+  }
+
+  body.painel .historico li {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  body.painel .quando {
+    text-align: left;
+  }
+}
+
+body.painel .abas {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+}
+
+body.painel .abas button {
+  padding: 8px 12px;
+  border: 1px solid #e1e6ec;
+  border-radius: 999px;
+  background: #fff;
+  color: #4d5968;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+body.painel .abas button[aria-selected="true"] {
+  background: #105faf;
+  border-color: #105faf;
+  color: #fff;
+}
+
+body.painel .abas button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+body.painel .formulario {
+  display: grid;
+  gap: 14px;
+  max-width: 32rem;
+}
+
+body.painel .formulario label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: #1c2430;
+}
+
+body.painel .formulario input,
+body.painel .formulario select {
+  height: 42px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid #e1e6ec;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  color: #1c2430;
+}
+
+body.painel .escolha {
+  display: flex;
+  gap: 16px;
+  font-weight: 500;
+}
+
+body.painel .escolha label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+body.painel .escolha input {
+  width: 16px;
+  height: 16px;
+}
+
+body.painel .acao {
+  justify-self: start;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #105faf;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+body.painel .acao.secundaria {
+  background: #fff;
+  color: #105faf;
+  border: 1px solid #d5e3f5;
+}
+
+body.painel .ferramenta {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f3f6;
+}
+
+body.painel .ferramenta input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+body.painel .ferramenta strong,
+body.painel .ferramenta span {
+  display: block;
+}
+
+body.painel .ferramenta span,
+body.painel .aviso-form {
+  color: #6b7684;
+  font-size: 13px;
+}
+
+body.painel .ferramenta.travada {
+  opacity: 0.7;
+}
+
+body.painel .ficha {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+body.painel .ficha div {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 8px;
+}
+
+body.painel .ficha dt {
+  color: #6b7684;
+}
+
+body.painel .ficha dd {
+  margin: 0;
+}
+
+body.painel .historico button.linha {
+  display: contents;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}

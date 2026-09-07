@@ -1,0 +1,17 @@
+---
+description: Regras permanentes do Horizon — segurança, fases e mentorias
+alwaysApply: true
+---
+
+# Horizon — regras permanentes do Cursor
+
+- Projeto backend: Python 3.12 + FastAPI + SQLAlchemy 2 + Alembic + PostgreSQL/Neon + Cloudflare R2.
+- Responder e comentar em português (pt-BR). Explicações didáticas: o usuário está aprendendo.
+- Seguir SEMPRE o protocolo: PLANO → aguardar confirmação → implementar em passos pequenos com explicação → testes → checklist de qualidade (docs/HORIZON_CONTEXTO_IA.md, seção 9) → resumo.
+- Nunca usar create_all em produção; só migrations Alembic reversíveis. Nunca destruir dados do Neon.
+- Toda rota sensível: autenticação + autorização por escopo (usuário + papel global + papel no projeto + organização + projeto + estado/visibilidade). Prevenir IDOR/BOLA; testar acesso cruzado entre organizações.
+- Respeitar soft delete (deleted_at) e atualizar atualizado_em nas mutations.
+- Sem segredos em código/logs/respostas. Hash de senha: Argon2id. Rate limiting em login, convite e redefinição.
+- Registrar auditoria (logs_auditoria) nas ações relevantes, sem dados sensíveis.
+- Econômico com a cota de IA: nível mais barato confiável; avisar antes de tarefas que merecem modelo premium; contexto enxuto (@arquivo específico); uma fase por vez, conforme roadmap em docs/HORIZON_CONTEXTO_IA.md.
+- Produto nesta etapa: consultora aplica pesquisa, funcionário responde e vê a própria nota, órgão consulta o resultado. Não copiar OKR/feedback do Yespper agora.

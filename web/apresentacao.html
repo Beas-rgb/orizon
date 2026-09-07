@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orizon — apresentação</title>
+    <style>
+      :root {
+        --canvas: #f4f3ef;
+        --surface: #ffffff;
+        --ink: #1a1a1a;
+        --muted: #6b6760;
+        --navy: #0e2433;
+        --copper: #a67c52;
+        --wash: #eae6df;
+        --line: #e6e2da;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      a { color: inherit; text-decoration: none; }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--copper);
+        font-size: 12px;
+        font-weight: 560;
+        letter-spacing: 0.14em;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        padding: 22px 72px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .mark {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--navy);
+        position: relative;
+      }
+
+      .mark::after {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 16px;
+        width: 14px;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--copper);
+      }
+
+      .nav nav {
+        display: flex;
+        gap: 28px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 520;
+      }
+
+      .nav .spacer { flex: 1; }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 12px 22px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        font: inherit;
+        font-size: 15px;
+        font-weight: 520;
+        cursor: pointer;
+      }
+
+      .btn-primary { background: var(--navy); color: white; }
+      .btn-secondary { background: transparent; color: var(--ink); border-color: var(--line); }
+      .btn-block { width: 100%; }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 72px;
+        align-items: center;
+        padding: 72px 72px 56px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 64px;
+        line-height: 1.05;
+        letter-spacing: -0.035em;
+        font-weight: 620;
+      }
+
+      .lead {
+        max-width: 560px;
+        margin: 22px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.55;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .fine {
+        margin: 16px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .preview {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+      }
+
+      .kicker {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 520;
+        letter-spacing: 0.08em;
+      }
+
+      .score {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        margin: 8px 0 0;
+      }
+
+      .score strong {
+        font-size: 72px;
+        line-height: 0.9;
+        letter-spacing: -0.04em;
+        color: var(--navy);
+        font-weight: 620;
+      }
+
+      .score span {
+        color: var(--muted);
+        font-size: 20px;
+        padding-bottom: 8px;
+      }
+
+      .who { margin: 10px 0 18px; color: var(--muted); }
+
+      .bar { margin-top: 14px; }
+      .bar p { margin: 0 0 8px; font-size: 13px; font-weight: 520; }
+      .track { height: 6px; border-radius: 99px; background: var(--wash); }
+      .track i { display: block; height: 6px; border-radius: 99px; background: var(--navy); }
+
+      .section { padding: 24px 72px 72px; }
+      .section h2, .wash h2, .trust h2 {
+        margin: 0;
+        font-size: 36px;
+        letter-spacing: -0.03em;
+        font-weight: 620;
+      }
+
+      .intro p, .step p, .item p {
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      .cards, .steps, .items {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-top: 28px;
+      }
+
+      .card, .step {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 28px 24px;
+      }
+
+      .card .line, .item .line {
+        width: 28px;
+        height: 3px;
+        border-radius: 2px;
+        background: var(--copper);
+        margin-bottom: 14px;
+      }
+
+      .item .line { background: var(--navy); height: 2px; }
+
+      .card small, .step .num {
+        color: var(--copper);
+        font-size: 12px;
+        font-weight: 560;
+        letter-spacing: 0.1em;
+      }
+
+      .step .num { color: var(--navy); }
+      .card h3, .step h3, .item h3 { margin: 10px 0 8px; font-size: 22px; letter-spacing: -0.02em; }
+      .step h3 { font-size: 24px; }
+
+      .wash { background: var(--wash); padding: 48px 72px 72px; }
+
+      .trust { padding: 64px 72px 48px; }
+      .trust h2 { max-width: 640px; }
+
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 22px 72px;
+        background: var(--navy);
+        color: white;
+      }
+
+      .footer span { color: var(--copper); font-size: 13px; }
+
+      .login {
+        display: none;
+        min-height: 100vh;
+        grid-template-columns: 560px 1fr;
+      }
+
+      .login.on { display: grid; }
+      .home.off { display: none; }
+
+      .panel {
+        background: var(--navy);
+        color: white;
+        padding: 48px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 100vh;
+      }
+
+      .panel .mark { background: white; }
+      .panel h1 { font-size: 40px; line-height: 1.12; margin-top: 64px; }
+      .panel .lead { color: #d7c3ae; }
+
+      .form-area {
+        display: grid;
+        place-items: center;
+        padding: 48px 72px;
+      }
+
+      form {
+        width: min(400px, 100%);
+        display: grid;
+        gap: 16px;
+      }
+
+      form h2 { margin: 0; font-size: 36px; letter-spacing: -0.03em; }
+      form .hint { margin: -6px 0 8px; color: var(--muted); }
+
+      label { display: grid; gap: 8px; font-size: 13px; font-weight: 520; }
+      input {
+        height: 46px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0 14px;
+        font: inherit;
+        font-size: 15px;
+        color: var(--ink);
+        background: white;
+      }
+
+      .links {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .links button {
+        border: 0;
+        background: none;
+        color: var(--muted);
+        font: inherit;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      @media (max-width: 900px) {
+        .nav, .hero, .section, .wash, .trust, .footer { padding-left: 24px; padding-right: 24px; }
+        .hero, .cards, .steps, .items, .login { grid-template-columns: 1fr; }
+        h1 { font-size: 40px; }
+        .panel { min-height: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="home" id="home">
+      <header class="nav">
+        <div class="brand"><span class="mark"></span> Orizon</div>
+        <nav>
+          <a href="#como">Como funciona</a>
+          <a href="#publicos">Para o órgão</a>
+          <a href="#login" id="ir-acesso">Acesso</a>
+        </nav>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="ir-entrar" type="button">Entrar</button>
+      </header>
+
+      <section class="hero">
+        <div>
+          <p class="eyebrow">SERVIÇO PÚBLICO</p>
+          <h1>A pesquisa do órgão,<br>do pedido à nota.</h1>
+          <p class="lead">Texto de teste. A consultora aplica a pesquisa, o servidor responde e vê a própria nota, e o órgão consulta o resultado — com isolamento, prazo e registro de cada passo.</p>
+          <div class="actions">
+            <button class="btn btn-primary" id="ir-entrar-2" type="button">Entrar</button>
+            <a class="btn btn-secondary" href="#como">Como funciona</a>
+          </div>
+          <p class="fine">Acesso por convite. Sem conta pública aberta.</p>
+        </div>
+        <aside class="preview">
+          <p class="kicker">RESULTADO · TEXTO DE TESTE</p>
+          <div class="score"><strong>8,4</strong><span>/ 10</span></div>
+          <p class="who">Nota vista só por quem respondeu.</p>
+          <div class="bar"><p>Clareza do serviço</p><div class="track"><i style="width:84%"></i></div></div>
+          <div class="bar"><p>Prazo cumprido</p><div class="track"><i style="width:72%"></i></div></div>
+          <div class="bar"><p>Registro da entrega</p><div class="track"><i style="width:91%"></i></div></div>
+        </aside>
+      </section>
+
+      <section class="section" id="publicos">
+        <div class="intro">
+          <p class="eyebrow">TRÊS PAPÉIS, UM FLUXO</p>
+          <h2>Cada pessoa vê só o que lhe cabe.</h2>
+          <p>Texto de teste. O acesso segue o papel no projeto — ninguém entra no resultado de outro órgão pelo identificador.</p>
+        </div>
+        <div class="cards">
+          <article class="card">
+            <div class="line"></div>
+            <small>CONSULTORA</small>
+            <h3>Aplica a pesquisa</h3>
+            <p>Texto de teste. Define o instrumento, o prazo e o público, e acompanha quem já respondeu.</p>
+          </article>
+          <article class="card">
+            <div class="line"></div>
+            <small>SERVIDOR</small>
+            <h3>Responde e vê a nota</h3>
+            <p>Texto de teste. Responde pelo convite e consulta somente a própria nota, sem ver a dos demais.</p>
+          </article>
+          <article class="card">
+            <div class="line"></div>
+            <small>ÓRGÃO</small>
+            <h3>Consulta o resultado</h3>
+            <p>Texto de teste. Acompanha o consolidado do projeto, sem abrir resposta individual fora da regra.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="wash" id="como">
+        <p class="eyebrow">COMO FUNCIONA</p>
+        <h2>Do convite ao resultado, sem atalho.</h2>
+        <div class="steps">
+          <article class="step">
+            <div class="num">01</div>
+            <h3>Aplicar</h3>
+            <p>Texto de teste. A consultora abre a pesquisa no projeto do órgão e envia o convite a quem deve responder.</p>
+          </article>
+          <article class="step">
+            <div class="num">02</div>
+            <h3>Responder</h3>
+            <p>Texto de teste. O servidor acessa pelo link, responde uma vez e consulta a própria nota.</p>
+          </article>
+          <article class="step">
+            <div class="num">03</div>
+            <h3>Consultar</h3>
+            <p>Texto de teste. O órgão vê o consolidado. Cada consulta fica registrada, sem dado sensível no log.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="trust">
+        <p class="eyebrow">FEITO PARA O PÚBLICO</p>
+        <h2>Clareza de quem presta o serviço. Reserva de quem responde.</h2>
+        <div class="items">
+          <article class="item">
+            <div class="line"></div>
+            <h3>Isolamento</h3>
+            <p>Texto de teste. Cada órgão só vê o próprio projeto. Um identificador conhecido não abre o de outro.</p>
+          </article>
+          <article class="item">
+            <div class="line"></div>
+            <h3>Nota pessoal</h3>
+            <p>Texto de teste. A nota de desempenho volta só para quem respondeu, pelo próprio acesso.</p>
+          </article>
+          <article class="item">
+            <div class="line"></div>
+            <h3>Auditoria</h3>
+            <p>Texto de teste. Login, convite e consulta ficam registrados, sem senha, token ou conteúdo da resposta.</p>
+          </article>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <strong>Orizon</strong>
+        <span>Texto de teste · pesquisa para o serviço público</span>
+      </footer>
+    </div>
+
+    <div class="login" id="login">
+      <aside class="panel">
+        <div>
+          <div class="brand"><span class="mark"></span> Orizon</div>
+          <p class="eyebrow">ACESSO RESTRITO</p>
+          <h1>Entre para continuar a pesquisa do órgão.</h1>
+          <p class="lead">Texto de teste. O convite define o papel. Sem senha compartilhada e sem acesso por identificador.</p>
+        </div>
+        <span>Serviço público · texto de teste</span>
+      </aside>
+      <main class="form-area">
+        <form>
+          <h2>Entrar</h2>
+          <p class="hint">Use o e-mail do convite. Texto de teste.</p>
+          <label>E-mail<input type="email" placeholder="nome@orgao.gov.br" /></label>
+          <label>Senha<input type="password" placeholder="••••••••" /></label>
+          <button class="btn btn-primary btn-block" type="button">Entrar</button>
+          <div class="links">
+            <button type="button">Esqueci a senha</button>
+            <button type="button">Primeiro acesso</button>
+          </div>
+          <button class="btn btn-secondary" id="voltar" type="button">Voltar à apresentação</button>
+        </form>
+      </main>
+    </div>
+
+    <script>
+      function abrirLogin() {
+        document.getElementById("home").classList.add("off");
+        document.getElementById("login").classList.add("on");
+      }
+      function fecharLogin() {
+        document.getElementById("login").classList.remove("on");
+        document.getElementById("home").classList.remove("off");
+      }
+      ["ir-entrar", "ir-entrar-2", "ir-acesso"].forEach((id) => {
+        document.getElementById(id).addEventListener("click", (evento) => {
+          evento.preventDefault();
+          abrirLogin();
+        });
+      });
+      document.getElementById("voltar").addEventListener("click", fecharLogin);
+    </script>
+  </body>
+</html>

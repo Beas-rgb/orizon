@@ -1,0 +1,15 @@
+.venv/
+frontend/node_modules/
+frontend/dist/
+.wrangler/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.env
+data/outbox/
+data/biblioteca/
+*.log
+.DS_Store
