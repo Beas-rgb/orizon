@@ -1,15 +1,12 @@
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
+from tests.contas import abrir_consultora
 
-SENHA = "senha-segura-1"
+SENHA = "Senha-segura1"
 
 
 def _consultora(client) -> dict[str, str]:
-    criado = client.post(
-        "/auth/bootstrap",
-        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
-    )
-    return {"Authorization": f"Bearer {criado.json()['access_token']}"}
+    return abrir_consultora(client)
 
 
 def _cnpj_falso(_cnpj: str) -> DadosCnpj:
@@ -83,7 +80,7 @@ def test_orgao_so_ve_o_proprio_projeto(client, monkeypatch) -> None:
     token = caixa_email.mensagens[-1]["corpo"].strip().split()[-1]
     acesso = client.post(
         "/auth/primeiro-acesso",
-        json={"token": token, "senha": "senha-orgao-1"},
+        json={"token": token, "senha": "Senha-orgao1"},
     )
     orgao = {"Authorization": f"Bearer {acesso.json()['access_token']}"}
 
@@ -102,3 +99,13 @@ def test_orgao_so_ve_o_proprio_projeto(client, monkeypatch) -> None:
         headers=orgao,
     )
     assert alheio.status_code == 404
+
+    equipe = client.get(f"/projetos/{projeto_id}/equipe", headers=headers)
+    assert equipe.status_code == 200
+    assert equipe.json()[0]["email"] == "rh@prefeitura.dev"
+    assert equipe.json()[0]["papel"] == "ORGAO"
+    assert equipe.json()[0]["situacao"] == "ATIVO"
+    assert "token" not in equipe.text
+
+    negado = client.get(f"/projetos/{projeto_id}/equipe", headers=orgao)
+    assert negado.status_code == 404

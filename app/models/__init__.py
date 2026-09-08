@@ -1,6 +1,7 @@
 """Modelos da identidade. Não chamam create_all."""
 
 import app.models.notificacao as _notificacao  # noqa: F401
+import app.models.pedido_consultora as _pedido_consultora  # noqa: F401
 import app.models.pesquisa as _pesquisa  # noqa: F401
 from app.models.auditoria import LogAuditoria
 from app.models.base import Base

@@ -14,6 +14,7 @@ from app.models.usuario import Usuario
 from app.schemas.projeto import (
     ConfiguracaoAtualizar,
     ConfiguracaoSaida,
+    EquipeSaida,
     ProjetoAtualizar,
     ProjetoCriar,
     ProjetoSaida,
@@ -27,6 +28,7 @@ from app.services.projeto import (
     atualizar_projeto,
     criar_projeto,
     criar_setor,
+    listar_equipe,
     listar_projetos,
     listar_rotulos,
     listar_setores,
@@ -133,6 +135,17 @@ def reenviar(
     """Reenvia o convite se o órgão ainda não aceitou. Token antigo deixa de valer."""
     email = _chamar(lambda: reenviar_convite(db, consultor, projeto_id))
     return {"mensagem": "Convite reenviado.", "email": email}
+
+
+@router.get("/{projeto_id}/equipe", response_model=list[EquipeSaida])
+def equipe(
+    projeto_id: str,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[EquipeSaida]:
+    """Quem entra neste trabalho. Só a consultora dona. Sem token."""
+    itens = _chamar(lambda: listar_equipe(db, consultor, projeto_id))
+    return [EquipeSaida(**item) for item in itens]
 
 
 @router.get("/{projeto_id}/setores", response_model=list[SetorSaida])

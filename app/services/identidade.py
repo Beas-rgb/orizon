@@ -7,13 +7,14 @@ Ataques que este módulo corta:
 - reuso de token: o hash é marcado como usado e as sessões antigas caem
 """
 
+import time
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
-from app.core.security import hash_senha, senha_confere
+from app.core.config import settings, url_publica
+from app.core.security import hash_senha, senha_aceita, senha_confere
 from app.core.tokens import (
     criar_access_token,
     criar_refresh_token,
@@ -24,6 +25,8 @@ from app.core.tokens import (
 from app.models.auditoria import LogAuditoria
 from app.models.controle_acesso import ControleAcesso
 from app.models.convite import Convite
+from app.models.pedido_consultora import PedidoConsultora
+from app.models.pesquisa import Pesquisa
 from app.models.projeto import Projeto
 from app.models.sessao import Sessao
 from app.models.token_redefinicao import TokenRedefinicao
@@ -129,8 +132,9 @@ def limpar_falhas(db: Session, chave: str) -> None:
 
 
 def _exigir_senha(senha: str) -> None:
-    if len(senha) < 8 or senha.strip() != senha:
-        raise ErroAuth(422, "A senha precisa ter ao menos 8 caracteres.")
+    motivo = senha_aceita(senha)
+    if motivo:
+        raise ErroAuth(422, motivo)
 
 
 PAINEIS = {
@@ -146,7 +150,7 @@ def painel_de(papel: str) -> str:
 
 
 def _link_com_token(pagina: str, token: str) -> str:
-    base = settings.app_public_url.rstrip("/")
+    base = url_publica().rstrip("/")
     if pagina == "primeiro-acesso.html":
         return f"{base}/#{token}"
     return f"{base}/{pagina}#{token}"
@@ -182,6 +186,46 @@ def _usuario_por_email(db: Session, email: str) -> Usuario | None:
     )
 
 
+def garantir_admin(db: Session) -> None:
+    """Cria a conta do TI a partir do .env, se ainda não existir.
+
+    A senha do ambiente é analisada e só o hash vai para o banco.
+    Não grava senha em log e não cria um segundo acesso de desenvolvimento.
+    """
+    nome = settings.admin_nome.strip()
+    email = settings.admin_email.strip()
+    senha = settings.admin_senha
+    if not nome or not email or not senha:
+        return
+    _exigir_senha(senha)
+    endereco = email_acesso(email)
+    ja_ti = db.scalar(
+        select(Usuario.id).where(
+            Usuario.papel == "TI",
+            Usuario.deleted_at.is_(None),
+        )
+    )
+    if ja_ti is not None:
+        return
+    if _usuario_por_email(db, endereco) is not None:
+        return
+    agora = _agora()
+    usuario = Usuario(
+        nome=nome,
+        email=endereco,
+        senha_hash=hash_senha(senha),
+        papel="TI",
+        ativo=True,
+        tentativas_falhas=0,
+        criado_em=agora,
+        atualizado_em=agora,
+    )
+    db.add(usuario)
+    db.flush()
+    _auditar(db, "ADMIN_CRIADO", usuario.id)
+    db.commit()
+
+
 def bootstrap(db: Session, nome: str, email: str, senha: str) -> dict[str, str]:
     """Só a primeira conta, e só se a tabela estiver vazia."""
     existe = db.scalar(select(Usuario.id).limit(1))
@@ -193,7 +237,7 @@ def bootstrap(db: Session, nome: str, email: str, senha: str) -> dict[str, str]:
         nome=nome.strip(),
         email=endereco,
         senha_hash=hash_senha(senha),
-        papel="CONSULTOR",
+        papel="TI",
         ativo=True,
         tentativas_falhas=0,
     )
@@ -392,18 +436,25 @@ def primeiro_acesso(db: Session, token: str, senha: str) -> dict[str, str]:
         or (_ciente(convite.expira_em) or _agora()) <= _agora()
     ):
         raise ErroAuth(400, MSG_TOKEN)
-    if _usuario_por_email(db, convite.email) is not None:
+    existente = _usuario_por_email(db, convite.email)
+    if existente is not None and existente.senha_hash:
         raise ErroAuth(409, "Este e-mail já tem acesso.")
-    usuario = Usuario(
-        nome=convite.nome,
-        email=convite.email,
-        senha_hash=hash_senha(senha),
-        papel=convite.papel,
-        ativo=True,
-        tentativas_falhas=0,
-    )
-    db.add(usuario)
-    db.flush()
+    if existente is None:
+        usuario = Usuario(
+            nome=convite.nome,
+            email=convite.email,
+            senha_hash=hash_senha(senha),
+            papel=convite.papel,
+            ativo=True,
+            tentativas_falhas=0,
+        )
+        db.add(usuario)
+        db.flush()
+    else:
+        usuario = existente
+        usuario.senha_hash = hash_senha(senha)
+        usuario.ativo = True
+        usuario.atualizado_em = _agora()
     convite.status = "ACEITO"
     convite.aceito_em = _agora()
     convite.atualizado_em = _agora()
@@ -491,6 +542,204 @@ def redefinir_senha(db: Session, token: str, senha: str) -> None:
     _revogar_sessoes(db, usuario.id)
     _auditar(db, "SENHA_REDEFINIDA", usuario.id)
     db.commit()
+
+
+def pedir_conta_consultora(db: Session, nome: str, email: str) -> None:
+    """Não cria login. O pedido espera autorização por no máximo 5 dias."""
+    endereco = email_acesso(email)
+    if len(nome.strip()) < 2:
+        raise ErroAuth(422, "Informe o nome.")
+    if _usuario_por_email(db, endereco) is not None:
+        raise ErroAuth(409, "Este e-mail já tem acesso.")
+    agora = _agora()
+    aberto = db.scalar(
+        select(PedidoConsultora).where(
+            PedidoConsultora.email == endereco,
+            PedidoConsultora.status == "PENDENTE",
+        )
+    )
+    if aberto is not None:
+        if (_ciente(aberto.expira_em) or agora) > agora:
+            raise ErroAuth(409, "Já existe um pedido pendente para este e-mail.")
+        aberto.status = "EXPIRADO"
+        aberto.atualizado_em = agora
+    pedido = PedidoConsultora(
+        id=novo_id(),
+        nome=nome.strip(),
+        email=endereco,
+        status="PENDENTE",
+        expira_em=agora + timedelta(days=5),
+        criado_em=agora,
+        atualizado_em=agora,
+        autorizado_em=None,
+        autorizado_por_id=None,
+    )
+    db.add(pedido)
+    _auditar(db, "PEDIDO_CONSULTORA", None)
+    db.commit()
+
+
+def _expirar_pedidos(db: Session) -> None:
+    agora = _agora()
+    abertos = db.scalars(
+        select(PedidoConsultora).where(PedidoConsultora.status == "PENDENTE")
+    ).all()
+    for item in abertos:
+        if (_ciente(item.expira_em) or agora) <= agora:
+            item.status = "EXPIRADO"
+            item.atualizado_em = agora
+
+
+def listar_pedidos(db: Session, usuario: Usuario) -> list[PedidoConsultora]:
+    if usuario.papel != "TI":
+        raise ErroAuth(404, "Pedido não encontrado.")
+    _expirar_pedidos(db)
+    db.commit()
+    return list(
+        db.scalars(
+            select(PedidoConsultora)
+            .where(PedidoConsultora.status == "PENDENTE")
+            .order_by(PedidoConsultora.criado_em.desc())
+        ).all()
+    )
+
+
+def listar_consultores(db: Session, usuario: Usuario) -> list[Usuario]:
+    if usuario.papel != "TI":
+        raise ErroAuth(404, "Pedido não encontrado.")
+    return list(
+        db.scalars(
+            select(Usuario)
+            .where(
+                Usuario.papel == "CONSULTOR",
+                Usuario.deleted_at.is_(None),
+            )
+            .order_by(Usuario.nome)
+        ).all()
+    )
+
+
+def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> None:
+    """Cria a conta sem senha e manda o primeiro acesso. Só o dev autoriza."""
+    if operador.papel != "TI":
+        raise ErroAuth(404, "Pedido não encontrado.")
+    _expirar_pedidos(db)
+    pedido = db.get(PedidoConsultora, pedido_id)
+    if pedido is None or pedido.status != "PENDENTE":
+        raise ErroAuth(404, "Pedido não encontrado.")
+    if (_ciente(pedido.expira_em) or _agora()) <= _agora():
+        pedido.status = "EXPIRADO"
+        pedido.atualizado_em = _agora()
+        db.commit()
+        raise ErroAuth(422, "Este pedido expirou.")
+    if _usuario_por_email(db, pedido.email) is not None:
+        raise ErroAuth(409, "Este e-mail já tem acesso.")
+    agora = _agora()
+    usuario = Usuario(
+        nome=pedido.nome,
+        email=pedido.email,
+        senha_hash=None,
+        papel="CONSULTOR",
+        ativo=False,
+        tentativas_falhas=0,
+    )
+    db.add(usuario)
+    db.flush()
+    token = novo_token_opaco()
+    convite = Convite(
+        email=pedido.email,
+        nome=pedido.nome,
+        papel="CONSULTOR",
+        token_hash=hash_token(token),
+        status="PENDENTE",
+        entrega="NAO_ENVIADO",
+        expira_em=agora + timedelta(hours=48),
+        convidado_por_id=operador.id,
+        projeto_id=None,
+    )
+    db.add(convite)
+    db.flush()
+    from app.services.notificacao import entregar_email
+
+    entrega = entregar_email(
+        db,
+        pedido.email,
+        "Horizon — primeiro acesso",
+        (
+            "Sua conta de consultora foi autorizada.\n"
+            "Abra o link e crie sua senha. Ela não é enviada neste e-mail.\n"
+            "Válido por 48 horas:\n\n"
+            f"{_link_com_token('primeiro-acesso.html', token)}\n\n"
+            f"{token}\n"
+        ),
+        "CONVITE",
+        None,
+        operador.id,
+    )
+    convite.entrega = "ENVIADO" if entrega.status == "ENVIADO" else "FALHA"
+    convite.atualizado_em = agora
+    pedido.status = "AUTORIZADO"
+    pedido.autorizado_em = agora
+    pedido.autorizado_por_id = operador.id
+    pedido.atualizado_em = agora
+    _auditar(db, "CONSULTORA_AUTORIZADA", operador.id)
+    db.commit()
+
+
+def diagnostico(db: Session, usuario: Usuario) -> dict[str, object]:
+    """Estabilidade para o painel do TI. Sem senha, URL nem segredo."""
+    if usuario.papel != "TI":
+        raise ErroAuth(404, "Pedido não encontrado.")
+    _expirar_pedidos(db)
+    db.commit()
+    inicio = time.perf_counter()
+    banco = "ok"
+    try:
+        db.execute(select(func.count()).select_from(Usuario))
+    except Exception:
+        banco = "indisponível"
+    banco_ms = int((time.perf_counter() - inicio) * 1000)
+    contas = {
+        papel: db.scalar(
+            select(func.count())
+            .select_from(Usuario)
+            .where(Usuario.papel == papel, Usuario.deleted_at.is_(None))
+        )
+        or 0
+        for papel in ("TI", "CONSULTOR", "ORGAO", "FUNCIONARIO")
+    }
+    recentes = db.scalars(
+        select(LogAuditoria).order_by(LogAuditoria.criado_em.desc()).limit(12)
+    ).all()
+    email = (
+        "smtp"
+        if settings.smtp_host and settings.smtp_user and settings.smtp_password
+        else "local"
+    )
+    return {
+        "api": "ok",
+        "banco": banco,
+        "banco_ms": banco_ms,
+        "email": email,
+        "contas": contas,
+        "pedidos_pendentes": db.scalar(
+            select(func.count())
+            .select_from(PedidoConsultora)
+            .where(PedidoConsultora.status == "PENDENTE")
+        )
+        or 0,
+        "projetos": db.scalar(
+            select(func.count())
+            .select_from(Projeto)
+            .where(Projeto.deleted_at.is_(None))
+        )
+        or 0,
+        "pesquisas": db.scalar(select(func.count()).select_from(Pesquisa)) or 0,
+        "auditoria": [
+            {"acao": item.acao, "criado_em": item.criado_em.isoformat()}
+            for item in recentes
+        ],
+    }
 
 
 def _revogar_tokens_abertos(db: Session, usuario_id: str) -> None:

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Horizon — órgão</title>
+    <link rel="stylesheet" href="estilo.css" />
+  </head>
+  <body>
+    <main>
+      <p class="olho">Tela de teste</p>
+      <h1>Painel do órgão</h1>
+      <p class="nota" id="quem"></p>
+      <p class="nota">Você vê só o trabalho em que foi convidado. Não cria projeto, não edita e não lista funcionário.</p>
+      <ul class="lista" id="lista"></ul>
+      <button type="button" id="sair">Sair</button>
+    </main>
+    <script src="horizon.js"></script>
+    <script>
+      document.getElementById("sair").addEventListener("click", sair);
+      api("/auth/eu")
+        .then((eu) => {
+          if (eu.painel !== "orgao") {
+            irParaPainel(eu.painel);
+            return;
+          }
+          document.getElementById("quem").textContent = `${eu.nome} — ${eu.email}`;
+          return api("/projetos");
+        })
+        .then((projetos) => {
+          if (!projetos) return;
+          const lista = document.getElementById("lista");
+          if (!projetos.length) {
+            lista.textContent = "Nenhum trabalho vinculado a esta conta.";
+            return;
+          }
+          projetos.forEach((item) => {
+            const li = document.createElement("li");
+            li.textContent = `${item.vinculo_titulo} — ${item.razao_social} — ${item.estado}`;
+            lista.append(li);
+          });
+        })
+        .catch(() => {
+          window.location.href = "entrar.html";
+        });
+    </script>
+  </body>
+</html>

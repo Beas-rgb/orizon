@@ -629,6 +629,70 @@ body.painel .ficha dd {
   margin: 0;
 }
 
+.olho {
+  margin: 0;
+  color: #78716c;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.escolha {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+a.acao,
+.abas button {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  margin-top: 0;
+}
+
+a.acao.secundaria,
+.abas button {
+  background: #fff;
+  color: #1c1917;
+  border: 1px solid #d6d3d1;
+}
+
+.topo-simples {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.abas {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.abas button.ativa {
+  background: #1c1917;
+  color: #fff;
+}
+
+.metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.metricas .cartao h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #57534e;
+}
+
+.metricas .cartao p {
+  margin: 0.4rem 0 0;
+  font-size: 1.15rem;
+}
+
 body.painel .historico button.linha {
   display: contents;
   padding: 0;

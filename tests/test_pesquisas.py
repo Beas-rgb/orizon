@@ -1,7 +1,8 @@
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
+from tests.contas import abrir_consultora
 
-SENHA = "senha-segura-1"
+SENHA = "Senha-segura1"
 
 
 def _cnpj_falso(_cnpj: str) -> DadosCnpj:
@@ -16,11 +17,7 @@ def _cnpj_falso(_cnpj: str) -> DadosCnpj:
 
 def _projeto(client, monkeypatch) -> tuple[dict[str, str], str]:
     monkeypatch.setattr("app.services.projeto.buscar", _cnpj_falso)
-    criado = client.post(
-        "/auth/bootstrap",
-        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
-    )
-    headers = {"Authorization": f"Bearer {criado.json()['access_token']}"}
+    headers = abrir_consultora(client)
     rotulos = client.get("/projetos/rotulos", headers=headers).json()
     clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
     projeto = client.post(
@@ -112,7 +109,7 @@ def test_desempenho_devolve_nota_so_com_token(client, monkeypatch) -> None:
     token_acesso = convite["corpo"].strip().split()[-1]
     acesso = client.post(
         "/auth/primeiro-acesso",
-        json={"token": token_acesso, "senha": "senha-orgao-1"},
+        json={"token": token_acesso, "senha": "Senha-orgao1"},
     )
     orgao = {"Authorization": f"Bearer {acesso.json()['access_token']}"}
     painel = client.get(f"/pesquisas/{pid}/painel", headers=orgao)

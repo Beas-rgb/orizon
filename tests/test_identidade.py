@@ -3,9 +3,10 @@ from sqlalchemy import select
 from app.integrations.email import caixa_email
 from app.models.auditoria import LogAuditoria
 from app.models.usuario import Usuario
+from tests.contas import abrir_consultora
 
-SENHA = "senha-segura-1"
-OUTRA = "senha-nova-2"
+SENHA = "Senha-segura1"
+OUTRA = "Senha-nova2!"
 
 
 def _token_do_email() -> str:
@@ -23,7 +24,8 @@ def test_bootstrap_e_eu(client) -> None:
     eu = client.get("/auth/eu", headers={"Authorization": f"Bearer {token}"})
     assert eu.status_code == 200
     assert eu.json()["email"] == "tia@horizon.dev"
-    assert eu.json()["papel"] == "CONSULTOR"
+    assert eu.json()["papel"] == "TI"
+    assert eu.json()["painel"] == "dev"
 
 
 def test_bootstrap_segunda_vez_bloqueado(client) -> None:
@@ -88,11 +90,7 @@ def test_tres_tentativas_esperam_cinco_minutos(client, db) -> None:
 
 
 def test_convite_nao_devolve_token_e_primeiro_acesso(client) -> None:
-    criado = client.post(
-        "/auth/bootstrap",
-        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
-    )
-    headers = {"Authorization": f"Bearer {criado.json()['access_token']}"}
+    headers = abrir_consultora(client)
     convite = client.post(
         "/auth/convites",
         headers=headers,
@@ -127,11 +125,7 @@ def test_convite_nao_devolve_token_e_primeiro_acesso(client) -> None:
 
 
 def test_orgao_nao_convida(client) -> None:
-    criado = client.post(
-        "/auth/bootstrap",
-        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
-    )
-    headers = {"Authorization": f"Bearer {criado.json()['access_token']}"}
+    headers = abrir_consultora(client)
     client.post(
         "/auth/convites",
         headers=headers,
@@ -188,7 +182,7 @@ def test_recuperacao_no_email_de_acesso(client) -> None:
 
     reuso = client.post(
         "/auth/redefinir-senha",
-        json={"token": token, "senha": "terceira-senha"},
+        json={"token": token, "senha": "Terceira-2!"},
     )
     assert reuso.status_code == 400
 

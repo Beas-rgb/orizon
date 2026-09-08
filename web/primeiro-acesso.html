@@ -9,7 +9,7 @@
   <body>
     <main>
       <h1>Defina sua senha</h1>
-      <p class="nota">A senha não veio no e-mail. Você cria agora.</p>
+      <p class="nota">A senha não veio no e-mail. Você cria agora: 8 caracteres, uma maiúscula, um número e um caractere especial.</p>
       <form id="ativar">
         <label>Senha<input name="senha" type="password" minlength="8" required /></label>
         <button type="submit">Entrar no Horizon</button>
@@ -33,7 +33,7 @@
             json: { token, senha: evento.currentTarget.senha.value },
           });
           guardarSessao(dados);
-          window.location.href = dados.painel === "consultora" ? "painel.html" : "index.html";
+          irParaPainel(dados.painel);
         } catch (exc) {
           erro.textContent = exc.message;
         }

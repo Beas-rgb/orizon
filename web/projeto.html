@@ -38,7 +38,19 @@
           </button>
           <button class="atalho" type="button" data-aba="ferramentas">
             <span class="icone verde">▣</span>
-            <span><strong>Ferramentas</strong><span>Ligar ou desligar</span></span>
+            <span><strong>Configuração</strong><span>Ligar ou desligar</span></span>
+          </button>
+          <button class="atalho" type="button" data-aba="setores">
+            <span class="icone azul">≡</span>
+            <span><strong>Setores</strong><span>Do órgão neste trabalho</span></span>
+          </button>
+          <button class="atalho" type="button" data-aba="pesquisas">
+            <span class="icone verde">▤</span>
+            <span><strong>Pesquisas</strong><span>Rascunho, publicar, link</span></span>
+          </button>
+          <button class="atalho" type="button" data-aba="equipe">
+            <span class="icone azul">+</span>
+            <span><strong>Funcionário</strong><span>Convite do projeto</span></span>
           </button>
         </section>
       </aside>
@@ -48,7 +60,10 @@
           <div class="abas" role="tablist">
             <button type="button" role="tab" id="aba-criar" data-aba="criar" aria-selected="true">Criar</button>
             <button type="button" role="tab" id="aba-editar" data-aba="editar" aria-selected="false">Editar</button>
-            <button type="button" role="tab" id="aba-ferramentas" data-aba="ferramentas" aria-selected="false">Ferramentas</button>
+            <button type="button" role="tab" id="aba-ferramentas" data-aba="ferramentas" aria-selected="false">Configuração</button>
+            <button type="button" role="tab" id="aba-setores" data-aba="setores" aria-selected="false">Setores</button>
+            <button type="button" role="tab" id="aba-pesquisas" data-aba="pesquisas" aria-selected="false">Pesquisas</button>
+            <button type="button" role="tab" id="aba-equipe" data-aba="equipe" aria-selected="false">Funcionário</button>
           </div>
           <p class="aviso-form" id="aviso"></p>
 
@@ -78,7 +93,9 @@
           </div>
 
           <div id="painel-editar" hidden>
-            <h2>Editar projeto</h2>
+            <h2>Trabalho aberto</h2>
+            <dl class="ficha" id="ficha"></dl>
+            <h2>Editar</h2>
             <p class="sub" id="editar-orgao"></p>
             <form class="formulario" id="form-editar">
               <label>Título do vínculo
@@ -98,14 +115,19 @@
           </div>
 
           <div id="painel-ferramentas" hidden>
-            <h2>Ferramentas</h2>
-            <p class="sub">O que estiver desmarcado fica desligado neste projeto.</p>
+            <h2>Configuração do trabalho</h2>
+            <p class="sub">A tela só envia o pedido. Quem decide é o backend.</p>
+            <ul class="lista">
+              <li>Pesquisas nascem desligadas. Sem ligar, não dá para publicar.</li>
+              <li>A IA permanece DESATIVADA. Este formulário não envia esse campo.</li>
+              <li>Órgão e funcionário não alteram esta configuração.</li>
+            </ul>
             <form id="form-ferramentas">
               <label class="ferramenta">
                 <input type="checkbox" id="pesquisas" />
                 <span>
                   <strong>Pesquisas</strong>
-                  <span>Desmarque para desabilitar a ferramenta de pesquisa neste projeto.</span>
+                  <span>Marque para permitir publicar pesquisa neste trabalho.</span>
                 </span>
               </label>
               <label class="ferramenta travada">
@@ -115,7 +137,85 @@
                   <span>Desabilitada nesta etapa. A caixa não aceita clique.</span>
                 </span>
               </label>
-              <button class="acao" type="submit">Salvar ferramentas</button>
+              <button class="acao" type="submit">Salvar configuração</button>
+            </form>
+          </div>
+
+          <div id="painel-setores" hidden>
+            <h2>Setores</h2>
+            <p class="sub">Só a consultora deste trabalho cria e remove setor.</p>
+            <form id="form-setor">
+              <label>Nome do setor
+                <input name="nome" minlength="2" required />
+              </label>
+              <button class="acao" type="submit">Adicionar setor</button>
+            </form>
+            <ul class="lista" id="lista-setores"></ul>
+          </div>
+
+          <div id="painel-pesquisas" hidden>
+            <h2>Pesquisas</h2>
+            <p class="sub">Rascunho pode nascer antes. Publicar só com a configuração ligada e ao menos uma pergunta. Clima não revela quem respondeu.</p>
+            <form id="form-pesquisa">
+              <label>Título
+                <input name="titulo" minlength="2" required />
+              </label>
+              <label>Tipo
+                <select name="tipo">
+                  <option value="CLIMA">Clima</option>
+                  <option value="DESEMPENHO">Desempenho</option>
+                  <option value="CARGOS_SALARIOS">Cargos e salários</option>
+                  <option value="PERSONALIZADA">Personalizada</option>
+                </select>
+              </label>
+              <button class="acao" type="submit">Criar rascunho</button>
+            </form>
+            <ul class="lista" id="lista-pesquisas"></ul>
+            <form id="form-pergunta">
+              <h2>Pergunta no rascunho</h2>
+              <label>Pesquisa
+                <select name="pesquisa_id" id="pesquisa-alvo" required></select>
+              </label>
+              <label>Texto
+                <input name="texto" minlength="2" required />
+              </label>
+              <label>Tipo
+                <select name="tipo">
+                  <option value="NOTA_5">Nota de 1 a 5</option>
+                  <option value="NOTA_10">Nota de 1 a 10</option>
+                  <option value="SIM_NAO">Sim ou não</option>
+                  <option value="TEXTO_LIVRE">Texto livre</option>
+                  <option value="MULTIPLA_ESCOLHA">Múltipla escolha</option>
+                </select>
+              </label>
+              <label>Opções, se for múltipla escolha
+                <input name="opcoes" placeholder="uma opção por vírgula" />
+              </label>
+              <button class="acao" type="submit">Adicionar pergunta</button>
+            </form>
+            <p>
+              <button class="acao" type="button" id="publicar">Publicar</button>
+              <button class="acao secundaria" type="button" id="gerar-link">Gerar link</button>
+              <button class="acao secundaria" type="button" id="ver-resultado">Ver resultado</button>
+              <button class="acao secundaria" type="button" id="encerrar">Encerrar</button>
+            </p>
+            <ul class="lista" id="resultado-pesquisa"></ul>
+          </div>
+
+          <div id="painel-equipe" hidden>
+            <h2>Quem entra neste trabalho</h2>
+            <p class="sub">A lista mostra órgão e funcionários. Pendente ainda não criou senha. Ativo já entrou. O token do e-mail não aparece aqui.</p>
+            <ul class="lista" id="lista-equipe"></ul>
+            <h2>Convidar funcionário</h2>
+            <p class="sub">Entra só neste trabalho. A senha ele cria no primeiro acesso. Não abre outra consultora.</p>
+            <form id="form-funcionario">
+              <label>Nome
+                <input name="nome" minlength="2" required />
+              </label>
+              <label>E-mail
+                <input name="email" type="email" required />
+              </label>
+              <button class="acao" type="submit">Enviar convite</button>
             </form>
           </div>
         </section>
@@ -126,9 +226,11 @@
     <script>
       const params = new URLSearchParams(location.search);
       const previa = params.get("ver") === "1";
+      const ABAS = ["criar", "editar", "ferramentas", "setores", "pesquisas", "equipe"];
       let projetoId = params.get("id") || "";
       let projeto = null;
       let rotulos = [];
+      let pesquisas = [];
 
       function iniciais(nome) {
         const partes = (nome || "").trim().split(/\s+/).filter(Boolean);
@@ -140,17 +242,96 @@
       }
 
       function mostrar(aba) {
-        ["criar", "editar", "ferramentas"].forEach((nome) => {
+        ABAS.forEach((nome) => {
           document.getElementById("painel-" + nome).hidden = nome !== aba;
           document.getElementById("aba-" + nome).setAttribute("aria-selected", String(nome === aba));
+          document.getElementById("aba-" + nome).disabled = nome !== "criar" && !projetoId && !previa;
         });
-        const precisaProjeto = aba !== "criar" && !projetoId && !previa;
-        document.getElementById("aba-editar").disabled = !projetoId && !previa;
-        document.getElementById("aba-ferramentas").disabled = !projetoId && !previa;
-        if (precisaProjeto) {
-          aviso("Crie o projeto antes de editar ou desligar ferramentas.");
+        if (aba !== "criar" && !projetoId && !previa) {
+          aviso("Crie o trabalho antes de configurar.");
           mostrar("criar");
         }
+      }
+
+      function itemLista(texto) {
+        const li = document.createElement("li");
+        li.textContent = texto;
+        return li;
+      }
+
+      function preencherPesquisas() {
+        const select = document.getElementById("pesquisa-alvo");
+        const lista = document.getElementById("lista-pesquisas");
+        select.replaceChildren();
+        lista.replaceChildren();
+        if (!pesquisas.length) {
+          lista.appendChild(itemLista("Nenhuma pesquisa neste trabalho."));
+          return;
+        }
+        pesquisas.forEach((item) => {
+          const opcao = document.createElement("option");
+          opcao.value = item.id;
+          opcao.textContent = item.titulo + " — " + item.status;
+          select.appendChild(opcao);
+          lista.appendChild(itemLista(item.titulo + " — " + item.tipo + " — " + item.status));
+        });
+      }
+
+      async function carregarSetores() {
+        const lista = document.getElementById("lista-setores");
+        lista.replaceChildren();
+        if (!projetoId || previa) {
+          lista.appendChild(itemLista("Os setores aparecem depois de criar o trabalho."));
+          return;
+        }
+        const setores = await api("/projetos/" + projetoId + "/setores");
+        if (!setores.length) {
+          lista.appendChild(itemLista("Nenhum setor ainda."));
+          return;
+        }
+        setores.forEach((item) => {
+          const li = document.createElement("li");
+          const nome = document.createElement("span");
+          nome.textContent = item.nome;
+          const botao = document.createElement("button");
+          botao.type = "button";
+          botao.textContent = "Remover";
+          botao.addEventListener("click", async () => {
+            aviso("");
+            try {
+              await api("/projetos/" + projetoId + "/setores/" + item.id, { method: "DELETE" });
+              await carregarSetores();
+            } catch (exc) {
+              aviso(exc.message);
+            }
+          });
+          li.append(nome, botao);
+          lista.appendChild(li);
+        });
+      }
+
+      async function carregarPesquisas() {
+        if (!projetoId || previa) {
+          pesquisas = [];
+          preencherPesquisas();
+          return;
+        }
+        pesquisas = await api("/projetos/" + projetoId + "/pesquisas");
+        preencherPesquisas();
+      }
+
+      function pesquisaEscolhida() {
+        return document.getElementById("pesquisa-alvo").value;
+      }
+
+      function linhaFicha(rotulo, valor) {
+        const bloco = document.createElement("div");
+        const dt = document.createElement("dt");
+        dt.textContent = rotulo;
+        const dd = document.createElement("dd");
+        dd.textContent = valor || "—";
+        bloco.append(dt, dd);
+        return bloco;
       }
 
       function preencherEditar() {
@@ -161,6 +342,35 @@
           (projeto.nome_fantasia || projeto.razao_social || "") + " · " + (projeto.rotulo || "");
         document.getElementById("resumo-lateral").textContent =
           projeto.vinculo_titulo || "Projeto aberto";
+        const ficha = document.getElementById("ficha");
+        ficha.replaceChildren(
+          linhaFicha("Órgão", projeto.nome_fantasia || projeto.razao_social),
+          linhaFicha("CNPJ", projeto.cnpj),
+          linhaFicha("E-mail do órgão", projeto.email_orgao),
+          linhaFicha("Rótulo", projeto.rotulo),
+          linhaFicha("Vínculo", projeto.vinculo_tipo + " — " + projeto.vinculo_titulo),
+          linhaFicha("Estado", projeto.estado),
+          linhaFicha("Convite", projeto.convite_entrega),
+        );
+      }
+
+      async function carregarEquipe() {
+        const lista = document.getElementById("lista-equipe");
+        lista.replaceChildren();
+        if (!projetoId || previa) {
+          lista.appendChild(itemLista("A equipe aparece depois de criar o trabalho."));
+          return;
+        }
+        const pessoas = await api("/projetos/" + projetoId + "/equipe");
+        if (!pessoas.length) {
+          lista.appendChild(itemLista("Ninguém além da consultora neste trabalho."));
+          return;
+        }
+        pessoas.forEach((item) => {
+          lista.appendChild(
+            itemLista(item.nome + " — " + item.email + " — " + item.papel + " — " + item.situacao)
+          );
+        });
       }
 
       function preencherRotulos() {
@@ -202,11 +412,11 @@
 
       async function exigirConta() {
         if (previa) return true;
-        if (!tokenAtual() || sessionStorage.getItem("horizon_painel") !== "consultora") {
-          window.location.href = "index.html";
+        const eu = await api("/auth/eu");
+        if (eu.painel !== "consultora") {
+          irParaPainel(eu.painel);
           return false;
         }
-        const eu = await api("/auth/eu");
         document.getElementById("quem").textContent = eu.nome;
         document.getElementById("iniciais").textContent = iniciais(eu.nome);
         return true;
@@ -226,6 +436,9 @@
           document.getElementById("pesquisas").checked = config.pesquisas_habilitadas;
           document.getElementById("ia").checked = false;
           preencherEditar();
+          await carregarSetores();
+          await carregarPesquisas();
+          await carregarEquipe();
           mostrar(params.get("aba") || "editar");
           return;
         }
@@ -236,10 +449,7 @@
         botao.addEventListener("click", () => mostrar(botao.dataset.aba));
       });
 
-      document.getElementById("sair").addEventListener("click", () => {
-        sessionStorage.clear();
-        window.location.href = "index.html";
-      });
+      document.getElementById("sair").addEventListener("click", sair);
 
       document.getElementById("form-criar").addEventListener("submit", async (evento) => {
         evento.preventDefault();
@@ -316,14 +526,170 @@
             method: "PATCH",
             json: { pesquisas_habilitadas: document.getElementById("pesquisas").checked },
           });
-          aviso("Ferramentas salvas. A IA continua desabilitada.");
+          aviso("Configuração salva. A IA continua desabilitada.");
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("form-setor").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        aviso("");
+        if (previa) {
+          aviso("Exemplo visual. O setor não foi salvo.");
+          return;
+        }
+        const form = evento.currentTarget;
+        try {
+          await api("/projetos/" + projetoId + "/setores", {
+            method: "POST",
+            json: { nome: form.nome.value },
+          });
+          form.reset();
+          await carregarSetores();
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("form-pesquisa").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        aviso("");
+        if (previa) {
+          aviso("Exemplo visual. A pesquisa não foi criada.");
+          return;
+        }
+        const form = evento.currentTarget;
+        try {
+          await api("/projetos/" + projetoId + "/pesquisas", {
+            method: "POST",
+            json: { titulo: form.titulo.value, tipo: form.tipo.value },
+          });
+          form.reset();
+          await carregarPesquisas();
+          aviso("Rascunho criado. Publique só depois de ligar as pesquisas e incluir uma pergunta.");
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("form-pergunta").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        aviso("");
+        if (previa) {
+          aviso("Exemplo visual. A pergunta não foi salva.");
+          return;
+        }
+        const form = evento.currentTarget;
+        const opcoes = form.opcoes.value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .map((texto) => ({ texto }));
+        try {
+          await api("/pesquisas/" + form.pesquisa_id.value + "/perguntas", {
+            method: "POST",
+            json: {
+              texto: form.texto.value,
+              tipo: form.tipo.value,
+              obrigatoria: true,
+              opcoes,
+            },
+          });
+          form.texto.value = "";
+          form.opcoes.value = "";
+          aviso("Pergunta adicionada.");
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("publicar").addEventListener("click", async () => {
+        aviso("");
+        if (previa) return;
+        try {
+          await api("/pesquisas/" + pesquisaEscolhida() + "/publicar", { method: "POST" });
+          await carregarPesquisas();
+          aviso("Pesquisa publicada. O link de resposta pode ser gerado agora.");
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("gerar-link").addEventListener("click", async () => {
+        aviso("");
+        if (previa) return;
+        try {
+          const dados = await api("/pesquisas/" + pesquisaEscolhida() + "/tokens?quantidade=1", {
+            method: "POST",
+          });
+          const token = dados.tokens[0];
+          aviso("Link de resposta: /responder/" + token);
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("ver-resultado").addEventListener("click", async () => {
+        aviso("");
+        const lista = document.getElementById("resultado-pesquisa");
+        lista.replaceChildren();
+        if (previa) return;
+        try {
+          const linhas = await api("/pesquisas/" + pesquisaEscolhida() + "/painel");
+          if (!linhas.length) {
+            lista.appendChild(itemLista("Ainda não há resultado agregado."));
+            return;
+          }
+          linhas.forEach((item) => {
+            const media = item.media == null ? "sem média" : "média " + item.media;
+            lista.appendChild(itemLista(item.texto + " — " + item.respostas + " respostas — " + media));
+          });
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("encerrar").addEventListener("click", async () => {
+        aviso("");
+        if (previa) return;
+        try {
+          await api("/pesquisas/" + pesquisaEscolhida() + "/encerrar", { method: "POST" });
+          await carregarPesquisas();
+          aviso("Pesquisa encerrada. O link deixa de aceitar resposta.");
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("form-funcionario").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        aviso("");
+        if (previa) {
+          aviso("Exemplo visual. O convite não foi enviado.");
+          return;
+        }
+        const form = evento.currentTarget;
+        try {
+          const dados = await api("/auth/convites", {
+            method: "POST",
+            json: {
+              nome: form.nome.value,
+              email: form.email.value,
+              papel: "FUNCIONARIO",
+              projeto_id: projetoId,
+            },
+          });
+          form.reset();
+          await carregarEquipe();
+          aviso(dados.mensagem + " A senha não vai no e-mail.");
         } catch (exc) {
           aviso(exc.message);
         }
       });
 
       carregar().catch(() => {
-        window.location.href = "index.html";
+        window.location.href = "entrar.html";
       });
     </script>
   </body>

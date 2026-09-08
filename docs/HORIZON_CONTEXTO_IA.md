@@ -111,7 +111,7 @@ zero** aproveitando esse desenho.
 | Fase | Módulo | Status |
 |---|---|---|
 | Fase 0 | Ambiente: venv/Docker, deps, .env, ruff, SQLAlchemy, Alembic, health-check Neon | concluída |
-| Fase 1 | Identidade: usuarios, login, primeiro acesso, convites, redefinição de senha | concluída na API — sem frontend |
+| Fase 1 | Identidade: usuarios, login, primeiro acesso, convites, redefinição de senha | concluída na API — tela de teste em `/app`, não é o Figma |
 | Fase 2 | Organização e projeto: orgs, projetos, config, projeto_usuarios, setores, autorização | concluída na API — sem frontend |
 | Fase 3 | Biblioteca: documentos, visibilidade no backend, auditoria | concluída na API — padrão PRIVADO; binário local até o R2 |
 | Fase 4 | Pesquisas: pesquisas, perguntas, tokens, respostas, painel, encerrar, modelo | concluída na API — clima anônimo; desempenho devolve nota só no token |
@@ -208,9 +208,16 @@ Objetivo: backend mínimo rodando e conectado ao Neon, sem mexer no schema.
 - **Atores**: CONSULTOR (conduz projeto), ÓRGÃO (responsável do cliente),
   FUNCIONÁRIO (participa), TI/DEV (operação técnica, sem acesso automático a
   dados de negócio).
-- **Fluxo de onboarding**: consultor cria organização → cria projeto → convida
-  responsável do órgão → destinatário define a própria senha via token (nunca
-  senha por e-mail) → convite marcado ACEITO + auditoria.
+- **Fluxo de onboarding**: a primeira conta é o TI (bootstrap). A consultora
+  não nasce no cadastro público: `POST /auth/cadastro-consultora` cria pedido
+  PENDENTE por no máximo 5 dias. Só o TI autoriza no painel (`/dev/pedidos`);
+  aí a conta nasce sem senha e o e-mail leva o primeiro acesso. Abas do painel:
+  consultores (`/dev/consultores`) e pedidos. Convite de outra CONSULTOR
+  continua bloqueado. Depois: consultora cria projeto → convida órgão →
+  destinatário define a própria senha via token (nunca senha por e-mail).
+- **Senha** (todos os papéis): no mínimo 8 caracteres, uma maiúscula, um
+  número e um caractere especial. A regra é só no backend (`senha_aceita`);
+  o banco guarda só o hash Argon2id.
 - **Estados de convite** (além de PENDENTE/ACEITO/EXPIRADO/CANCELADO): cadastrado,
   enviado, falha de entrega, primeiro acesso iniciado, ativado, desativado.
 - **Pesquisas**: RASCUNHO → PUBLICADA (janela de disponibilidade) → ENCERRADA →

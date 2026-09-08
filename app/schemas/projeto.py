@@ -29,6 +29,13 @@ class SetorSaida(BaseModel):
     nome: str
 
 
+class EquipeSaida(BaseModel):
+    nome: str
+    email: str
+    papel: str
+    situacao: str
+
+
 class ConfiguracaoSaida(BaseModel):
     pesquisas_habilitadas: bool
     ia_modo: str

@@ -10,13 +10,18 @@ from app.core.database import check_db
 from app.core.observabilidade import LogAcesso
 from app.routers.auth import router as auth_router
 from app.routers.biblioteca import router as biblioteca_router
+from app.routers.dev import router as dev_router
 from app.routers.notificacoes import router as notificacoes_router
 from app.routers.pesquisas import router as pesquisas_router
 from app.routers.projetos import router as projetos_router
 
 app = FastAPI(title="Horizon", version="0.1.0")
 
-_origens = [origem.strip() for origem in settings.cors_origins.split(",") if origem.strip()]
+_origens = [
+    origem.strip()
+    for origem in settings.cors_origins.split(",")
+    if origem.strip()
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origens,
@@ -31,6 +36,7 @@ def inicio() -> RedirectResponse:
     return RedirectResponse(url="/app/", status_code=302)
 app.add_middleware(LogAcesso)
 app.include_router(auth_router)
+app.include_router(dev_router)
 app.include_router(notificacoes_router)
 app.include_router(projetos_router)
 app.include_router(biblioteca_router)

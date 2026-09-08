@@ -1,3 +1,5 @@
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -43,6 +45,11 @@ class Settings(BaseSettings):
     r2_access_key_id: str = ""
     r2_secret_access_key: str = ""
 
+    # Conta do TI. A senha fica só no .env; no banco entra o hash.
+    admin_nome: str = ""
+    admin_email: str = ""
+    admin_senha: str = ""
+
     def __repr__(self) -> str:
         return "Settings(segredos ocultos)"
 
@@ -51,3 +58,14 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def url_publica() -> str:
+    """Endereço da tela. No Render usa o host público, não o localhost."""
+    externa = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
+    atual = settings.app_public_url.rstrip("/")
+    if externa and (
+        not atual or "127.0.0.1" in atual or "localhost" in atual
+    ):
+        return f"{externa}/app"
+    return atual

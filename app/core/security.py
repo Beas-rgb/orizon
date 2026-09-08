@@ -13,6 +13,21 @@ from passlib.context import CryptContext
 _pwd = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
+def senha_aceita(senha: str) -> str | None:
+    """Regra de senha. A análise fica aqui, nunca na tela."""
+    if senha != senha.strip():
+        return "A senha não pode começar ou terminar com espaço."
+    if len(senha) < 8:
+        return "A senha precisa ter ao menos 8 caracteres."
+    if not any(caractere.isupper() for caractere in senha):
+        return "A senha precisa ter uma letra maiúscula."
+    if not any(caractere.isdigit() for caractere in senha):
+        return "A senha precisa ter um número."
+    if not any(not caractere.isalnum() for caractere in senha):
+        return "A senha precisa ter um caractere especial."
+    return None
+
+
 def hash_senha(senha: str) -> str:
     """Gera o hash. Nunca logar o valor de `senha` nem o retorno."""
     if not senha or not senha.strip():

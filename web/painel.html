@@ -26,6 +26,16 @@
     <div class="grade">
       <aside class="coluna">
         <section class="cartao">
+          <h2>Regras desta tela</h2>
+          <p class="nota">Teste. O layout muda depois. A regra vale no backend.</p>
+          <ul class="lista">
+            <li>Só a consultora cria trabalho e convida funcionário.</li>
+            <li>O órgão recebe o convite no e-mail do projeto. A senha não vai no e-mail.</li>
+            <li>Pesquisas só publicam se estiverem ligadas na configuração.</li>
+            <li>A IA fica desligada. A tela não consegue ligar.</li>
+          </ul>
+        </section>
+        <section class="cartao">
           <h2>Acesso rápido</h2>
           <button class="atalho" type="button" id="ver-lista">
             <span class="icone azul">+</span>
@@ -302,21 +312,18 @@
           exemplo();
           return;
         }
-        if (!tokenAtual() || sessionStorage.getItem("horizon_painel") !== "consultora") {
-          window.location.href = "index.html";
+        const eu = await api("/auth/eu");
+        if (eu.painel !== "consultora") {
+          irParaPainel(eu.painel);
           return;
         }
-        const eu = await api("/auth/eu");
         document.getElementById("quem").textContent = eu.nome;
         document.getElementById("iniciais").textContent = iniciais(eu.nome).toUpperCase();
         projetos = await api("/projetos");
         render();
       }
 
-      document.getElementById("sair").addEventListener("click", () => {
-        sessionStorage.clear();
-        window.location.href = "index.html";
-      });
+      document.getElementById("sair").addEventListener("click", sair);
       document.getElementById("busca").addEventListener("input", render);
       function destinoProjeto(aba) {
         const previa = new URLSearchParams(location.search).get("ver") === "1";
@@ -335,7 +342,7 @@
       });
 
       carregar().catch(() => {
-        window.location.href = "index.html";
+        window.location.href = "entrar.html";
       });
     </script>
   </body>

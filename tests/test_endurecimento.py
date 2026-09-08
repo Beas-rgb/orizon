@@ -2,8 +2,9 @@ import logging
 
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
+from tests.contas import abrir_consultora
 
-SENHA = "senha-segura-1"
+SENHA = "Senha-segura1"
 
 
 def _cnpj_falso(_cnpj: str) -> DadosCnpj:
@@ -18,11 +19,7 @@ def _cnpj_falso(_cnpj: str) -> DadosCnpj:
 
 def _consultora(client, monkeypatch) -> tuple[dict[str, str], str]:
     monkeypatch.setattr("app.services.projeto.buscar", _cnpj_falso)
-    criado = client.post(
-        "/auth/bootstrap",
-        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
-    )
-    headers = {"Authorization": f"Bearer {criado.json()['access_token']}"}
+    headers = abrir_consultora(client)
     rotulos = client.get("/projetos/rotulos", headers=headers).json()
     clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
     projeto = client.post(
@@ -40,24 +37,18 @@ def _consultora(client, monkeypatch) -> tuple[dict[str, str], str]:
 
 
 def test_login_de_email_abre_o_painel_do_papel(client, monkeypatch) -> None:
-    criado = client.post(
-        "/auth/bootstrap",
-        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
-    )
-    headers = {"Authorization": f"Bearer {criado.json()['access_token']}"}
-    dev = client.post(
-        "/auth/convites",
-        headers=headers,
-        json={"nome": "Dev", "email": "dev@horizon.dev", "papel": "TI"},
-    )
-    assert dev.status_code == 200
+    headers = abrir_consultora(client)
     outro = client.post(
         "/auth/convites",
         headers=headers,
         json={"nome": "Outro", "email": "outro-dev@horizon.dev", "papel": "TI"},
     )
     assert outro.status_code == 409
-    assert criado.json()["painel"] == "consultora"
+    entrada_dev = client.post(
+        "/auth/login",
+        json={"email": "joao@horizon.dev", "senha": SENHA},
+    )
+    assert entrada_dev.json()["painel"] == "dev"
     monkeypatch.setattr("app.services.projeto.buscar", _cnpj_falso)
     rotulos = client.get("/projetos/rotulos", headers=headers).json()
     clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
@@ -91,12 +82,12 @@ def test_login_de_email_abre_o_painel_do_papel(client, monkeypatch) -> None:
     token = convite["corpo"].strip().split()[-1]
     acesso = client.post(
         "/auth/primeiro-acesso",
-        json={"token": token, "senha": "senha-func-1"},
+        json={"token": token, "senha": "Senha-func1!"},
     )
     assert acesso.json()["painel"] == "funcionario"
     entrada = client.post(
         "/auth/login",
-        json={"email": "servidor@prefeitura.dev", "senha": "senha-func-1"},
+        json={"email": "servidor@prefeitura.dev", "senha": "Senha-func1!"},
     )
     assert entrada.status_code == 200
     assert entrada.json()["painel"] == "funcionario"
@@ -118,7 +109,7 @@ def test_orgao_nao_abre_pesquisa_de_outro_projeto(client, monkeypatch) -> None:
     token = caixa_email.mensagens[-1]["corpo"].strip().split()[-1]
     acesso = client.post(
         "/auth/primeiro-acesso",
-        json={"token": token, "senha": "senha-orgao-1"},
+        json={"token": token, "senha": "Senha-orgao1"},
     )
     orgao = {"Authorization": f"Bearer {acesso.json()['access_token']}"}
 

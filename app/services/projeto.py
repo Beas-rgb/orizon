@@ -251,7 +251,10 @@ def reenviar_convite(db: Session, consultor: Usuario, projeto_id: str) -> str:
     projeto = _projeto_da_consultora(db, consultor, projeto_id)
     convite = db.scalar(
         select(Convite)
-        .where(Convite.projeto_id == projeto.id)
+        .where(
+            Convite.projeto_id == projeto.id,
+            Convite.papel == "ORGAO",
+        )
         .order_by(Convite.criado_em.desc())
     )
     if convite is None:
@@ -270,6 +273,53 @@ def reenviar_convite(db: Session, consultor: Usuario, projeto_id: str) -> str:
         projeto_id=projeto.id,
     )
     return convite.email
+
+
+def listar_equipe(db: Session, consultor: Usuario, projeto_id: str) -> list[dict]:
+    """Órgão e funcionários do trabalho. Sem token e sem senha."""
+    projeto = _projeto_da_consultora(db, consultor, projeto_id)
+    itens: list[dict] = []
+    vistos: set[str] = set()
+    vinculos = db.scalars(
+        select(ProjetoUsuario).where(ProjetoUsuario.projeto_id == projeto.id)
+    ).all()
+    for vinculo in vinculos:
+        if vinculo.papel not in {"ORGAO", "FUNCIONARIO"}:
+            continue
+        pessoa = db.get(Usuario, vinculo.usuario_id)
+        if pessoa is None or pessoa.deleted_at is not None:
+            continue
+        vistos.add(pessoa.email)
+        itens.append(
+            {
+                "nome": pessoa.nome,
+                "email": pessoa.email,
+                "papel": vinculo.papel,
+                "situacao": "ATIVO" if pessoa.ativo else "INATIVO",
+            }
+        )
+    convites = db.scalars(
+        select(Convite)
+        .where(
+            Convite.projeto_id == projeto.id,
+            Convite.papel.in_(("ORGAO", "FUNCIONARIO")),
+            Convite.status == "PENDENTE",
+        )
+        .order_by(Convite.criado_em.desc())
+    ).all()
+    for convite in convites:
+        if convite.email in vistos:
+            continue
+        vistos.add(convite.email)
+        itens.append(
+            {
+                "nome": convite.nome,
+                "email": convite.email,
+                "papel": convite.papel,
+                "situacao": "PENDENTE",
+            }
+        )
+    return itens
 
 
 def listar_setores(db: Session, usuario: Usuario, projeto_id: str) -> list[Setor]:

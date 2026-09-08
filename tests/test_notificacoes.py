@@ -1,8 +1,9 @@
 from app.integrations.email import caixa_email
 from app.models.usuario import Usuario
 from app.services.notificacao import reservar_telefone
+from tests.contas import abrir_consultora
 
-SENHA = "senha-segura-1"
+SENHA = "Senha-segura1"
 
 
 def _projeto(client, monkeypatch) -> tuple[dict[str, str], str]:
@@ -18,11 +19,7 @@ def _projeto(client, monkeypatch) -> tuple[dict[str, str], str]:
             uf="DF",
         ),
     )
-    criado = client.post(
-        "/auth/bootstrap",
-        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
-    )
-    headers = {"Authorization": f"Bearer {criado.json()['access_token']}"}
+    headers = abrir_consultora(client)
     rotulos = client.get("/projetos/rotulos", headers=headers).json()
     clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
     projeto = client.post(
@@ -56,7 +53,7 @@ def test_convite_grava_entrega_sem_token(client, monkeypatch, db) -> None:
     token = caixa_email.mensagens[-1]["corpo"].strip().split()[-1]
     acesso = client.post(
         "/auth/primeiro-acesso",
-        json={"token": token, "senha": "senha-orgao-1"},
+        json={"token": token, "senha": "Senha-orgao1"},
     )
     orgao = {"Authorization": f"Bearer {acesso.json()['access_token']}"}
     negado = client.get(f"/projetos/{projeto_id}/entregas", headers=orgao)

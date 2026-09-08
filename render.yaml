@@ -4,6 +4,7 @@ services:
     name: orizon-api
     runtime: docker
     plan: free
+    branch: master
     healthCheckPath: /health
     envVars:
       - key: APP_ENV

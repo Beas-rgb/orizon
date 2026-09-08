@@ -34,3 +34,20 @@ async function api(caminho, opcoes = {}) {
 function tokenDoLink() {
   return decodeURIComponent(window.location.hash.replace(/^#/, "")).trim();
 }
+
+const DESTINO = {
+  consultora: "painel.html",
+  dev: "dev.html",
+  orgao: "orgao.html",
+  funcionario: "funcionario.html",
+};
+
+function irParaPainel(painel) {
+  window.location.href = DESTINO[painel] || "entrar.html";
+}
+
+function sair() {
+  sessionStorage.removeItem("horizon_access");
+  sessionStorage.removeItem("horizon_painel");
+  window.location.href = "entrar.html";
+}

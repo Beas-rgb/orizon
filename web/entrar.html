@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Horizon — entrar</title>
+    <link rel="stylesheet" href="estilo.css" />
+  </head>
+  <body>
+    <main>
+      <p class="olho">Tela de teste</p>
+      <h1>Entrar</h1>
+      <p class="nota">
+        E-mail e senha. O sistema abre o painel da sua conta: consultora,
+        órgão, funcionário ou desenvolvimento.
+      </p>
+      <form id="entrar">
+        <label>E-mail<input name="email" type="email" required /></label>
+        <label>Senha
+          <input name="senha" type="password" required />
+        </label>
+        <p class="nota">A senha tem no mínimo 8 caracteres, uma maiúscula, um número e um caractere especial. A regra é conferida no servidor.</p>
+        <button type="submit">Entrar</button>
+        <p id="erro" class="erro"></p>
+      </form>
+      <form id="recuperar">
+        <h2>Esqueci a senha</h2>
+        <p class="nota">O link vai para o e-mail de acesso. A senha não vem no e-mail.</p>
+        <label>E-mail<input name="email" type="email" required /></label>
+        <button type="submit">Enviar instruções</button>
+        <p id="ok-recuperar" class="nota"></p>
+      </form>
+      <p><a href="index.html">Voltar</a></p>
+    </main>
+    <script src="horizon.js"></script>
+    <script>
+      if (tokenAtual()) {
+        api("/auth/eu")
+          .then((eu) => irParaPainel(eu.painel))
+          .catch(() => sessionStorage.clear());
+      }
+      document.getElementById("entrar").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const form = evento.currentTarget;
+        const erro = document.getElementById("erro");
+        erro.textContent = "";
+        try {
+          const dados = await api("/auth/login", {
+            method: "POST",
+            json: {
+              email: form.email.value,
+              senha: form.senha.value,
+            },
+          });
+          guardarSessao(dados);
+          irParaPainel(dados.painel);
+        } catch (exc) {
+          erro.textContent = exc.message;
+        }
+      });
+
+      document.getElementById("recuperar").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const ok = document.getElementById("ok-recuperar");
+        ok.textContent = "";
+        try {
+          const dados = await api("/auth/recuperar-senha", {
+            method: "POST",
+            json: { email: evento.currentTarget.email.value },
+          });
+          ok.textContent = dados.mensagem;
+        } catch (exc) {
+          ok.textContent = exc.message;
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,7 +1,8 @@
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
+from tests.contas import abrir_consultora
 
-SENHA = "senha-segura-1"
+SENHA = "Senha-segura1"
 
 
 def _cnpj_falso(_cnpj: str) -> DadosCnpj:
@@ -16,11 +17,7 @@ def _cnpj_falso(_cnpj: str) -> DadosCnpj:
 
 def _projeto(client, monkeypatch) -> tuple[dict[str, str], str]:
     monkeypatch.setattr("app.services.projeto.buscar", _cnpj_falso)
-    criado = client.post(
-        "/auth/bootstrap",
-        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
-    )
-    headers = {"Authorization": f"Bearer {criado.json()['access_token']}"}
+    headers = abrir_consultora(client)
     rotulos = client.get("/projetos/rotulos", headers=headers).json()
     clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
     projeto = client.post(
@@ -68,7 +65,7 @@ def test_orgao_nao_altera_nem_cria_setor(client, monkeypatch) -> None:
     token = caixa_email.mensagens[-1]["corpo"].strip().split()[-1]
     acesso = client.post(
         "/auth/primeiro-acesso",
-        json={"token": token, "senha": "senha-orgao-1"},
+        json={"token": token, "senha": "Senha-orgao1"},
     )
     orgao = {"Authorization": f"Bearer {acesso.json()['access_token']}"}
 
@@ -103,11 +100,11 @@ def test_reenvio_cancela_token_antigo(client, monkeypatch) -> None:
 
     velho = client.post(
         "/auth/primeiro-acesso",
-        json={"token": antigo, "senha": "senha-orgao-1"},
+        json={"token": antigo, "senha": "Senha-orgao1"},
     )
     assert velho.status_code == 400
     novo_acesso = client.post(
         "/auth/primeiro-acesso",
-        json={"token": novo, "senha": "senha-orgao-1"},
+        json={"token": novo, "senha": "Senha-orgao1"},
     )
     assert novo_acesso.status_code == 200

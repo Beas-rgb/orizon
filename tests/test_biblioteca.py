@@ -1,7 +1,8 @@
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
+from tests.contas import abrir_consultora
 
-SENHA = "senha-segura-1"
+SENHA = "Senha-segura1"
 PDF = b"%PDF-1.4 teste"
 
 
@@ -17,11 +18,7 @@ def _cnpj_falso(_cnpj: str) -> DadosCnpj:
 
 def _consultora_e_projeto(client, monkeypatch) -> tuple[dict[str, str], str]:
     monkeypatch.setattr("app.services.projeto.buscar", _cnpj_falso)
-    criado = client.post(
-        "/auth/bootstrap",
-        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
-    )
-    headers = {"Authorization": f"Bearer {criado.json()['access_token']}"}
+    headers = abrir_consultora(client)
     rotulos = client.get("/projetos/rotulos", headers=headers).json()
     clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
     projeto = client.post(
@@ -42,7 +39,7 @@ def _orgao(client) -> dict[str, str]:
     token = caixa_email.mensagens[-1]["corpo"].strip().split()[-1]
     acesso = client.post(
         "/auth/primeiro-acesso",
-        json={"token": token, "senha": "senha-orgao-1"},
+        json={"token": token, "senha": "Senha-orgao1"},
     )
     return {"Authorization": f"Bearer {acesso.json()['access_token']}"}
 
