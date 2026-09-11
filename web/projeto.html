@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Orizon — projeto</title>
+    <title>Horizon — projeto</title>
     <link rel="stylesheet" href="estilo.css" />
   </head>
   <body class="painel">
     <header class="topo">
       <a class="marca" href="painel.html">
         <span class="selo">OR</span>
-        <div>Orizon<small>Consultora</small></div>
+        <div>Horizon<small>Consultora</small></div>
       </a>
       <label class="busca">
         <span aria-hidden="true">⌕</span>
@@ -52,6 +52,10 @@
             <span class="icone azul">+</span>
             <span><strong>Funcionário</strong><span>Convite do projeto</span></span>
           </button>
+          <button class="atalho" type="button" data-aba="biblioteca">
+            <span class="icone verde">▣</span>
+            <span><strong>Biblioteca</strong><span>Arquivos deste trabalho</span></span>
+          </button>
         </section>
       </aside>
 
@@ -64,6 +68,7 @@
             <button type="button" role="tab" id="aba-setores" data-aba="setores" aria-selected="false">Setores</button>
             <button type="button" role="tab" id="aba-pesquisas" data-aba="pesquisas" aria-selected="false">Pesquisas</button>
             <button type="button" role="tab" id="aba-equipe" data-aba="equipe" aria-selected="false">Funcionário</button>
+            <button type="button" role="tab" id="aba-biblioteca" data-aba="biblioteca" aria-selected="false">Biblioteca</button>
           </div>
           <p class="aviso-form" id="aviso"></p>
 
@@ -218,6 +223,36 @@
               <button class="acao" type="submit">Enviar convite</button>
             </form>
           </div>
+
+          <div id="painel-biblioteca" hidden>
+            <h2>Biblioteca do trabalho</h2>
+            <p class="sub">
+              Sem escolher audiência, o arquivo nasce PRIVADO (só a consultora).
+              Externa = só você. Interna = você escolhe quem vê. O backend ignora
+              pedido de quem não pode ver — o ID sozinho não libera o download.
+            </p>
+            <form id="form-biblioteca">
+              <label>Arquivo
+                <input name="arquivo" type="file" required />
+              </label>
+              <label>Camada
+                <select name="camada" id="camada-arquivo">
+                  <option value="EXTERNA">Externa (só a consultora)</option>
+                  <option value="INTERNA">Interna (escolhe audiência)</option>
+                </select>
+              </label>
+              <label id="rotulo-visibilidade" hidden>Quem vê (interna)
+                <select name="visibilidade" id="visibilidade-arquivo">
+                  <option value="PRIVADO">Só a consultora</option>
+                  <option value="ORGAO">Ela + órgão</option>
+                  <option value="FUNCIONARIOS">Ela + funcionários</option>
+                  <option value="PUBLICO_PROJETO">Todos do projeto</option>
+                </select>
+              </label>
+              <button class="acao" type="submit">Enviar arquivo</button>
+            </form>
+            <ul class="lista" id="lista-docs"></ul>
+          </div>
         </section>
       </main>
     </div>
@@ -226,7 +261,7 @@
     <script>
       const params = new URLSearchParams(location.search);
       const previa = params.get("ver") === "1";
-      const ABAS = ["criar", "editar", "ferramentas", "setores", "pesquisas", "equipe"];
+      const ABAS = ["criar", "editar", "ferramentas", "setores", "pesquisas", "equipe", "biblioteca"];
       let projetoId = params.get("id") || "";
       let projeto = null;
       let rotulos = [];
@@ -373,6 +408,81 @@
         });
       }
 
+      function rotuloVisibilidade(valor) {
+        return (
+          {
+            PRIVADO: "só a consultora",
+            ORGAO: "ela + órgão",
+            FUNCIONARIOS: "ela + funcionários",
+            PUBLICO_PROJETO: "todos do projeto",
+          }[valor] || valor
+        );
+      }
+
+      async function carregarDocs() {
+        const lista = document.getElementById("lista-docs");
+        lista.replaceChildren();
+        if (!projetoId || previa) {
+          lista.appendChild(itemLista("Os arquivos aparecem depois de criar o trabalho."));
+          return;
+        }
+        const docs = await api("/biblioteca?projeto_id=" + encodeURIComponent(projetoId));
+        if (!docs.length) {
+          lista.appendChild(itemLista("Nenhum arquivo neste trabalho."));
+          return;
+        }
+        docs.forEach((item) => {
+          const li = document.createElement("li");
+          const texto = document.createElement("p");
+          texto.textContent =
+            item.nome +
+            " — " +
+            item.camada +
+            " — " +
+            rotuloVisibilidade(item.visibilidade);
+          const baixar = document.createElement("button");
+          baixar.type = "button";
+          baixar.textContent = "Baixar";
+          baixar.addEventListener("click", async () => {
+            aviso("");
+            try {
+              await baixarArquivo(item.id, item.nome);
+            } catch (exc) {
+              aviso(exc.message);
+            }
+          });
+          li.append(texto, baixar);
+          if (item.camada === "INTERNA") {
+            const select = document.createElement("select");
+            ["PRIVADO", "ORGAO", "FUNCIONARIOS", "PUBLICO_PROJETO"].forEach((valor) => {
+              const op = document.createElement("option");
+              op.value = valor;
+              op.textContent = rotuloVisibilidade(valor);
+              if (valor === item.visibilidade) op.selected = true;
+              select.appendChild(op);
+            });
+            const salvar = document.createElement("button");
+            salvar.type = "button";
+            salvar.textContent = "Salvar quem vê";
+            salvar.addEventListener("click", async () => {
+              aviso("");
+              try {
+                await api("/biblioteca/" + item.id, {
+                  method: "PATCH",
+                  json: { visibilidade: select.value },
+                });
+                await carregarDocs();
+                aviso("Visibilidade atualizada. Quem não pode ver continua com 404.");
+              } catch (exc) {
+                aviso(exc.message);
+              }
+            });
+            li.append(select, salvar);
+          }
+          lista.appendChild(li);
+        });
+      }
+
       function preencherRotulos() {
         const select = document.getElementById("rotulo");
         select.replaceChildren();
@@ -439,7 +549,19 @@
           await carregarSetores();
           await carregarPesquisas();
           await carregarEquipe();
+          await carregarDocs();
           mostrar(params.get("aba") || "editar");
+          if (
+            projeto.convite_entrega &&
+            projeto.convite_entrega !== "ENVIADO" &&
+            projeto.convite_entrega !== "ENTREGUE"
+          ) {
+            aviso(
+              "Convite do órgão: " +
+                projeto.convite_entrega +
+                ". Use reenviar convite se ainda não aceitou."
+            );
+          }
           return;
         }
         mostrar("criar");
@@ -624,7 +746,9 @@
             method: "POST",
           });
           const token = dados.tokens[0];
-          aviso("Link de resposta: /responder/" + token);
+          const link = new URL("responder.html", window.location.href);
+          link.hash = token;
+          aviso("Link de resposta (copie): " + link.href);
         } catch (exc) {
           aviso(exc.message);
         }
@@ -657,6 +781,39 @@
           await api("/pesquisas/" + pesquisaEscolhida() + "/encerrar", { method: "POST" });
           await carregarPesquisas();
           aviso("Pesquisa encerrada. O link deixa de aceitar resposta.");
+        } catch (exc) {
+          aviso(exc.message);
+        }
+      });
+
+      document.getElementById("camada-arquivo").addEventListener("change", (evento) => {
+        document.getElementById("rotulo-visibilidade").hidden =
+          evento.currentTarget.value !== "INTERNA";
+      });
+
+      document.getElementById("form-biblioteca").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        aviso("");
+        if (previa) {
+          aviso("Exemplo visual. O arquivo não foi enviado.");
+          return;
+        }
+        const form = evento.currentTarget;
+        const arquivo = form.arquivo.files[0];
+        if (!arquivo) return;
+        const dados = new FormData();
+        dados.append("arquivo", arquivo);
+        dados.append("projeto_id", projetoId);
+        dados.append("camada", form.camada.value);
+        if (form.camada.value === "INTERNA") {
+          dados.append("visibilidade", form.visibilidade.value);
+        }
+        try {
+          await apiArquivo("/biblioteca", dados);
+          form.reset();
+          document.getElementById("rotulo-visibilidade").hidden = true;
+          await carregarDocs();
+          aviso("Arquivo enviado. Sem audiência explícita na externa, fica só com você.");
         } catch (exc) {
           aviso(exc.message);
         }

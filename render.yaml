@@ -21,3 +21,17 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
+      # E-mail (Mailtrap preferido). Preencha no painel do Render — nunca no git.
+      - key: MAILTRAP_API_TOKEN
+        sync: false
+      - key: MAILTRAP_FROM_EMAIL
+        sync: false
+      - key: MAILTRAP_FROM_NAME
+        value: Horizon
+      # Conta TI / painel /app/dev.html — só hash no banco; valores no Render.
+      - key: ADMIN_NOME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_SENHA
+        sync: false

@@ -105,19 +105,19 @@ negócio. Atualizar `atualizado_em` em mutations.
 ## 6. ROADMAP E ESTADO ATUAL
 
 Banco PostgreSQL/Neon **já existe** (dump analisado: 21 tabelas, 14 ENUMs,
-extensões citext + pgcrypto, índices e FKs). O backend será **reiniciado do
-zero** aproveitando esse desenho.
+extensões citext + pgcrypto, índices e FKs). O backend **reaproveita esse
+desenho** via Alembic; não se recria o banco do zero.
 
 | Fase | Módulo | Status |
 |---|---|---|
 | Fase 0 | Ambiente: venv/Docker, deps, .env, ruff, SQLAlchemy, Alembic, health-check Neon | concluída |
-| Fase 1 | Identidade: usuarios, login, primeiro acesso, convites, redefinição de senha | concluída na API — tela de teste em `/app`, não é o Figma |
-| Fase 2 | Organização e projeto: orgs, projetos, config, projeto_usuarios, setores, autorização | concluída na API — sem frontend |
-| Fase 3 | Biblioteca: documentos, visibilidade no backend, auditoria | concluída na API — padrão PRIVADO; binário local até o R2 |
-| Fase 4 | Pesquisas: pesquisas, perguntas, tokens, respostas, painel, encerrar, modelo | concluída na API — clima anônimo; desempenho devolve nota só no token |
+| Fase 1 | Identidade: usuarios, login, primeiro acesso, convites, redefinição de senha | concluída — tela de teste em `/app` (não é o Figma); bootstrap cria TI; React antigo em `arquivo/frontend/` |
+| Fase 2 | Organização e projeto: orgs, projetos, config, projeto_usuarios, setores, autorização | concluída — tela de teste da consultora cria/edita projeto; órgão por projeto |
+| Fase 3 | Biblioteca: documentos, visibilidade no backend, auditoria | concluída — `biblioteca.html` + aba no projeto; padrão PRIVADO; IDOR = 404 |
+| Fase 4 | Pesquisas: pesquisas, perguntas, tokens, respostas, painel, encerrar, modelo | concluída — tela parcial na consultora; `responder.html` anônimo por token |
 | Fase 5 | Notificações: internas + e-mail; telefone reservado, sem SMS | concluída na API — e-mail só; canal TELEFONE não envia |
 | Fase 6 | IA: conversas, mensagens, limites, custo | **suspensa** — `ia_modo` fica DESATIVADA até o Horizon estar em uso |
-| Fase 7 | Hardening: testes de autorização, rate limits, observabilidade, DR | concluída na API — convite também espera; log sem token; restore só pelo snapshot do Neon |
+| Fase 7 | Hardening: testes de autorização, rate limits, observabilidade, DR | concluída — IDOR como 404; painéis órgão/funcionário auditados |
 
 **Nunca pular fases. Cada fase só começa quando a anterior passou no checklist
 da seção 9.**
@@ -130,8 +130,9 @@ OKR, feedback e competências ficam fora até o fluxo de pesquisa estar sólido.
 
 ## 7. DECISÕES DE PROJETO (fechadas com o uso real)
 
-1. **Papel**: ORGAO continua global. No projeto, o vínculo é `projeto_usuarios`
-   com papel ORGAO. A lista só mostra projeto em que a pessoa participa.
+1. **Papel**: ORGAO no usuário é o tipo de conta; no projeto o vínculo é
+   `projeto_usuarios` com papel ORGAO. A vaga de órgão é **por projeto** (não
+   global). A lista só mostra projeto em que a pessoa participa.
 2. **Órgão**: não há `organizacao_id` em `usuarios`. O CNPJ cria/atualiza
    `organizacoes`. O e-mail do órgão recebe o convite daquele projeto.
 3. **Entrega do convite**: campo `entrega` (ENVIADO/FALHA) na criação. Sem

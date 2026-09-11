@@ -109,7 +109,7 @@ def entregar_email(
     )
     db.add(entrega)
     try:
-        caixa_email.enviar(destino, assunto, corpo)
+        caixa_email.enviar(destino, assunto, corpo, categoria=referencia)
     except Exception:
         entrega.status = "FALHA"
         entrega.erro = "Falha ao enviar e-mail."

@@ -11,36 +11,53 @@
       <p class="olho">Tela de teste</p>
       <h1>Painel do funcionário</h1>
       <p class="nota" id="quem"></p>
-      <p class="nota">O funcionário entra pelo convite do trabalho e responde pelo link da pesquisa. Não cria projeto.</p>
+      <p class="nota">
+        O funcionário entra pelo convite do trabalho e responde pelo link da
+        pesquisa. Não cria projeto, não edita configuração e não vê a equipe.
+        Conhecer o ID de outro trabalho não libera acesso (404).
+      </p>
       <ul class="lista" id="lista"></ul>
+      <p id="erro" class="erro"></p>
       <button type="button" id="sair">Sair</button>
     </main>
     <script src="horizon.js"></script>
     <script>
       document.getElementById("sair").addEventListener("click", sair);
+
+      function linhaSegura(item) {
+        const li = document.createElement("li");
+        li.textContent =
+          (item.vinculo_titulo || "Trabalho") +
+          " — " +
+          (item.razao_social || "") +
+          " — " +
+          (item.estado || "");
+        return li;
+      }
+
       api("/auth/eu")
         .then((eu) => {
           if (eu.painel !== "funcionario") {
             irParaPainel(eu.painel);
-            return;
+            return null;
           }
+          sessionStorage.setItem("horizon_painel", "funcionario");
           document.getElementById("quem").textContent = `${eu.nome} — ${eu.email}`;
           return api("/projetos");
         })
         .then((projetos) => {
           if (!projetos) return;
           const lista = document.getElementById("lista");
+          lista.replaceChildren();
           if (!projetos.length) {
-            lista.textContent = "Nenhum trabalho vinculado. Use o link da pesquisa quando ele chegar.";
+            lista.textContent =
+              "Nenhum trabalho vinculado. Use o link da pesquisa quando ele chegar.";
             return;
           }
-          projetos.forEach((item) => {
-            const li = document.createElement("li");
-            li.textContent = `${item.vinculo_titulo} — ${item.razao_social} — ${item.estado}`;
-            lista.append(li);
-          });
+          projetos.forEach((item) => lista.appendChild(linhaSegura(item)));
         })
         .catch(() => {
+          sessionStorage.clear();
           window.location.href = "entrar.html";
         });
     </script>

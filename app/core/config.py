@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
 
+    # Mailtrap Email API. O token é segredo; o remetente é valor de setup.
+    mailtrap_api_token: str = ""
+    mailtrap_from_email: str = ""
+    mailtrap_from_name: str = "Horizon"
+
     r2_account_id: str = ""
     r2_endpoint: str = ""
     r2_bucket: str = ""

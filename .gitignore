@@ -1,4 +1,7 @@
 .venv/
+arquivo/frontend/node_modules/
+arquivo/frontend/dist/
+arquivo/frontend/.wrangler/
 frontend/node_modules/
 frontend/dist/
 .wrangler/

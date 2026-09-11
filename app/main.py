@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import check_db
 from app.core.observabilidade import LogAcesso
+from app.integrations.email import modo_envio
 from app.routers.auth import router as auth_router
 from app.routers.biblioteca import router as biblioteca_router
 from app.routers.dev import router as dev_router
@@ -50,12 +51,8 @@ app.mount(
 
 @app.get("/health/email")
 def health_email() -> dict[str, str]:
-    """Diz se o envio é real ou arquivo local. Não devolve senha nem host."""
-    from app.core.config import settings
-
-    if settings.smtp_host and settings.smtp_user and settings.smtp_password:
-        return {"modo": "smtp"}
-    return {"modo": "local"}
+    """Diz se o envio é Mailtrap, SMTP ou arquivo local. Sem token nem senha."""
+    return {"modo": modo_envio()}
 
 
 @app.get("/health")

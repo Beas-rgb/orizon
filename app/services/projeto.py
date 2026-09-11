@@ -68,16 +68,12 @@ def listar_rotulos(db: Session) -> list[RotuloProjeto]:
 
 
 def _participa(db: Session, usuario: Usuario, projeto_id: str) -> bool:
-    if usuario.papel == "CONSULTOR":
-        proprio = db.scalar(
-            select(Projeto.id).where(
-                Projeto.id == projeto_id,
-                Projeto.consultor_id == usuario.id,
-                Projeto.deleted_at.is_(None),
-            )
-        )
-        if proprio is not None:
-            return True
+    """Só quem tem vínculo no projeto vivo. Soft delete corta o acesso."""
+    projeto = db.get(Projeto, projeto_id)
+    if projeto is None or projeto.deleted_at is not None:
+        return False
+    if usuario.papel == "CONSULTOR" and projeto.consultor_id == usuario.id:
+        return True
     vinculo = db.scalar(
         select(ProjetoUsuario.id).where(
             ProjetoUsuario.projeto_id == projeto_id,
@@ -199,8 +195,55 @@ def criar_projeto(
             projeto_id=projeto.id,
         )
     except ErroAuth as exc:
+        # Projeto já nasceu. Sem engolir em silêncio: audita e, se o
+        # e-mail já é um órgão ativo, vincula neste trabalho.
         if exc.status != 409:
             raise
+        existente = db.scalar(
+            select(Usuario).where(
+                Usuario.email == endereco,
+                Usuario.deleted_at.is_(None),
+            )
+        )
+        if (
+            existente is not None
+            and existente.papel == "ORGAO"
+            and existente.ativo
+        ):
+            ja = db.scalar(
+                select(ProjetoUsuario.id).where(
+                    ProjetoUsuario.projeto_id == projeto.id,
+                    ProjetoUsuario.usuario_id == existente.id,
+                )
+            )
+            if ja is None:
+                db.add(
+                    ProjetoUsuario(
+                        id=novo_id(),
+                        projeto_id=projeto.id,
+                        usuario_id=existente.id,
+                        papel="ORGAO",
+                    )
+                )
+            db.add(
+                LogAuditoria(
+                    id=novo_id(),
+                    usuario_id=consultor.id,
+                    acao="ORGAO_VINCULADO",
+                    criado_em=agora(),
+                )
+            )
+            db.commit()
+        else:
+            db.add(
+                LogAuditoria(
+                    id=novo_id(),
+                    usuario_id=consultor.id,
+                    acao="CONVITE_NAO_ENVIADO",
+                    criado_em=agora(),
+                )
+            )
+            db.commit()
     return _montar(db, projeto)
 
 
@@ -497,9 +540,26 @@ def _montar(db: Session, projeto: Projeto) -> "ProjetoSaidaMontada":
     rotulo = db.get(RotuloProjeto, projeto.rotulo_id)
     convite = db.scalar(
         select(Convite)
-        .where(Convite.projeto_id == projeto.id)
+        .where(
+            Convite.projeto_id == projeto.id,
+            Convite.papel == "ORGAO",
+        )
         .order_by(Convite.criado_em.desc())
     )
+    email_orgao = convite.email if convite else ""
+    entrega = convite.entrega if convite else "NAO_ENVIADO"
+    if not email_orgao:
+        vinculo = db.scalar(
+            select(ProjetoUsuario).where(
+                ProjetoUsuario.projeto_id == projeto.id,
+                ProjetoUsuario.papel == "ORGAO",
+            )
+        )
+        if vinculo is not None:
+            pessoa = db.get(Usuario, vinculo.usuario_id)
+            if pessoa is not None and pessoa.deleted_at is None:
+                email_orgao = pessoa.email
+                entrega = "ENVIADO"
     return ProjetoSaidaMontada(
         id=projeto.id,
         rotulo_id=projeto.rotulo_id,
@@ -508,8 +568,8 @@ def _montar(db: Session, projeto: Projeto) -> "ProjetoSaidaMontada":
         cnpj=orgao.cnpj if orgao else "",
         razao_social=orgao.razao_social if orgao else "",
         nome_fantasia=orgao.nome_fantasia if orgao else None,
-        email_orgao=convite.email if convite else "",
+        email_orgao=email_orgao,
         vinculo_tipo=projeto.vinculo_tipo,
         vinculo_titulo=projeto.vinculo_titulo,
-        convite_entrega=convite.entrega if convite else "NAO_ENVIADO",
+        convite_entrega=entrega,
     )

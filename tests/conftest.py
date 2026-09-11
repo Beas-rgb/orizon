@@ -13,6 +13,14 @@ from app.main import app
 from app.models.base import Base
 
 
+@pytest.fixture(autouse=True)
+def _sem_envio_real(monkeypatch) -> None:
+    """Nenhum teste fala com Mailtrap ou SMTP de verdade."""
+    monkeypatch.setattr(settings, "mailtrap_api_token", "")
+    monkeypatch.setattr(settings, "smtp_host", "")
+    caixa_email.mensagens.clear()
+
+
 @pytest.fixture()
 def db() -> Generator[Session, None, None]:
     settings.jwt_secret = "segredo-de-teste-com-mais-de-32-chars"

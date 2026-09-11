@@ -1,20 +1,40 @@
 # Horizon
 
-Plataforma da consultora para aplicar pesquisas por cliente. Não é um clone do Yespper: nesta etapa não há OKR, feedback nem feed.
+Plataforma da consultora para aplicar pesquisas por cliente. Não é um clone do
+Yespper: nesta etapa não há OKR, feedback nem feed.
 
 ## Quem usa
 
-- **Consultora** cria a pesquisa e conduz o projeto do cliente.
-- **Funcionário** responde pelo link e vê a própria nota.
-- **Órgão** consulta o resultado daquela pesquisa.
+- **TI (dev)** — primeira conta (`bootstrap` ou `ADMIN_*` no `.env`). Autoriza
+  pedidos de consultora e vê diagnóstico.
+- **Consultora** — pede conta; só nasce depois da autorização do TI. Cria
+  projeto, pesquisa e convites.
+- **Órgão** — entra pelo convite do projeto; vê o resultado daquele trabalho.
+- **Funcionário** — entra pelo convite do projeto; responde pelo link da pesquisa
+  e vê a própria nota (quando o tipo devolver).
 
-Cada cliente fica isolado. Conhecer o ID de uma pesquisa de outro órgão não dá acesso.
+Cada cliente fica isolado. Conhecer o ID de um projeto ou pesquisa de outro
+órgão responde **404** (não confirma que o recurso existe).
 
-## Estado atual — Fase 1
+## Estado atual
 
-Tudo no backend, sem tela. A consultora entra pela API, convida por e-mail (o destinatário define a própria senha) e quem esqueceu a senha recebe um token só no e-mail de acesso.
+Backend das fases 0–5 e 7 concluído e coberto por testes. Fase 6 (IA) suspensa
+(`ia_modo = DESATIVADA`).
 
-Três senhas erradas no mesmo e-mail gravam um bloqueio de 5 minutos na tabela `controle_acesso`. A senha nunca vai no e-mail e nunca volta na resposta.
+Há **tela de teste** em `web/`, servida em `/app` (HTML/JS puro). Não é o
+desenho final do Figma. A pasta React antiga foi arquivada em
+`arquivo/frontend/` e não deve receber trabalho novo.
+
+Fluxos já usáveis na tela de teste:
+
+- entrar / recuperar senha / primeiro acesso
+- pedido de conta da consultora + painel do TI (pedidos, consultores, análise)
+- painel da consultora (lista, criar/editar projeto, configuração, setores,
+  pesquisas, equipe)
+- painéis simples de órgão e funcionário (só o que o vínculo libera)
+
+Ainda sem tela de teste: nenhuma (biblioteca e resposta por token já têm tela).
+Desenho Figma final e R2 em produção ficam para depois.
 
 ## Como rodar
 
@@ -25,66 +45,74 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 copy .env.example .env
-# edite .env e cole a DATABASE_URL do Neon (não commite o .env)
+# edite .env: DATABASE_URL, JWT_SECRET (não commite o .env)
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Tela da consultora: `http://127.0.0.1:8000/app`
+Abra `http://127.0.0.1:8000/app`.
 
-Para o e-mail sair da caixa local, preencha no `.env` (não cole no chat): `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` e `SMTP_FROM`.
+Conta do TI (opcional): preencha `ADMIN_NOME`, `ADMIN_EMAIL` e `ADMIN_SENHA` no
+`.env`. A senha fica só no ambiente; no banco entra o hash Argon2id.
 
-- `GET http://127.0.0.1:8000/health` — a API está no ar (não usa banco).
-- `GET http://127.0.0.1:8000/health/db` — o Neon responde `SELECT 1`. Sem URL, ou se a conexão falhar, retorna 503. Não altera schema.
+Para o e-mail sair de verdade, instale o SDK (`pip install mailtrap`) e
+preencha no `.env` (não cole no chat): `MAILTRAP_API_TOKEN` e
+`MAILTRAP_FROM_EMAIL`. O token sai em https://mailtrap.io/settings/api-tokens.
+Os envios aparecem em https://mailtrap.io/sending/email_logs. Sem Mailtrap,
+ainda vale SMTP (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`). Sem
+os dois, o token do convite fica em `data/outbox/`.
 
-Testes:
+- `GET /health` — API no ar (não usa banco).
+- `GET /health/db` — Neon responde `SELECT 1`. Sem URL, ou se falhar: 503.
 
 ```powershell
 pytest
 ```
 
-Coloque `JWT_SECRET` no `.env`. Sem SMTP, o token do e-mail em development fica em `data/outbox/ultimo.txt`.
+## Senha e acesso
 
-Endpoints (não há tela):
+Regra de senha (todos os papéis), só no backend: mínimo 8 caracteres, uma
+maiúscula, um número e um caractere especial. No banco só o hash.
 
-- `POST /auth/bootstrap` — primeira consultora, só se não existir usuário.
-- `POST /auth/login` — e-mail e senha. A resposta traz `painel` (consultora, dev, orgao ou funcionario). CPF e CNPJ não entram no login.
-- `POST /auth/convites` — uma conta de dev. O órgão entra pelo projeto. Cada funcionário do projeto tem conta e entra pelo mesmo login. O link da pesquisa continua sem nome.
+Três senhas erradas no mesmo e-mail bloqueiam por 5 minutos. A senha nunca vai
+no e-mail e nunca volta na resposta.
+
+## Contas e convites
+
+- `POST /auth/bootstrap` — **primeira conta TI**, só se a tabela de usuários
+  estiver vazia.
+- `POST /auth/cadastro-consultora` — pedido público (pendente até 5 dias).
+- `GET/POST /dev/pedidos` e `GET /dev/consultores` — só o TI.
+- `POST /auth/login` — e-mail e senha; a resposta traz `painel`.
+- Órgão e funcionário entram pelo projeto. O órgão é **por projeto** (não uma
+  vaga global no sistema).
 - `POST /auth/primeiro-acesso` — destinatário define a senha.
-- `POST /auth/recuperar-senha` — token vai só para o e-mail de acesso.
-- `POST /auth/redefinir-senha` — grava a senha nova.
-- `GET /projetos/rotulos` — rótulos da aba (já vêm do banco).
-- `GET /projetos` — lista só os projetos da pessoa logada.
-- `POST /projetos` — cria com CNPJ, rótulo, edital ou documento e e-mail do órgão.
-- `POST /projetos/{id}/setores` — área do órgão. Só a consultora cria.
-- `GET/PATCH /projetos/{id}/configuracao` — liga pesquisas. A IA fica DESATIVADA.
-- `POST /projetos/{id}/reenviar-convite` — novo token se o órgão ainda não aceitou.
-- `POST /biblioteca` — envia arquivo. Sem audiência, nasce PRIVADO, só para a consultora.
-- `POST /projetos/{id}/pesquisas` — a consultora cria. O funcionário responde pelo token.
-- `POST /pesquisas/{id}/encerrar` — fecha o link. O painel do órgão continua.
-- `POST /pesquisas/{id}/modelo` — guarda o questionário para reutilizar no próximo projeto.
-- Clima não devolve nota nem nome. Desempenho devolve a nota só para quem tem o token. O órgão vê a média.
-- `GET /notificacoes` — avisos da própria conta. E-mail sai agora. Telefone fica gravado, sem SMS.
+- `POST /auth/recuperar-senha` / `POST /auth/redefinir-senha` — token só no
+  e-mail de acesso.
 
-O log de acesso grava método, caminho e status. O token de resposta não entra no log. Backup e restore ficam no snapshot do Neon, não numa rota da API.
+## Projetos e pesquisas (API)
 
-Quando o `.env` real existir, aplique só a migration de identidade. Ela não apaga tabela existente:
+- `GET /projetos` — só os da pessoa logada.
+- `POST /projetos` — CNPJ, rótulo, vínculo e e-mail do órgão (convite automático).
+- `GET /projetos/{id}/equipe` — só a consultora dona; sem token na resposta.
+- `GET/PATCH /projetos/{id}/configuracao` — liga pesquisas; IA continua
+  DESATIVADA.
+- Pesquisas: criar, perguntas, publicar, tokens, painel agregado, encerrar.
+- Biblioteca: upload com visibilidade decidida no backend (PRIVADO por padrão).
 
-```powershell
-alembic upgrade head
-```
+O log de acesso grava método, caminho e status. Token de resposta não entra no
+log. Backup e restore ficam no snapshot do Neon.
 
-A `0001` não muda nada. A `0002` cria o que faltar e, se `usuarios` já existir, só acrescenta as colunas de bloqueio. Nunca use `Base.metadata.create_all`.
+Nunca use `Base.metadata.create_all`. Só migrations Alembic.
 
 ## Engine, session e pool
 
-Três peças do SQLAlchemy, em ordem:
+- **Engine** — fábrica de conexões com o Postgres.
+- **Session** — uma por request; fecha no fim.
+- **Pool** — pequeno (`pool_size` baixo, `max_overflow=0`) por causa da cota do
+  Neon; `pool_pre_ping` evita conexão morta após o compute dormir.
 
-- **Engine** é a fábrica de conexões com o Postgres. Ela não guarda uma “tela” de dados; ela sabe como abrir e devolver conexões.
-- **Session** é a conversa de um pedido: abre, lê ou grava, e fecha. No Horizon, uma session por request, descartada no fim, para um usuário não ver o rastro do outro.
-- **Pool** é a fila de conexões já abertas, para não pagar o custo de conectar a cada request.
+## Fora desta etapa
 
-O Neon (e o pooler dele) limita quantas conexões um projeto pode ter ao mesmo tempo. Se cada processo da API guardar um pool grande, a cota acaba e o restante das requisições falha. Por isso o pool aqui é pequeno (`pool_size=5`, `max_overflow=0`) e usa `pool_pre_ping`: antes de reutilizar uma conexão, o SQLAlchemy pergunta se ela ainda está viva — o compute do Neon pode ter dormido.
-
-## Fora desta fase
-
-Tela, organização/projeto, biblioteca, pesquisa e R2. Sem OKR nem feedback.
+Desenho Figma final, tela de resposta da pesquisa, tela de biblioteca, R2 em
+produção e IA. Sem OKR nem feedback.

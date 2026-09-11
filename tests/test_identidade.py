@@ -89,19 +89,35 @@ def test_tres_tentativas_esperam_cinco_minutos(client, db) -> None:
     assert usuario.tentativas_falhas >= 3
 
 
-def test_convite_nao_devolve_token_e_primeiro_acesso(client) -> None:
+def test_convite_nao_devolve_token_e_primeiro_acesso(client, monkeypatch) -> None:
+    from app.integrations.cnpj import DadosCnpj
+
+    monkeypatch.setattr(
+        "app.services.projeto.buscar",
+        lambda _cnpj: DadosCnpj(
+            cnpj="19131243000197",
+            razao_social="Prefeitura Exemplo",
+            nome_fantasia=None,
+            municipio="Brasilia",
+            uf="DF",
+        ),
+    )
     headers = abrir_consultora(client)
-    convite = client.post(
-        "/auth/convites",
+    rotulos = client.get("/projetos/rotulos", headers=headers).json()
+    clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
+    criado = client.post(
+        "/projetos",
         headers=headers,
         json={
-            "nome": "Orgão",
-            "email": "orgao@cliente.dev",
-            "papel": "ORGAO",
+            "rotulo_id": clima["id"],
+            "cnpj": "19131243000197",
+            "email_orgao": "orgao@cliente.dev",
+            "vinculo_tipo": "EDITAL",
+            "vinculo_titulo": "Edital 1",
         },
     )
-    assert convite.status_code == 200
-    assert "token" not in convite.json()["mensagem"].lower()
+    assert criado.status_code == 200
+    assert criado.json()["convite_entrega"] == "ENVIADO"
     assert caixa_email.mensagens[-1]["destino"] == "orgao@cliente.dev"
     assert "senha" not in caixa_email.mensagens[-1]["assunto"].lower()
 
@@ -124,12 +140,32 @@ def test_convite_nao_devolve_token_e_primeiro_acesso(client) -> None:
     assert de_novo.status_code == 400
 
 
-def test_orgao_nao_convida(client) -> None:
+def test_orgao_nao_convida(client, monkeypatch) -> None:
+    from app.integrations.cnpj import DadosCnpj
+
+    monkeypatch.setattr(
+        "app.services.projeto.buscar",
+        lambda _cnpj: DadosCnpj(
+            cnpj="19131243000197",
+            razao_social="Prefeitura Exemplo",
+            nome_fantasia=None,
+            municipio="Brasilia",
+            uf="DF",
+        ),
+    )
     headers = abrir_consultora(client)
+    rotulos = client.get("/projetos/rotulos", headers=headers).json()
+    clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
     client.post(
-        "/auth/convites",
+        "/projetos",
         headers=headers,
-        json={"nome": "Orgão", "email": "orgao@cliente.dev", "papel": "ORGAO"},
+        json={
+            "rotulo_id": clima["id"],
+            "cnpj": "19131243000197",
+            "email_orgao": "orgao@cliente.dev",
+            "vinculo_tipo": "EDITAL",
+            "vinculo_titulo": "Edital 1",
+        },
     )
     acesso = client.post(
         "/auth/primeiro-acesso",

@@ -27,7 +27,7 @@ from app.models.controle_acesso import ControleAcesso
 from app.models.convite import Convite
 from app.models.pedido_consultora import PedidoConsultora
 from app.models.pesquisa import Pesquisa
-from app.models.projeto import Projeto
+from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.sessao import Sessao
 from app.models.token_redefinicao import TokenRedefinicao
 from app.models.usuario import Usuario
@@ -350,20 +350,33 @@ def _vaga_de_acesso(
             raise ErroAuth(409, "Já existe o acesso de desenvolvimento.")
         return
     if papel == "ORGAO":
+        # Ataque que corta: um órgão de outro cliente bloquear o onboarding
+        # do próximo. A vaga é por projeto, não no sistema inteiro.
+        if not projeto_id:
+            raise ErroAuth(422, "O órgão entra pelo projeto.")
+        projeto = db.get(Projeto, projeto_id)
+        if (
+            projeto is None
+            or projeto.deleted_at is not None
+            or projeto.consultor_id != consultor.id
+        ):
+            raise ErroAuth(404, "Projeto não encontrado.")
         ja = db.scalar(
-            select(Usuario.id).where(
-                Usuario.papel == "ORGAO",
-                Usuario.deleted_at.is_(None),
+            select(ProjetoUsuario.id).where(
+                ProjetoUsuario.projeto_id == projeto_id,
+                ProjetoUsuario.papel == "ORGAO",
             )
         )
         pendente = db.scalar(
             select(Convite.id).where(
+                Convite.projeto_id == projeto_id,
                 Convite.papel == "ORGAO",
                 Convite.status == "PENDENTE",
             )
         )
         if ja is not None or pendente is not None:
-            raise ErroAuth(409, "Já existe o acesso do órgão.")
+            raise ErroAuth(409, "Já existe o acesso do órgão neste projeto.")
+        return
 
 
 def criar_convite(
@@ -711,11 +724,9 @@ def diagnostico(db: Session, usuario: Usuario) -> dict[str, object]:
     recentes = db.scalars(
         select(LogAuditoria).order_by(LogAuditoria.criado_em.desc()).limit(12)
     ).all()
-    email = (
-        "smtp"
-        if settings.smtp_host and settings.smtp_user and settings.smtp_password
-        else "local"
-    )
+    from app.integrations.email import modo_envio
+
+    email = modo_envio()
     return {
         "api": "ok",
         "banco": banco,

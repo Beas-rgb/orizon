@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Orizon — consultora</title>
+    <title>Horizon — consultora</title>
     <link rel="stylesheet" href="estilo.css" />
   </head>
   <body class="painel">
     <header class="topo">
       <div class="marca">
         <span class="selo">OR</span>
-        <div>Orizon<small>Consultora</small></div>
+        <div>Horizon<small>Consultora</small></div>
       </div>
       <label class="busca">
         <span aria-hidden="true">⌕</span>
@@ -49,6 +49,10 @@
             <span class="icone verde">▤</span>
             <span><strong>Relatórios</strong><span>Ver resumo</span></span>
           </button>
+          <a class="atalho" href="biblioteca.html">
+            <span class="icone azul">▣</span>
+            <span><strong>Biblioteca principal</strong><span>Arquivos-modelo</span></span>
+          </a>
         </section>
         <section class="cartao">
           <h2>Visão rápida</h2>
@@ -68,6 +72,7 @@
               <p>Resumo dos projetos em que você entra.</p>
             </div>
           </div>
+          <p class="erro" id="aviso-convites" hidden></p>
           <div class="metricas" id="numeros"></div>
           <p class="rotulo-grafico">Comparativo do que está aberto agora</p>
           <div class="grafico" id="grafico"></div>
@@ -100,9 +105,17 @@
         return item.nome_fantasia || item.razao_social;
       }
 
+      function convitePendente(item) {
+        const entrega = item.convite_entrega || "NAO_ENVIADO";
+        return entrega !== "ENVIADO" && entrega !== "ENTREGUE";
+      }
+
       function estadoVisual(item) {
-        if (item.convite_entrega === "FALHA") {
-          return { texto: "Convite parado", classe: "alerta", faixa: "meio", largura: 35 };
+        if (convitePendente(item)) {
+          const entrega = item.convite_entrega || "NAO_ENVIADO";
+          const texto =
+            entrega === "FALHA" ? "Convite com falha" : "Convite não enviado";
+          return { texto, classe: "alerta", faixa: "meio", largura: 35 };
         }
         if (ENCERRADOS.has(item.estado)) {
           return { texto: "Concluído", classe: "ok", faixa: "ok", largura: 100 };
@@ -136,13 +149,23 @@
         const abertos = projetos.filter((item) => item.estado === "ABERTO");
         const andamento = projetos.filter((item) => item.estado === "EM_ANDAMENTO");
         const concluidos = projetos.filter((item) => ENCERRADOS.has(item.estado));
-        const parados = projetos.filter((item) => item.convite_entrega === "FALHA");
+        const parados = projetos.filter((item) => convitePendente(item));
+        const avisoConvites = document.getElementById("aviso-convites");
+        if (parados.length) {
+          avisoConvites.hidden = false;
+          avisoConvites.textContent =
+            parados.length +
+            " trabalho(s) com convite do órgão não enviado ou com falha. Abra o trabalho e use reenviar convite.";
+        } else {
+          avisoConvites.hidden = true;
+          avisoConvites.textContent = "";
+        }
 
         const vista = document.getElementById("vista");
         vista.replaceChildren();
         [
           [andamento.length, "Em andamento"],
-          [parados.length, "Convites parados"],
+          [parados.length, "Convites pendentes"],
           [projetos.length, "Trabalhos ativos"],
         ].forEach(([n, rotulo]) => {
           const li = document.createElement("li");
@@ -292,7 +315,7 @@
             estado: "ABERTO",
             vinculo_titulo: "Pesquisa salarial mercado TI",
             email_orgao: "Coleta iniciada",
-            convite_entrega: "FALHA",
+            convite_entrega: "NAO_ENVIADO",
           },
           {
             nome_fantasia: "Controladoria",
