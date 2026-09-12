@@ -712,11 +712,99 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
         "mensagem": "Conta autorizada. O primeiro acesso foi enviado ao e-mail.",
         "email": pedido.email,
     }
-    # Token só para o TI quando não há e-mail real — nunca na rota pública.
-    if modo_envio() == "local" or entrega.status != "ENVIADO":
+    # Token só para o TI em desenvolvimento / e-mail local / falha de entrega.
+    # Em produção com Mailtrap/SMTP OK, o token vai só no e-mail.
+    if (
+        settings.app_env == "development"
+        or modo_envio() == "local"
+        or entrega.status != "ENVIADO"
+    ):
         saida["mensagem"] = (
-            "Conta autorizada. E-mail em modo teste: use o link abaixo "
-            "(válido 48h) para a consultora criar a senha."
+            "Conta autorizada. Em desenvolvimento o link aparece aqui "
+            "(válido 48h) para a consultora criar a senha. Senha nunca vai no e-mail."
+        )
+        saida["link_primeiro_acesso"] = link
+    return saida
+
+
+def reenviar_primeiro_acesso_consultora(
+    db: Session, operador: Usuario, consultor_id: str
+) -> dict[str, str]:
+    """Novo token se a consultora ainda não definiu senha. Só o TI."""
+    if operador.papel != "TI":
+        raise ErroAuth(404, "Consultora não encontrada.")
+    usuario = db.get(Usuario, consultor_id)
+    if (
+        usuario is None
+        or usuario.papel != "CONSULTOR"
+        or usuario.deleted_at is not None
+    ):
+        raise ErroAuth(404, "Consultora não encontrada.")
+    if usuario.senha_hash:
+        raise ErroAuth(
+            422,
+            "Esta consultora já definiu senha. Use recuperar senha se precisar.",
+        )
+    agora = _agora()
+    abertos = db.scalars(
+        select(Convite).where(
+            Convite.email == usuario.email,
+            Convite.papel == "CONSULTOR",
+            Convite.status == "PENDENTE",
+        )
+    ).all()
+    for antigo in abertos:
+        antigo.status = "CANCELADO"
+        antigo.atualizado_em = agora
+    token = novo_token_opaco()
+    link = _link_com_token("primeiro-acesso.html", token)
+    convite = Convite(
+        email=usuario.email,
+        nome=usuario.nome,
+        papel="CONSULTOR",
+        token_hash=hash_token(token),
+        status="PENDENTE",
+        entrega="NAO_ENVIADO",
+        expira_em=agora + timedelta(hours=48),
+        convidado_por_id=operador.id,
+        projeto_id=None,
+    )
+    db.add(convite)
+    db.flush()
+    from app.integrations.email import modo_envio
+    from app.services.notificacao import entregar_email
+
+    entrega = entregar_email(
+        db,
+        usuario.email,
+        "Horizon — primeiro acesso",
+        (
+            "Reenvio do primeiro acesso da consultora.\n"
+            "Abra o link e crie sua senha. Ela não é enviada neste e-mail.\n"
+            "Válido por 48 horas:\n\n"
+            f"{link}\n\n"
+            f"{token}\n"
+        ),
+        "CONVITE",
+        None,
+        operador.id,
+    )
+    convite.entrega = "ENVIADO" if entrega.status == "ENVIADO" else "FALHA"
+    convite.atualizado_em = agora
+    _auditar(db, "CONVITE_CRIADO", operador.id)
+    db.commit()
+    saida = {
+        "mensagem": "Primeiro acesso reenviado ao e-mail.",
+        "email": usuario.email,
+    }
+    if (
+        settings.app_env == "development"
+        or modo_envio() == "local"
+        or entrega.status != "ENVIADO"
+    ):
+        saida["mensagem"] = (
+            "Novo link gerado (válido 48h). Senha nunca vai no e-mail — "
+            "a consultora define no primeiro acesso."
         )
         saida["link_primeiro_acesso"] = link
     return saida

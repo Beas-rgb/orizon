@@ -41,14 +41,20 @@ class CaixaEmail:
         self.mensagens.append(
             {"destino": destino, "assunto": assunto, "corpo": corpo}
         )
+        # Em development sempre grava a caixa local, mesmo com Mailtrap/SMTP.
+        # Assim o TI recupera o token se o e-mail real não chegar.
+        if settings.app_env == "development" or (
+            not settings.mailtrap_api_token and not settings.smtp_host
+        ):
+            self._gravar_outbox(destino, assunto, corpo)
         if settings.mailtrap_api_token:
             _enviar_mailtrap(destino, assunto, corpo, categoria)
             return
         if settings.smtp_host:
             _enviar_smtp(destino, assunto, corpo)
             return
-        # Sem provedor: grava caixa local. Também em produção, para o TI
-        # não perder o token enquanto o Mailtrap não estiver no Render.
+
+    def _gravar_outbox(self, destino: str, assunto: str, corpo: str) -> None:
         OUTBOX.mkdir(parents=True, exist_ok=True)
         arquivo = OUTBOX / "ultimo.txt"
         arquivo.write_text(

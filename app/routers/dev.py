@@ -16,6 +16,7 @@ from app.services.identidade import (
     listar_consultores,
     listar_pedidos,
     pedir_conta_consultora,
+    reenviar_primeiro_acesso_consultora,
 )
 
 router = APIRouter(tags=["dev"])
@@ -118,4 +119,23 @@ def autorizar(
 ) -> MensagemSaida:
     """Cria a conta sem senha e envia o primeiro acesso ao e-mail cadastrado."""
     saida = _chamar(lambda: autorizar_pedido(db, usuario, pedido_id))
+    return MensagemSaida(**saida)
+
+
+@router.post(
+    "/dev/consultores/{consultor_id}/reenviar-primeiro-acesso",
+    response_model=MensagemSaida,
+)
+def reenviar_primeiro_acesso(
+    consultor_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> MensagemSaida:
+    """Novo token se a consultora ainda não criou senha.
+
+    Em dev o link volta na resposta.
+    """
+    saida = _chamar(
+        lambda: reenviar_primeiro_acesso_consultora(db, usuario, consultor_id)
+    )
     return MensagemSaida(**saida)
