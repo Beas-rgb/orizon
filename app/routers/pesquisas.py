@@ -203,9 +203,17 @@ def tokens(
     db: Session = Depends(get_db),
     quantidade: int = 1,
 ) -> dict[str, list[str]]:
-    """A consultora recebe os links. O nome de quem vai responder não é gravado."""
-    links = _chamar(lambda: gerar_tokens(db, consultor, pesquisa_id, quantidade))
-    return {"tokens": links}
+    """A consultora recebe tokens e links React. Sem nome de quem responde."""
+    from app.core.config import url_publica
+
+    gerados = _chamar(
+        lambda: gerar_tokens(db, consultor, pesquisa_id, quantidade)
+    )
+    base = url_publica().rstrip("/")
+    return {
+        "tokens": gerados,
+        "links": [f"{base}/responder/{token}" for token in gerados],
+    }
 
 
 @router.get("/pesquisas/{pesquisa_id}/painel", response_model=list[PainelPergunta])

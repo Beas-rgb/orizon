@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../lib/api";
@@ -7,8 +7,12 @@ import { ACCENT, glassStyle } from "../lib/theme";
 export function LoginPage() {
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
-  const { entrarComTokens } = useAuth();
+  const { entrarComTokens, usuario, pronto } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (pronto && usuario) navigate("/inicio", { replace: true });
+  }, [pronto, usuario, navigate]);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -177,8 +181,13 @@ export function CadastroPage() {
 export function RecuperarPage() {
   const [erro, setErro] = useState("");
   const [ok, setOk] = useState("");
+  const [token, setToken] = useState(() =>
+    decodeURIComponent(window.location.hash.replace(/^#/, "")).trim(),
+  );
+  const navigate = useNavigate();
+  const comToken = Boolean(token);
 
-  async function enviar(evento: FormEvent<HTMLFormElement>) {
+  async function pedirEmail(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setErro("");
     setOk("");
@@ -194,12 +203,82 @@ export function RecuperarPage() {
     }
   }
 
+  async function redefinir(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setErro("");
+    setOk("");
+    const form = evento.currentTarget;
+    try {
+      await api("/auth/redefinir-senha", {
+        method: "POST",
+        json: {
+          token: token.trim(),
+          senha: (form.elements.namedItem("senha") as HTMLInputElement).value,
+        },
+      });
+      setOk("Senha redefinida. Entre com a nova senha.");
+      setTimeout(() => navigate("/entrar"), 1200);
+    } catch (exc) {
+      setErro(exc instanceof Error ? exc.message : "Falha");
+    }
+  }
+
+  const fieldStyle = {
+    background: "rgba(255,255,255,0.7)",
+    border: "1px solid rgba(255,255,255,0.8)",
+  } as const;
+
+  if (comToken) {
+    return (
+      <AuthLayout
+        titulo="Nova senha"
+        sub="Defina a nova senha (mín. 8, maiúscula, número e especial). O token veio no e-mail."
+      >
+        <form className="flex flex-col gap-3" onSubmit={redefinir}>
+          <label className="text-[12px] font-semibold text-gray-600">
+            Token
+            <input
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              required
+              className="mt-1 w-full rounded-xl px-3 py-2.5 outline-none"
+              style={fieldStyle}
+            />
+          </label>
+          <label className="text-[12px] font-semibold text-gray-600">
+            Nova senha
+            <input
+              name="senha"
+              type="password"
+              minLength={8}
+              required
+              className="mt-1 w-full rounded-xl px-3 py-2.5 outline-none"
+              style={fieldStyle}
+            />
+          </label>
+          {erro ? <p className="text-[13px] text-[#A02828]">{erro}</p> : null}
+          {ok ? <p className="text-[13px] text-[#1E7A4A]">{ok}</p> : null}
+          <button
+            type="submit"
+            className="rounded-2xl py-3 text-white text-[14px] font-bold mt-1"
+            style={{ background: `linear-gradient(135deg, ${ACCENT}, #164A8A)` }}
+          >
+            Salvar senha
+          </button>
+          <Link to="/entrar" className="text-center text-[12px] text-gray-500 mt-2">
+            Voltar ao login
+          </Link>
+        </form>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout
       titulo="Esqueci a senha"
       sub="O link vai para o e-mail de acesso. A senha nunca vem no e-mail."
     >
-      <form className="flex flex-col gap-3" onSubmit={enviar}>
+      <form className="flex flex-col gap-3" onSubmit={pedirEmail}>
         <label className="text-[12px] font-semibold text-gray-600">
           E-mail
           <input
@@ -207,10 +286,7 @@ export function RecuperarPage() {
             type="email"
             required
             className="mt-1 w-full rounded-xl px-3 py-2.5 outline-none"
-            style={{
-              background: "rgba(255,255,255,0.7)",
-              border: "1px solid rgba(255,255,255,0.8)",
-            }}
+            style={fieldStyle}
           />
         </label>
         {erro ? <p className="text-[13px] text-[#A02828]">{erro}</p> : null}

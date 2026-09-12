@@ -213,6 +213,9 @@ export function ProjetoDetalhePage() {
   const [aviso, setAviso] = useState("");
   const [conviteMsg, setConviteMsg] = useState("");
   const [linkAcesso, setLinkAcesso] = useState("");
+  const [linksResposta, setLinksResposta] = useState<string[]>([]);
+  const [pesquisaAtiva, setPesquisaAtiva] = useState<string>("");
+  const [pesquisasOk, setPesquisasOk] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -234,8 +237,12 @@ export function ProjetoDetalhePage() {
         setEquipe(eq);
         setSetores(se);
         setDocs(d);
+        if (pe[0]) setPesquisaAtiva(pe[0].id);
       })
       .catch((exc) => setAviso(exc instanceof Error ? exc.message : "Erro"));
+    api<{ pesquisas_habilitadas: boolean }>(`/projetos/${id}/configuracao`)
+      .then((c) => setPesquisasOk(c.pesquisas_habilitadas))
+      .catch(() => setPesquisasOk(false));
   }, [id]);
 
   async function reenviarConviteOrgao() {
@@ -333,17 +340,82 @@ export function ProjetoDetalhePage() {
     setAviso("");
     const form = evento.currentTarget;
     try {
-      await api(`/projetos/${id}/pesquisas`, {
+      const criada = await api<Pesquisa>(`/projetos/${id}/pesquisas`, {
         method: "POST",
         json: {
           titulo: (form.elements.namedItem("titulo") as HTMLInputElement).value,
           tipo: (form.elements.namedItem("tipo") as HTMLSelectElement).value,
         },
       });
-      setPesquisas(await api<Pesquisa[]>(`/projetos/${id}/pesquisas`));
+      const lista = await api<Pesquisa[]>(`/projetos/${id}/pesquisas`);
+      setPesquisas(lista);
+      setPesquisaAtiva(criada.id);
       form.reset();
     } catch (exc) {
       setAviso(exc instanceof Error ? exc.message : "Erro");
+    }
+  }
+
+  async function adicionarPergunta(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!pesquisaAtiva) {
+      setAviso("Selecione ou crie uma pesquisa.");
+      return;
+    }
+    setAviso("");
+    const form = evento.currentTarget;
+    try {
+      await api(`/pesquisas/${pesquisaAtiva}/perguntas`, {
+        method: "POST",
+        json: {
+          texto: (form.elements.namedItem("texto") as HTMLInputElement).value,
+          tipo: (form.elements.namedItem("tipo_pergunta") as HTMLSelectElement).value,
+          obrigatoria: true,
+        },
+      });
+      setAviso("");
+      form.reset();
+      setConviteMsg("Pergunta adicionada.");
+    } catch (exc) {
+      setAviso(exc instanceof Error ? exc.message : "Erro na pergunta");
+    }
+  }
+
+  async function publicarPesquisa(pesquisaId: string) {
+    setAviso("");
+    try {
+      await api(`/pesquisas/${pesquisaId}/publicar`, { method: "POST" });
+      setPesquisas(await api<Pesquisa[]>(`/projetos/${id}/pesquisas`));
+    } catch (exc) {
+      setAviso(exc instanceof Error ? exc.message : "Erro ao publicar");
+    }
+  }
+
+  async function gerarLinks(pesquisaId: string) {
+    setAviso("");
+    setLinksResposta([]);
+    try {
+      const resp = await api<{ tokens: string[]; links: string[] }>(
+        `/pesquisas/${pesquisaId}/tokens?quantidade=1`,
+        { method: "POST" },
+      );
+      setLinksResposta(resp.links?.length ? resp.links : resp.tokens.map((t) => `/app/responder/${t}`));
+    } catch (exc) {
+      setAviso(exc instanceof Error ? exc.message : "Erro ao gerar link");
+    }
+  }
+
+  async function ligarPesquisas() {
+    if (!id) return;
+    setAviso("");
+    try {
+      await api(`/projetos/${id}/configuracao`, {
+        method: "PATCH",
+        json: { pesquisas_habilitadas: true },
+      });
+      setPesquisasOk(true);
+    } catch (exc) {
+      setAviso(exc instanceof Error ? exc.message : "Erro na config");
     }
   }
 
@@ -510,22 +582,65 @@ export function ProjetoDetalhePage() {
 
         {aba === "pesquisas" && (
           <div className="flex flex-col gap-4">
+            {!pesquisasOk ? (
+              <div className="rounded-2xl p-3 text-[12px] text-gray-700" style={{ background: "rgba(160,112,32,0.1)" }}>
+                Pesquisas desligadas neste projeto.{" "}
+                <button type="button" className="font-bold text-[#1D5FAF] underline" onClick={() => void ligarPesquisas()}>
+                  Ligar agora
+                </button>
+              </div>
+            ) : null}
             <ul className="flex flex-col gap-2">
               {pesquisas.map((p) => (
                 <li
                   key={p.id}
-                  className="p-3 rounded-2xl flex justify-between gap-2"
-                  style={{ background: "rgba(255,255,255,0.55)" }}
+                  className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
+                  style={{
+                    background:
+                      pesquisaAtiva === p.id ? "rgba(29,95,175,0.12)" : "rgba(255,255,255,0.55)",
+                  }}
                 >
-                  <div>
+                  <button type="button" className="text-left" onClick={() => setPesquisaAtiva(p.id)}>
                     <p className="text-[13px] font-semibold">{p.titulo}</p>
                     <p className="text-[11px] text-gray-500">
                       {p.tipo} · {p.status}
                     </p>
+                  </button>
+                  <div className="flex gap-2 flex-wrap">
+                    {p.status === "RASCUNHO" ? (
+                      <button
+                        type="button"
+                        className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
+                        style={{ background: ACCENT }}
+                        onClick={() => void publicarPesquisa(p.id)}
+                      >
+                        Publicar
+                      </button>
+                    ) : null}
+                    {p.status === "PUBLICADA" ? (
+                      <button
+                        type="button"
+                        className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
+                        style={{ background: "#1E7A4A" }}
+                        onClick={() => void gerarLinks(p.id)}
+                      >
+                        Gerar link
+                      </button>
+                    ) : null}
                   </div>
                 </li>
               ))}
             </ul>
+            {linksResposta.length > 0 ? (
+              <div className="rounded-2xl p-3 text-[12px] break-all" style={{ background: "rgba(29,95,175,0.08)" }}>
+                <p className="font-bold mb-1">Link de resposta (copie e envie)</p>
+                {linksResposta.map((link) => (
+                  <a key={link} href={link} className="block text-[#1D5FAF] font-semibold underline mb-1">
+                    {link}
+                  </a>
+                ))}
+              </div>
+            ) : null}
             <form onSubmit={criarPesquisa} className="grid sm:grid-cols-3 gap-2 items-end">
               <label className="text-[12px] font-semibold text-gray-600 sm:col-span-1">
                 Título
@@ -546,6 +661,28 @@ export function ProjetoDetalhePage() {
                 style={{ background: ACCENT }}
               >
                 Criar pesquisa
+              </button>
+            </form>
+            <form onSubmit={adicionarPergunta} className="grid sm:grid-cols-3 gap-2 items-end">
+              <label className="text-[12px] font-semibold text-gray-600 sm:col-span-1">
+                Pergunta (pesquisa selecionada)
+                <input name="texto" required className={field} placeholder="Ex.: Como está o clima?" />
+              </label>
+              <label className="text-[12px] font-semibold text-gray-600">
+                Tipo da pergunta
+                <select name="tipo_pergunta" className={field} defaultValue="NOTA_5">
+                  <option value="NOTA_5">Nota 1–5</option>
+                  <option value="NOTA_10">Nota 1–10</option>
+                  <option value="TEXTO_LIVRE">Texto livre</option>
+                  <option value="SIM_NAO">Sim / Não</option>
+                </select>
+              </label>
+              <button
+                type="submit"
+                className="rounded-xl py-2.5 text-white text-[13px] font-bold"
+                style={{ background: "#164A8A" }}
+              >
+                Adicionar pergunta
               </button>
             </form>
           </div>
@@ -596,8 +733,22 @@ export function ProjetoDetalhePage() {
         )}
 
         {aba === "config" && (
-          <div>
-            <p className="text-[13px] text-gray-600 mb-2">Setores cadastrados</p>
+          <div className="flex flex-col gap-3">
+            <p className="text-[13px] text-gray-600">
+              Pesquisas neste projeto:{" "}
+              <strong>{pesquisasOk ? "ligadas" : "desligadas"}</strong>
+            </p>
+            {!pesquisasOk ? (
+              <button
+                type="button"
+                onClick={() => void ligarPesquisas()}
+                className="self-start rounded-xl py-2 px-4 text-white text-[13px] font-bold"
+                style={{ background: ACCENT }}
+              >
+                Ligar pesquisas
+              </button>
+            ) : null}
+            <p className="text-[13px] text-gray-600 mb-1 mt-2">Setores cadastrados</p>
             <ul className="flex flex-wrap gap-2">
               {setores.map((s) => (
                 <li
