@@ -1,12 +1,24 @@
-from pydantic import BaseModel, ConfigDict, Field
+import re
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ProjetoCriar(BaseModel):
     rotulo_id: str = Field(min_length=1, max_length=36)
+    # Aceita máscara (XX.XXX.XXX/XXXX-XX); normaliza antes de validar tamanho.
     cnpj: str = Field(min_length=14, max_length=18)
     email_orgao: str = Field(min_length=3, max_length=255)
     vinculo_tipo: str
     vinculo_titulo: str = Field(min_length=2, max_length=200)
+
+    @field_validator("cnpj", mode="before")
+    @classmethod
+    def _cnpj_limpo(cls, valor: object) -> object:
+        if not isinstance(valor, str):
+            return valor
+        # Remove pontuação; sobram 14 caracteres (numérico ou alfanumérico).
+        limpo = re.sub(r"[^0-9A-Za-z]", "", valor).upper()
+        return limpo
 
 class RotuloSaida(BaseModel):
     id: str

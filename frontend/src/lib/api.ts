@@ -49,7 +49,21 @@ export async function sair() {
 
 function textoErro(corpo: { detail?: unknown }) {
   const detalhe = corpo.detail;
-  if (Array.isArray(detalhe)) return "Confira os campos.";
+  if (Array.isArray(detalhe)) {
+    const msgs = detalhe
+      .map((item) => {
+        if (!item || typeof item !== "object") return "";
+        const erro = item as { loc?: unknown[]; msg?: string };
+        const campo = Array.isArray(erro.loc)
+          ? String(erro.loc[erro.loc.length - 1] || "")
+          : "";
+        const msg = erro.msg || "";
+        if (campo && msg) return `${campo}: ${msg}`;
+        return msg;
+      })
+      .filter(Boolean);
+    return msgs[0] || "Confira os campos.";
+  }
   if (typeof detalhe === "string") return detalhe;
   return "Não foi possível concluir.";
 }

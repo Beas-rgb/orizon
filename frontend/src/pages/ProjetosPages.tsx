@@ -94,14 +94,20 @@ export function NovoProjetoPage() {
     setErro("");
     const form = evento.currentTarget;
     try {
+      const cnpjBruto = (form.elements.namedItem("cnpj") as HTMLInputElement).value;
+      const cnpj = cnpjBruto.replace(/[^0-9A-Za-z]/g, "").toUpperCase();
+      if (cnpj.length !== 14) {
+        setErro("CNPJ deve ter 14 caracteres (pode colar com pontuação).");
+        return;
+      }
       const criado = await api<Projeto>("/projetos", {
         method: "POST",
         json: {
           rotulo_id: (form.elements.namedItem("rotulo_id") as HTMLSelectElement).value,
-          cnpj: (form.elements.namedItem("cnpj") as HTMLInputElement).value,
-          email_orgao: (form.elements.namedItem("email_orgao") as HTMLInputElement).value,
+          cnpj,
+          email_orgao: (form.elements.namedItem("email_orgao") as HTMLInputElement).value.trim(),
           vinculo_tipo: (form.elements.namedItem("vinculo_tipo") as HTMLSelectElement).value,
-          vinculo_titulo: (form.elements.namedItem("vinculo_titulo") as HTMLInputElement).value,
+          vinculo_titulo: (form.elements.namedItem("vinculo_titulo") as HTMLInputElement).value.trim(),
         },
       });
       navigate(`/app/projetos/${criado.id}`);
@@ -137,8 +143,16 @@ export function NovoProjetoPage() {
         </label>
         <label className="text-[12px] font-semibold text-gray-600">
           CNPJ
-          <input name="cnpj" required className={field} />
+          <input
+            name="cnpj"
+            required
+            placeholder="00.000.000/0001-00"
+            className={field}
+          />
         </label>
+        <p className="text-[11px] text-gray-400 -mt-2">
+          Use um CNPJ real (BrasilAPI). Ex.: 33000167000101
+        </p>
         <label className="text-[12px] font-semibold text-gray-600">
           E-mail do órgão
           <input name="email_orgao" type="email" required className={field} />
