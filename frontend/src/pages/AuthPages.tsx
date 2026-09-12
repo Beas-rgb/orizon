@@ -32,7 +32,7 @@ export function LoginPage() {
         return;
       }
       await entrarComTokens(dados);
-      navigate("/app");
+      navigate("/inicio");
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Falha no login");
     } finally {
@@ -255,7 +255,7 @@ export function PrimeiroAcessoPage() {
         },
       });
       await entrarComTokens(dados);
-      navigate("/app");
+      navigate("/inicio");
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Falha");
     }

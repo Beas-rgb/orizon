@@ -18,6 +18,7 @@ from app.schemas.projeto import (
     ProjetoAtualizar,
     ProjetoCriar,
     ProjetoSaida,
+    ReenviarFuncionarioEntrada,
     RotuloSaida,
     SetorCriar,
     SetorSaida,
@@ -35,6 +36,7 @@ from app.services.projeto import (
     obter_configuracao,
     obter_projeto,
     reenviar_convite,
+    reenviar_convite_funcionario,
     remover_setor,
 )
 
@@ -134,6 +136,26 @@ def reenviar(
 ) -> dict[str, str | None]:
     """Reenvia o convite se o órgão ainda não aceitou. Token antigo deixa de valer."""
     saida = _chamar(lambda: reenviar_convite(db, consultor, projeto_id))
+    return {
+        "mensagem": "Convite reenviado.",
+        "email": saida["email"],
+        "link_primeiro_acesso": saida.get("link_primeiro_acesso"),
+    }
+
+
+@router.post("/{projeto_id}/reenviar-convite-funcionario")
+def reenviar_funcionario(
+    projeto_id: str,
+    corpo: ReenviarFuncionarioEntrada,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict[str, str | None]:
+    """Reenvia convite de funcionário pendente. Token antigo deixa de valer."""
+    saida = _chamar(
+        lambda: reenviar_convite_funcionario(
+            db, consultor, projeto_id, corpo.email
+        )
+    )
     return {
         "mensagem": "Convite reenviado.",
         "email": saida["email"],

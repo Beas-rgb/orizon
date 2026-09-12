@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  base: "/app/",
   plugins: [react(), tailwindcss()],
   server: {
     host: "127.0.0.1",
@@ -17,6 +18,7 @@ export default defineConfig({
       "/modelos": "http://127.0.0.1:8000",
       "/health": "http://127.0.0.1:8000",
       "/dev": "http://127.0.0.1:8000",
+      "/responder": "http://127.0.0.1:8000",
     },
   },
 });

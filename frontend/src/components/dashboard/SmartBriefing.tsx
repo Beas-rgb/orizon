@@ -165,8 +165,8 @@ export function SmartBriefing({ nome, priority, indicators }: Props) {
           </div>
           <div className="flex flex-col gap-2">
             {[
-              { label: "Criar novo projeto", to: "/app/projetos/novo", color: ACCENT },
-              { label: "Ver trabalhos", to: "/app/projetos", color: "#1E7A4A" },
+              { label: "Criar novo projeto", to: "/projetos/novo", color: ACCENT },
+              { label: "Ver trabalhos", to: "/projetos", color: "#1E7A4A" },
             ].map((a) => (
               <motion.button
                 key={a.label}

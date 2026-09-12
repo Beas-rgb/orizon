@@ -2,8 +2,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, RedirectResponse
 
 from app.core.config import settings
 from app.core.database import check_db
@@ -35,6 +34,8 @@ app.add_middleware(
 @app.get("/")
 def inicio() -> RedirectResponse:
     return RedirectResponse(url="/app/", status_code=302)
+
+
 app.add_middleware(LogAcesso)
 app.include_router(auth_router)
 app.include_router(dev_router)
@@ -42,28 +43,23 @@ app.include_router(notificacoes_router)
 app.include_router(projetos_router)
 app.include_router(biblioteca_router)
 app.include_router(pesquisas_router)
-# Frontend React (build) — rota /app/v2 para teste lado a lado
+
+# Frontend único: React em /app (SPA com fallback).
 _react_dist = Path(__file__).resolve().parent.parent / "web" / "app"
-if _react_dist.exists():
-    from fastapi.responses import FileResponse
 
-    @app.get("/app/v2")
-    @app.get("/app/v2/{caminho:path}")
-    def spa_react(caminho: str = "") -> FileResponse:
-        # Arquivos estáticos (js, css, svg, png) servidos direto
-        if caminho and "." in caminho.split("/")[-1]:
-            arquivo = _react_dist / caminho
-            if arquivo.exists():
-                return FileResponse(arquivo)
-        # SPA fallback: qualquer outra rota serve o index.html
-        return FileResponse(_react_dist / "index.html")
 
-# Frontend legado (HTML/JS puro) — rota /app
-app.mount(
-    "/app",
-    StaticFiles(directory=Path(__file__).resolve().parent.parent / "web", html=True),
-    name="app",
-)
+@app.get("/app")
+@app.get("/app/{caminho:path}")
+def spa_react(caminho: str = "") -> FileResponse:
+    """Serve o build do React. Assets com extensão; demais rotas → index.html."""
+    if not _react_dist.exists():
+        raise HTTPException(status_code=503, detail="Frontend indisponível.")
+    if caminho and "." in caminho.split("/")[-1]:
+        arquivo = _react_dist / caminho
+        if arquivo.is_file():
+            return FileResponse(arquivo)
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+    return FileResponse(_react_dist / "index.html")
 
 
 @app.get("/health/email")

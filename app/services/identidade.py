@@ -150,10 +150,17 @@ def painel_de(papel: str) -> str:
 
 
 def _link_com_token(pagina: str, token: str) -> str:
+    """Link do React em /app. Nunca aponta para HTML legado."""
     base = url_publica().rstrip("/")
-    if pagina == "primeiro-acesso.html":
-        return f"{base}/#{token}"
-    return f"{base}/{pagina}#{token}"
+    # pagina legado → rota React equivalente
+    rotas = {
+        "primeiro-acesso.html": "primeiro-acesso",
+        "redefinir.html": "recuperar",
+        "primeiro-acesso": "primeiro-acesso",
+        "recuperar": "recuperar",
+    }
+    caminho = rotas.get(pagina, pagina.removesuffix(".html"))
+    return f"{base}/{caminho}#{token}"
 
 
 def _emitir_sessao(db: Session, usuario: Usuario) -> dict[str, str]:

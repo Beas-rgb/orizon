@@ -13,6 +13,7 @@ type Projeto = {
   razao_social?: string | null;
   email_orgao?: string | null;
   onboarding_estado?: string | null;
+  convite_entrega?: string | null;
   link_primeiro_acesso?: string | null;
 };
 
@@ -40,7 +41,7 @@ export function ProjetosListaPage() {
           <p className="text-[12px] text-gray-500">Lista de projetos da consultora</p>
         </div>
         <Link
-          to="/app/projetos/novo"
+          to="/projetos/novo"
           className="px-4 py-2.5 rounded-2xl text-white text-[13px] font-bold"
           style={{ background: `linear-gradient(135deg, ${ACCENT}, #164A8A)` }}
         >
@@ -53,7 +54,7 @@ export function ProjetosListaPage() {
           {projetos.map((p) => (
             <li key={p.id}>
               <Link
-                to={`/app/projetos/${p.id}`}
+                to={`/projetos/${p.id}`}
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-3 rounded-2xl hover:bg-white/60"
                 style={{
                   background: "rgba(255,255,255,0.55)",
@@ -116,7 +117,7 @@ export function NovoProjetoPage() {
       if (criado.link_primeiro_acesso) {
         sessionStorage.setItem(`horizon_link_${criado.id}`, criado.link_primeiro_acesso);
       }
-      navigate(`/app/projetos/${criado.id}`);
+      navigate(`/projetos/${criado.id}`);
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Erro ao criar");
     }
@@ -188,7 +189,14 @@ export function NovoProjetoPage() {
 }
 
 type Pesquisa = { id: string; titulo: string; tipo: string; status: string };
-type Membro = { nome: string; email: string; papel: string; situacao: string };
+type Membro = {
+  nome: string;
+  email: string;
+  papel: string;
+  situacao: string;
+  convite_entrega?: string | null;
+  convite_status?: string | null;
+};
 type Setor = { id: string; nome: string };
 type Doc = { id: string; nome: string; visibilidade?: string };
 
@@ -273,6 +281,52 @@ export function ProjetoDetalhePage() {
     }
   }
 
+  async function reenviarConviteFuncionario(email: string) {
+    if (!id) return;
+    setConviteMsg("");
+    setLinkAcesso("");
+    try {
+      const resp = await api<{
+        mensagem: string;
+        link_primeiro_acesso?: string | null;
+      }>(`/projetos/${id}/reenviar-convite-funcionario`, {
+        method: "POST",
+        json: { email },
+      });
+      setConviteMsg(resp.mensagem || "Convite reenviado.");
+      if (resp.link_primeiro_acesso) setLinkAcesso(resp.link_primeiro_acesso);
+      setEquipe(await api<Membro[]>(`/projetos/${id}/equipe`));
+    } catch (exc) {
+      setConviteMsg(exc instanceof Error ? exc.message : "Erro");
+    }
+  }
+
+  async function enviarDocumento(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!id) return;
+    setAviso("");
+    const form = evento.currentTarget;
+    const arquivo = (form.elements.namedItem("arquivo") as HTMLInputElement).files?.[0];
+    if (!arquivo) {
+      setAviso("Escolha um arquivo.");
+      return;
+    }
+    const dados = new FormData();
+    dados.append("arquivo", arquivo);
+    dados.append("projeto_id", id);
+    dados.append(
+      "visibilidade",
+      (form.elements.namedItem("visibilidade") as HTMLSelectElement).value,
+    );
+    try {
+      await api("/biblioteca", { method: "POST", formData: dados });
+      setDocs(await api<Doc[]>(`/biblioteca?projeto_id=${id}`));
+      form.reset();
+    } catch (exc) {
+      setAviso(exc instanceof Error ? exc.message : "Erro no upload");
+    }
+  }
+
   async function criarPesquisa(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!id) return;
@@ -306,7 +360,7 @@ export function ProjetoDetalhePage() {
 
   return (
     <AppShell active="projetos">
-      <Link to="/app/projetos" className="text-[12px] text-[#1D5FAF] font-semibold">
+      <Link to="/projetos" className="text-[12px] text-[#1D5FAF] font-semibold">
         ← Voltar aos trabalhos
       </Link>
       <h1 className="text-[18px] font-bold text-gray-800 mt-2">
@@ -370,23 +424,63 @@ export function ProjetoDetalhePage() {
 
         {aba === "equipe" && (
           <div className="flex flex-col gap-4">
-            <ul className="flex flex-col gap-2">
-              {equipe.map((m) => (
-                <li
-                  key={`${m.email}-${m.papel}`}
-                  className="p-3 rounded-2xl text-[13px]"
-                  style={{ background: "rgba(255,255,255,0.55)" }}
-                >
-                  <strong>{m.nome}</strong>
-                  <span className="text-gray-500 text-[11px] ml-2">
-                    {m.email} · {m.papel} · {m.situacao}
-                  </span>
-                </li>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-[12px] text-left">
+                <thead>
+                  <tr className="text-gray-500 border-b border-white/60">
+                    <th className="py-2 pr-2 font-semibold">Nome</th>
+                    <th className="py-2 pr-2 font-semibold">E-mail</th>
+                    <th className="py-2 pr-2 font-semibold">Papel</th>
+                    <th className="py-2 pr-2 font-semibold">Status</th>
+                    <th className="py-2 pr-2 font-semibold">Convite</th>
+                    <th className="py-2 font-semibold">Ação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {equipe.map((m) => (
+                    <tr key={`${m.email}-${m.papel}`} className="border-b border-white/40">
+                      <td className="py-2 pr-2 font-semibold text-gray-800">{m.nome}</td>
+                      <td className="py-2 pr-2 text-gray-600">{m.email}</td>
+                      <td className="py-2 pr-2">{m.papel}</td>
+                      <td className="py-2 pr-2">{m.situacao}</td>
+                      <td className="py-2 pr-2">
+                        {m.convite_entrega === "FALHA"
+                          ? "Falha ⚠️"
+                          : m.convite_entrega === "ENVIADO"
+                            ? "E-mail enviado ✅"
+                            : m.situacao === "PENDENTE"
+                              ? m.convite_entrega || "Pendente"
+                              : "—"}
+                      </td>
+                      <td className="py-2">
+                        {m.situacao === "PENDENTE" && m.papel === "FUNCIONARIO" ? (
+                          <button
+                            type="button"
+                            className="text-[#1D5FAF] font-bold underline"
+                            onClick={() => void reenviarConviteFuncionario(m.email)}
+                          >
+                            Reenviar
+                          </button>
+                        ) : m.situacao === "PENDENTE" && m.papel === "ORGAO" ? (
+                          <button
+                            type="button"
+                            className="text-[#1D5FAF] font-bold underline"
+                            onClick={() => void reenviarConviteOrgao()}
+                          >
+                            Reenviar
+                          </button>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               {equipe.length === 0 ? (
-                <p className="text-gray-500 text-[13px]">Ninguém na equipe ainda.</p>
+                <p className="text-gray-500 text-[13px] mt-2">Ninguém na equipe ainda.</p>
               ) : null}
-            </ul>
+            </div>
             <form onSubmit={convidarFuncionario} className="grid sm:grid-cols-3 gap-2 items-end">
               <label className="text-[12px] font-semibold text-gray-600">
                 Nome
@@ -404,14 +498,13 @@ export function ProjetoDetalhePage() {
                 Convidar funcionário
               </button>
             </form>
-            <button
-              type="button"
-              onClick={() => void reenviarConviteOrgao()}
-              className="text-[12px] font-bold text-[#1D5FAF] underline self-start"
-            >
-              Reenviar convite do órgão
-            </button>
             {conviteMsg ? <p className="text-[12px] text-gray-600">{conviteMsg}</p> : null}
+            {projeto?.onboarding_estado && projeto.onboarding_estado !== "orgao_aceitou" ? (
+              <p className="text-[12px] text-gray-500">
+                Onboarding órgão: {projeto.onboarding_estado}
+                {projeto.convite_entrega === "FALHA" ? " — falha no e-mail" : ""}
+              </p>
+            ) : null}
           </div>
         )}
 
@@ -459,23 +552,47 @@ export function ProjetoDetalhePage() {
         )}
 
         {aba === "docs" && (
-          <ul className="flex flex-col gap-2">
-            {docs.map((d) => (
-              <li
-                key={d.id}
-                className="p-3 rounded-2xl text-[13px]"
-                style={{ background: "rgba(255,255,255,0.55)" }}
+          <div className="flex flex-col gap-4">
+            <ul className="flex flex-col gap-2">
+              {docs.map((d) => (
+                <li
+                  key={d.id}
+                  className="p-3 rounded-2xl text-[13px]"
+                  style={{ background: "rgba(255,255,255,0.55)" }}
+                >
+                  {d.nome}
+                  {d.visibilidade ? (
+                    <span className="text-[11px] text-gray-500 ml-2">{d.visibilidade}</span>
+                  ) : null}
+                </li>
+              ))}
+              {docs.length === 0 ? (
+                <p className="text-gray-500 text-[13px]">Nenhum documento neste projeto.</p>
+              ) : null}
+            </ul>
+            <form onSubmit={enviarDocumento} className="grid sm:grid-cols-3 gap-2 items-end">
+              <label className="text-[12px] font-semibold text-gray-600 sm:col-span-1">
+                Arquivo
+                <input name="arquivo" type="file" required className={field} />
+              </label>
+              <label className="text-[12px] font-semibold text-gray-600">
+                Visibilidade
+                <select name="visibilidade" className={field} defaultValue="PRIVADO">
+                  <option value="PRIVADO">Privado</option>
+                  <option value="ORGAO">Órgão</option>
+                  <option value="FUNCIONARIOS">Funcionários</option>
+                  <option value="PUBLICO_PROJETO">Público no projeto</option>
+                </select>
+              </label>
+              <button
+                type="submit"
+                className="rounded-xl py-2.5 text-white text-[13px] font-bold"
+                style={{ background: ACCENT }}
               >
-                {d.nome}
-                {d.visibilidade ? (
-                  <span className="text-[11px] text-gray-500 ml-2">{d.visibilidade}</span>
-                ) : null}
-              </li>
-            ))}
-            {docs.length === 0 ? (
-              <p className="text-gray-500 text-[13px]">Nenhum documento neste projeto.</p>
-            ) : null}
-          </ul>
+                Enviar arquivo
+              </button>
+            </form>
+          </div>
         )}
 
         {aba === "config" && (

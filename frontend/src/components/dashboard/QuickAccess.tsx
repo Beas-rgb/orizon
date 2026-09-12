@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { ArrowRight, BarChart2, List, Plus } from "lucide-react";
+import { ArrowRight, List, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { glassStyle } from "../../lib/theme";
 
@@ -11,7 +11,7 @@ const actions = [
     color: "#1D5FAF",
     bg: "rgba(29,95,175,0.10)",
     border: "rgba(29,95,175,0.20)",
-    to: "/app/projetos/novo",
+    to: "/projetos/novo",
   },
   {
     icon: List,
@@ -20,16 +20,7 @@ const actions = [
     color: "#4B5C6E",
     bg: "rgba(75,92,110,0.09)",
     border: "rgba(75,92,110,0.18)",
-    to: "/app/projetos",
-  },
-  {
-    icon: BarChart2,
-    label: "Relatórios",
-    description: "Resultados",
-    color: "#1E7A4A",
-    bg: "rgba(30,122,74,0.09)",
-    border: "rgba(30,122,74,0.18)",
-    to: "/app/projetos",
+    to: "/projetos",
   },
 ];
 

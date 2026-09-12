@@ -329,6 +329,8 @@ def listar_equipe(db: Session, consultor: Usuario, projeto_id: str) -> list[dict
                 "email": pessoa.email,
                 "papel": vinculo.papel,
                 "situacao": "ATIVO" if pessoa.ativo else "INATIVO",
+                "convite_entrega": None,
+                "convite_status": "ACEITO",
             }
         )
     convites = db.scalars(
@@ -350,9 +352,48 @@ def listar_equipe(db: Session, consultor: Usuario, projeto_id: str) -> list[dict
                 "email": convite.email,
                 "papel": convite.papel,
                 "situacao": "PENDENTE",
+                "convite_entrega": convite.entrega,
+                "convite_status": convite.status,
             }
         )
     return itens
+
+
+def reenviar_convite_funcionario(
+    db: Session, consultor: Usuario, projeto_id: str, email: str
+) -> dict[str, str | None]:
+    """Novo token para funcionário pendente. Token antigo deixa de valer."""
+    from app.services.identidade import email_acesso
+
+    projeto = _projeto_da_consultora(db, consultor, projeto_id)
+    endereco = email_acesso(email)
+    convite = db.scalar(
+        select(Convite)
+        .where(
+            Convite.projeto_id == projeto.id,
+            Convite.papel == "FUNCIONARIO",
+            Convite.email == endereco,
+            Convite.status == "PENDENTE",
+        )
+        .order_by(Convite.criado_em.desc())
+    )
+    if convite is None:
+        raise ErroAuth(404, "Convite não encontrado.")
+    convite.status = "CANCELADO"
+    convite.atualizado_em = agora()
+    db.commit()
+    saida = criar_convite(
+        db,
+        consultor,
+        convite.nome,
+        convite.email,
+        "FUNCIONARIO",
+        projeto_id=projeto.id,
+    )
+    return {
+        "email": convite.email,
+        "link_primeiro_acesso": saida.get("link_primeiro_acesso"),
+    }
 
 
 def listar_setores(db: Session, usuario: Usuario, projeto_id: str) -> list[Setor]:

@@ -45,6 +45,12 @@ class EquipeSaida(BaseModel):
     email: str
     papel: str
     situacao: str
+    convite_entrega: str | None = None
+    convite_status: str | None = None
+
+
+class ReenviarFuncionarioEntrada(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
 
 
 class ConfiguracaoSaida(BaseModel):

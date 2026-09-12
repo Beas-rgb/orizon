@@ -146,6 +146,7 @@ export function OrgaoPainel() {
 export function FuncionarioPainel() {
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [erro, setErro] = useState("");
+  const [token, setToken] = useState("");
 
   useEffect(() => {
     api<Projeto[]>("/projetos")
@@ -157,9 +158,30 @@ export function FuncionarioPainel() {
     <AppShell active="dashboard">
       <h1 className="text-[18px] font-bold text-gray-800 mb-1">Início do funcionário</h1>
       <p className="text-[12px] text-gray-500 mb-5">
-        Seus trabalhos. Responda pelo link/token da pesquisa e veja a própria nota quando houver.
+        Seus trabalhos. Responda pelo link da pesquisa (token) e veja a própria nota quando houver.
       </p>
       {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
+      <div className="rounded-3xl p-5 mb-4" style={glassStyle}>
+        <p className="text-[13px] font-bold text-gray-800 mb-2">Abrir pesquisa pelo token</p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="Cole o token do link"
+            className="flex-1 rounded-xl px-3 py-2.5 text-[13px] outline-none bg-white/70 border border-white/80"
+          />
+          <a
+            href={token.trim() ? `/app/responder/${encodeURIComponent(token.trim())}` : "#"}
+            className="rounded-xl py-2.5 px-4 text-center text-white text-[13px] font-bold"
+            style={{ background: ACCENT, opacity: token.trim() ? 1 : 0.5 }}
+            onClick={(e) => {
+              if (!token.trim()) e.preventDefault();
+            }}
+          >
+            Responder
+          </a>
+        </div>
+      </div>
       <div className="rounded-3xl p-5" style={glassStyle}>
         <ul className="flex flex-col gap-2">
           {projetos.map((p) => (
@@ -283,9 +305,9 @@ export function DevPainel() {
             {linkAcesso}
           </a>
           <p className="mt-2 text-gray-500">
-            No React local, prefira:{" "}
+            Em desenvolvimento local:{" "}
             <code className="text-[11px]">
-              http://127.0.0.1:5173/primeiro-acesso#
+              http://127.0.0.1:8000/app/primeiro-acesso#
               {decodeURIComponent(linkAcesso.split("#").pop() || "")}
             </code>
           </p>

@@ -28,10 +28,21 @@ services:
         sync: false
       - key: MAILTRAP_FROM_NAME
         value: Horizon
-      # Conta TI / painel /app/dev.html — só hash no banco; valores no Render.
+      # Conta TI (bootstrap). Só hash no banco; valores no painel do Render.
       - key: ADMIN_NOME
         sync: false
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_SENHA
+        sync: false
+      # Cloudflare R2 (storage). Preencha no painel — nunca no git.
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
         sync: false

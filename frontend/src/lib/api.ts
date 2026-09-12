@@ -68,7 +68,7 @@ function textoErro(corpo: { detail?: unknown }) {
   return "Não foi possível concluir.";
 }
 
-type ApiOpcoes = RequestInit & { json?: unknown };
+type ApiOpcoes = RequestInit & { json?: unknown; formData?: FormData };
 
 export async function api<T = unknown>(caminho: string, opcoes: ApiOpcoes = {}): Promise<T> {
   const headers: Record<string, string> = {
@@ -78,11 +78,14 @@ export async function api<T = unknown>(caminho: string, opcoes: ApiOpcoes = {}):
   if (opcoes.json !== undefined) {
     headers["Content-Type"] = "application/json";
     body = JSON.stringify(opcoes.json);
+  } else if (opcoes.formData !== undefined) {
+    // Multipart: não definir Content-Type (o browser coloca o boundary).
+    body = opcoes.formData;
   }
   const acesso = tokenAtual();
   if (acesso) headers.Authorization = `Bearer ${acesso}`;
 
-  const { json: _json, ...rest } = opcoes;
+  const { json: _json, formData: _fd, ...rest } = opcoes;
   const resposta = await fetch(urlApi(caminho), { ...rest, headers, body });
   if (resposta.status === 204) return null as T;
   const corpo = await resposta.json().catch(() => ({}));

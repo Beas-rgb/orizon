@@ -44,7 +44,7 @@ export function JobHistory({ jobs }: { jobs: JobItem[] }) {
         </div>
         <button
           type="button"
-          onClick={() => navigate("/app/projetos")}
+          onClick={() => navigate("/projetos")}
           className="flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-white/50 text-[12px] font-semibold text-[#1D5FAF]"
         >
           Ver todos <ChevronRight size={13} />
@@ -65,7 +65,7 @@ export function JobHistory({ jobs }: { jobs: JobItem[] }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05, duration: 0.3 }}
               whileHover={{ scale: 1.005, x: 3 }}
-              onClick={() => navigate(`/app/projetos/${job.id}`)}
+              onClick={() => navigate(`/projetos/${job.id}`)}
               className="flex items-center gap-3 p-3 rounded-2xl text-left group w-full"
               style={{
                 background: "rgba(255,255,255,0.55)",

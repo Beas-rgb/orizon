@@ -15,6 +15,7 @@ import {
   ProjetoDetalhePage,
   ProjetosListaPage,
 } from "./pages/ProjetosPages";
+import { ResponderPage } from "./pages/ResponderPage";
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { pronto, usuario } = useAuth();
@@ -38,6 +39,10 @@ function HomeApp() {
   return <Navigate to="/entrar" replace />;
 }
 
+/**
+ * basename="/app" → URLs públicas: /app/, /app/entrar, /app/projetos...
+ * Paths aqui NÃO repetem /app.
+ */
 export default function App() {
   return (
     <Routes>
@@ -46,8 +51,10 @@ export default function App() {
       <Route path="/cadastro" element={<CadastroPage />} />
       <Route path="/recuperar" element={<RecuperarPage />} />
       <Route path="/primeiro-acesso" element={<PrimeiroAcessoPage />} />
+      <Route path="/responder/:token" element={<ResponderPage />} />
+      <Route path="/responder" element={<ResponderPage />} />
       <Route
-        path="/app"
+        path="/inicio"
         element={
           <RequireAuth>
             <HomeApp />
@@ -55,7 +62,7 @@ export default function App() {
         }
       />
       <Route
-        path="/app/projetos"
+        path="/projetos"
         element={
           <RequireAuth>
             <ProjetosListaPage />
@@ -63,7 +70,7 @@ export default function App() {
         }
       />
       <Route
-        path="/app/projetos/novo"
+        path="/projetos/novo"
         element={
           <RequireAuth>
             <NovoProjetoPage />
@@ -71,7 +78,7 @@ export default function App() {
         }
       />
       <Route
-        path="/app/projetos/:id"
+        path="/projetos/:id"
         element={
           <RequireAuth>
             <ProjetoDetalhePage />
