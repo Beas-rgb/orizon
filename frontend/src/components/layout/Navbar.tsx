@@ -70,7 +70,7 @@ export function Navbar({
         </div>
       </div>
 
-      <div className="flex-1 max-w-xl mx-auto relative min-w-0">
+      <div className="hidden sm:block flex-1 max-w-xl mx-auto relative min-w-0">
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-2xl transition-all duration-300"
           style={{

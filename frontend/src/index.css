@@ -55,3 +55,43 @@ textarea {
 .page-bg {
   background: linear-gradient(160deg, #eef1f5 0%, #e8edf4 40%, #eceef4 70%, #f0f2f6 100%);
 }
+
+/* Mobile: área segura + toques */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+@media (max-width: 640px) {
+  button:not(.icon-btn),
+  .tap-target {
+    min-height: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important; /* evita zoom automático no iOS */
+  }
+
+  .hz-table-wrap {
+    margin-inline: -0.25rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hz-table-wrap table {
+    min-width: 540px;
+  }
+}

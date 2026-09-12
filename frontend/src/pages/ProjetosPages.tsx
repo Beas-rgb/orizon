@@ -496,7 +496,7 @@ export function ProjetoDetalhePage() {
 
         {aba === "equipe" && (
           <div className="flex flex-col gap-4">
-            <div className="overflow-x-auto">
+            <div className="hz-table-wrap overflow-x-auto">
               <table className="w-full text-[12px] text-left">
                 <thead>
                   <tr className="text-gray-500 border-b border-white/60">

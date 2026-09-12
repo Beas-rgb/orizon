@@ -171,7 +171,9 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
         searchHints={searchHints}
       />
 
-      <main className="relative z-10 pt-[76px] px-4 sm:px-6 pb-8 max-w-[1440px] mx-auto w-full">
+      <main className="relative z-10 pt-[70px] sm:pt-[76px] px-3 sm:px-6 pb-10 sm:pb-8 max-w-[1440px] mx-auto w-full"
+        style={{ paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))" }}
+      >
         {children}
       </main>
     </div>

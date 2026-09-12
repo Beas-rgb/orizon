@@ -314,7 +314,7 @@ export function DevPainel() {
         </div>
       ) : null}
 
-      <div className="grid md:grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-5">
         {[
           ["API", saude?.status || "…"],
           ["Banco", banco?.status || "…"],
@@ -326,6 +326,72 @@ export function DevPainel() {
           </div>
         ))}
       </div>
+
+      {email?.modo === "local" ? (
+        <div
+          className="rounded-3xl p-4 sm:p-5 mb-5 text-[12px] text-gray-700 leading-relaxed"
+          style={{
+            ...glassStyle,
+            border: "1px solid rgba(160,112,32,0.35)",
+            background: "rgba(160,112,32,0.08)",
+          }}
+        >
+          <p className="font-bold text-gray-800 mb-2">E-mail ainda em modo local</p>
+          <p className="mb-2">
+            Convites não chegam na caixa real. Para testar envio/recebimento de verdade,
+            preencha no painel do <strong>Render</strong> (Environment):
+          </p>
+          <ol className="list-decimal pl-5 mb-2 space-y-1">
+            <li>
+              Em <a className="text-[#1D5FAF] underline" href="https://mailtrap.io" target="_blank" rel="noreferrer">mailtrap.io</a>{" "}
+              crie um token de API (Email Sending).
+            </li>
+            <li>
+              No Render → serviço <code>orizon-api</code> → Environment, defina:
+              <br />
+              <code className="text-[11px] break-all">MAILTRAP_API_TOKEN</code> = o token
+              <br />
+              <code className="text-[11px] break-all">MAILTRAP_FROM_EMAIL</code> = remetente
+              liberado no Mailtrap
+              <br />
+              <code className="text-[11px]">MAILTRAP_FROM_NAME</code> = Horizon
+              <br />
+              <code className="text-[11px] break-all">APP_PUBLIC_URL</code> =
+              https://orizon-api.onrender.com/app
+            </li>
+            <li>Salve e aguarde o redeploy (ou Manual Deploy).</li>
+            <li>
+              Confira{" "}
+              <a
+                className="text-[#1D5FAF] underline break-all"
+                href="https://orizon-api.onrender.com/health/email"
+                target="_blank"
+                rel="noreferrer"
+              >
+                /health/email
+              </a>{" "}
+              → deve mostrar <code>{`{"modo":"mailtrap"}`}</code>.
+            </li>
+          </ol>
+          <p className="text-gray-600">
+            Enquanto estiver em <code>local</code>, use o link de primeiro acesso que aparece
+            após autorizar (acima). Senha nunca vai por e-mail.
+          </p>
+        </div>
+      ) : email?.modo === "mailtrap" || email?.modo === "smtp" ? (
+        <div
+          className="rounded-3xl p-4 mb-5 text-[12px] text-[#1E7A4A]"
+          style={{
+            ...glassStyle,
+            border: "1px solid rgba(30,122,74,0.3)",
+            background: "rgba(30,122,74,0.08)",
+          }}
+        >
+          Canal de e-mail ativo (<strong>{email.modo}</strong>). Convites devem chegar ao
+          destinatário. Se não chegar, confira o Inbox/Spam do Mailtrap e o remetente
+          autorizado.
+        </div>
+      ) : null}
 
       <div className="rounded-3xl p-5" style={glassStyle}>
         <h2 className="text-[14px] font-bold mb-3">Pedidos de consultora</h2>

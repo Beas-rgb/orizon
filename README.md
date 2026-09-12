@@ -72,11 +72,26 @@ Conta do TI (opcional): preencha `ADMIN_NOME`, `ADMIN_EMAIL` e `ADMIN_SENHA` no
 
 ## E-mail e storage
 
-- **E-mail:** Mailtrap (preferido) → SMTP → outbox local. Em produção, preencha
-  `MAILTRAP_*` no Render. Em modo `local`, a API pode devolver
-  `link_primeiro_acesso` para a consultora/TI testarem.
+- **E-mail:** Mailtrap (preferido) → SMTP → outbox local. Em modo `local`, a API
+  pode devolver `link_primeiro_acesso` para a consultora/TI testarem.
 - **R2:** vars `R2_*` no `.env` / Render (`sync: false`). Sem R2, o backend usa
   fallback local.
+
+### Ativar e-mail real no Render (checklist)
+
+1. Crie conta em [mailtrap.io](https://mailtrap.io) → API Tokens (Email Sending).
+2. No Render → `orizon-api` → **Environment**, preencha:
+   - `MAILTRAP_API_TOKEN` — token do Mailtrap
+   - `MAILTRAP_FROM_EMAIL` — remetente autorizado no Mailtrap
+   - `MAILTRAP_FROM_NAME` — `Horizon`
+   - `APP_PUBLIC_URL` — `https://orizon-api.onrender.com/app`
+3. Salve e aguarde o redeploy.
+4. Confira `https://orizon-api.onrender.com/health/email` → deve ser
+   `{"modo":"mailtrap"}`.
+5. No painel TI (`/app/inicio`) o cartão de e-mail deixa de mostrar o aviso
+   amarelo de modo local.
+
+Sem esses valores, o envio continua em `local` (sem caixa real).
 
 ## Testes
 
