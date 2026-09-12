@@ -274,7 +274,9 @@ def atualizar_projeto(
     return _montar(db, projeto)
 
 
-def reenviar_convite(db: Session, consultor: Usuario, projeto_id: str) -> dict[str, str | None]:
+def reenviar_convite(
+    db: Session, consultor: Usuario, projeto_id: str
+) -> dict[str, str | None]:
     """Novo token se o órgão ainda não aceitou. O token antigo deixa de valer."""
     projeto = _projeto_da_consultora(db, consultor, projeto_id)
     convite = db.scalar(
