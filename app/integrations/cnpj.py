@@ -35,10 +35,13 @@ class DadosCnpj:
 
 
 def normalizar_cnpj(valor: str) -> str:
-    digitos = re.sub(r"\D", "", valor or "")
-    if len(digitos) != 14:
-        raise CnpjInvalido("CNPJ deve ter 14 dígitos.")
-    return digitos
+    """Aceita CNPJ numérico clássico e o novo alfanumérico (14 caracteres)."""
+    bruto = re.sub(r"[^0-9A-Za-z]", "", (valor or "").upper())
+    if len(bruto) != 14:
+        raise CnpjInvalido("CNPJ deve ter 14 caracteres (numérico ou alfanumérico).")
+    if not re.fullmatch(r"[0-9A-Z]{14}", bruto):
+        raise CnpjInvalido("CNPJ inválido.")
+    return bruto
 
 
 def buscar(cnpj: str) -> DadosCnpj:

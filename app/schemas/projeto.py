@@ -8,7 +8,6 @@ class ProjetoCriar(BaseModel):
     vinculo_tipo: str
     vinculo_titulo: str = Field(min_length=2, max_length=200)
 
-
 class RotuloSaida(BaseModel):
     id: str
     codigo: str

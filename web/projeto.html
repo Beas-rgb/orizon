@@ -80,7 +80,7 @@
                 <select name="rotulo_id" id="rotulo" required></select>
               </label>
               <label>CNPJ
-                <input name="cnpj" inputmode="numeric" placeholder="00.000.000/0000-00" required />
+                <input name="cnpj" placeholder="00.000.000/0000-00 ou alfanumérico" maxlength="18" required />
               </label>
               <label>E-mail do órgão
                 <input name="email_orgao" type="email" placeholder="contato@orgao.gov.br" required />
@@ -624,9 +624,11 @@
           return;
         }
         const form = evento.currentTarget;
-        const digitos = form.cnpj.value.replace(/\D/g, "");
-        if (digitos.length !== 14) {
-          aviso("CNPJ deve ter 14 dígitos.");
+        const cnpjLimpo = form.cnpj.value
+          .toUpperCase()
+          .replace(/[^0-9A-Z]/g, "");
+        if (cnpjLimpo.length !== 14) {
+          aviso("CNPJ deve ter 14 caracteres (numérico ou alfanumérico).");
           return;
         }
         try {
@@ -634,7 +636,7 @@
             method: "POST",
             json: {
               rotulo_id: form.rotulo_id.value,
-              cnpj: digitos,
+              cnpj: cnpjLimpo,
               email_orgao: form.email_orgao.value,
               vinculo_tipo: form.vinculo_tipo.value,
               vinculo_titulo: form.vinculo_titulo.value,

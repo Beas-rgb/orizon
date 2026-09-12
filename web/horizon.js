@@ -140,10 +140,13 @@ async function copiarTexto(texto) {
 }
 
 function mascaraCnpj(valor) {
-  const d = String(valor || "").replace(/\D/g, "").slice(0, 14);
+  const d = String(valor || "")
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, "")
+    .slice(0, 14);
   return d
-    .replace(/^(\d{2})(\d)/, "$1.$2")
-    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-    .replace(/\.(\d{3})(\d)/, ".$1/$2")
-    .replace(/(\d{4})(\d)/, "$1-$2");
+    .replace(/^(.{2})(.)/, "$1.$2")
+    .replace(/^(.{2})\.(.{3})(.)/, "$1.$2.$3")
+    .replace(/\.(.{3})(.)/, ".$1/$2")
+    .replace(/(.{4})(.)/, "$1-$2");
 }
