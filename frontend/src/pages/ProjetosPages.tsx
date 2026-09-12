@@ -11,6 +11,9 @@ type Projeto = {
   vinculo_titulo?: string | null;
   nome_fantasia?: string | null;
   razao_social?: string | null;
+  email_orgao?: string | null;
+  onboarding_estado?: string | null;
+  link_primeiro_acesso?: string | null;
 };
 
 type Rotulo = { id: string; nome: string };
@@ -110,6 +113,9 @@ export function NovoProjetoPage() {
           vinculo_titulo: (form.elements.namedItem("vinculo_titulo") as HTMLInputElement).value.trim(),
         },
       });
+      if (criado.link_primeiro_acesso) {
+        sessionStorage.setItem(`horizon_link_${criado.id}`, criado.link_primeiro_acesso);
+      }
       navigate(`/app/projetos/${criado.id}`);
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Erro ao criar");
@@ -198,12 +204,18 @@ export function ProjetoDetalhePage() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [aviso, setAviso] = useState("");
   const [conviteMsg, setConviteMsg] = useState("");
+  const [linkAcesso, setLinkAcesso] = useState("");
 
   useEffect(() => {
     if (!id) return;
+    const salvo = sessionStorage.getItem(`horizon_link_${id}`);
+    if (salvo) {
+      setLinkAcesso(salvo);
+      sessionStorage.removeItem(`horizon_link_${id}`);
+    }
     Promise.all([
       api<Projeto>(`/projetos/${id}`),
-      api<Pesquisa[]>(`/projetos/${id}/pesquisas`),
+      api<Pesquisa[]>(`/projetos/${id}/pesquisas`).catch(() => []),
       api<Membro[]>(`/projetos/${id}/equipe`).catch(() => []),
       api<Setor[]>(`/projetos/${id}/setores`).catch(() => []),
       api<Doc[]>(`/biblioteca?projeto_id=${id}`).catch(() => []),
@@ -218,22 +230,42 @@ export function ProjetoDetalhePage() {
       .catch((exc) => setAviso(exc instanceof Error ? exc.message : "Erro"));
   }, [id]);
 
+  async function reenviarConviteOrgao() {
+    if (!id) return;
+    setConviteMsg("");
+    setLinkAcesso("");
+    try {
+      const resp = await api<{
+        mensagem: string;
+        link_primeiro_acesso?: string | null;
+      }>(`/projetos/${id}/reenviar-convite`, { method: "POST" });
+      setConviteMsg(resp.mensagem || "Convite reenviado.");
+      if (resp.link_primeiro_acesso) setLinkAcesso(resp.link_primeiro_acesso);
+    } catch (exc) {
+      setConviteMsg(exc instanceof Error ? exc.message : "Erro");
+    }
+  }
+
   async function convidarFuncionario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!id) return;
     setConviteMsg("");
     const form = evento.currentTarget;
     try {
-      const resp = await api<{ mensagem: string }>("/auth/convites", {
-        method: "POST",
-        json: {
-          nome: (form.elements.namedItem("nome") as HTMLInputElement).value,
-          email: (form.elements.namedItem("email") as HTMLInputElement).value,
-          papel: "FUNCIONARIO",
-          projeto_id: id,
+      const resp = await api<{ mensagem: string; link_primeiro_acesso?: string | null }>(
+        "/auth/convites",
+        {
+          method: "POST",
+          json: {
+            nome: (form.elements.namedItem("nome") as HTMLInputElement).value,
+            email: (form.elements.namedItem("email") as HTMLInputElement).value,
+            papel: "FUNCIONARIO",
+            projeto_id: id,
+          },
         },
-      });
+      );
       setConviteMsg(resp.mensagem || "Convite enviado.");
+      if (resp.link_primeiro_acesso) setLinkAcesso(resp.link_primeiro_acesso);
       form.reset();
       setEquipe(await api<Membro[]>(`/projetos/${id}/equipe`));
     } catch (exc) {
@@ -308,6 +340,24 @@ export function ProjetoDetalhePage() {
       </div>
 
       {aviso ? <p className="text-[#A02828] text-[13px] mb-3">{aviso}</p> : null}
+      {linkAcesso ? (
+        <div
+          className="rounded-2xl p-4 mb-4 text-[12px] break-all"
+          style={{
+            background: "rgba(29,95,175,0.08)",
+            border: "1px solid rgba(29,95,175,0.2)",
+          }}
+        >
+          <p className="font-bold text-gray-800 mb-1">Link de primeiro acesso (modo local)</p>
+          <p className="text-gray-600 mb-2">
+            E-mail ainda não está no ar. Copie o link e abra em aba anônima para
+            definir a senha do órgão/funcionário.
+          </p>
+          <a className="text-[#1D5FAF] font-semibold underline" href={linkAcesso}>
+            {linkAcesso}
+          </a>
+        </div>
+      ) : null}
 
       <div className="rounded-3xl p-4 sm:p-5" style={glassStyle}>
         {aba === "resumo" && (
@@ -354,6 +404,13 @@ export function ProjetoDetalhePage() {
                 Convidar funcionário
               </button>
             </form>
+            <button
+              type="button"
+              onClick={() => void reenviarConviteOrgao()}
+              className="text-[12px] font-bold text-[#1D5FAF] underline self-start"
+            >
+              Reenviar convite do órgão
+            </button>
             {conviteMsg ? <p className="text-[12px] text-gray-600">{conviteMsg}</p> : null}
           </div>
         )}

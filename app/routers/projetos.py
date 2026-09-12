@@ -131,10 +131,14 @@ def reenviar(
     projeto_id: str,
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
-) -> dict[str, str]:
+) -> dict[str, str | None]:
     """Reenvia o convite se o órgão ainda não aceitou. Token antigo deixa de valer."""
-    email = _chamar(lambda: reenviar_convite(db, consultor, projeto_id))
-    return {"mensagem": "Convite reenviado.", "email": email}
+    saida = _chamar(lambda: reenviar_convite(db, consultor, projeto_id))
+    return {
+        "mensagem": "Convite reenviado.",
+        "email": saida["email"],
+        "link_primeiro_acesso": saida.get("link_primeiro_acesso"),
+    }
 
 
 @router.get("/{projeto_id}/equipe", response_model=list[EquipeSaida])

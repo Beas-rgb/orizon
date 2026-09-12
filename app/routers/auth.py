@@ -91,7 +91,7 @@ def convidar(
     db: Session = Depends(get_db),
 ) -> MensagemSaida:
     """Convite. O e-mail leva o token de primeiro acesso, nunca uma senha."""
-    _chamar(
+    saida = _chamar(
         lambda: criar_convite(
             db,
             consultor,
@@ -101,7 +101,10 @@ def convidar(
             corpo.projeto_id,
         )
     )
-    return MensagemSaida(mensagem="Convite registrado. O destinatário define a senha.")
+    return MensagemSaida(
+        mensagem="Convite registrado. O destinatário define a senha.",
+        link_primeiro_acesso=saida.get("link_primeiro_acesso"),
+    )
 
 
 @router.post("/primeiro-acesso", response_model=TokensSaida)

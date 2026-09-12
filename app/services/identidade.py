@@ -386,7 +386,7 @@ def criar_convite(
     email: str,
     papel: str,
     projeto_id: str | None = None,
-) -> None:
+) -> dict[str, str | None]:
     if consultor.papel != "CONSULTOR":
         raise ErroAuth(403, "Só a consultora convida.")
     chave = f"convite:{consultor.id}"
@@ -400,6 +400,7 @@ def criar_convite(
     if _usuario_por_email(db, endereco) is not None:
         raise ErroAuth(409, "Este e-mail já tem acesso.")
     token = novo_token_opaco()
+    link = _link_com_token("primeiro-acesso.html", token)
     convite = Convite(
         email=endereco,
         nome=nome.strip(),
@@ -423,7 +424,7 @@ def criar_convite(
             "A consultora convidou você para o Horizon.\n"
             "Abra o link, defina sua senha. Ela não é enviada neste e-mail.\n"
             "Válido por 48 horas:\n\n"
-            f"{_link_com_token('primeiro-acesso.html', token)}\n\n"
+            f"{link}\n\n"
             f"{token}\n"
         ),
         "CONVITE",
@@ -441,6 +442,21 @@ def criar_convite(
     convite.atualizado_em = _agora()
     _auditar(db, "CONVITE_CRIADO", consultor.id)
     db.commit()
+    from app.integrations.email import modo_envio
+
+    saida: dict[str, str | None] = {
+        "email": endereco,
+        "entrega": convite.entrega,
+        "link_primeiro_acesso": None,
+    }
+    # Em modo local (ou falha), a consultora vê o link para testar onboarding.
+    if (
+        settings.app_env == "development"
+        or modo_envio() == "local"
+        or convite.entrega == "FALHA"
+    ):
+        saida["link_primeiro_acesso"] = link
+    return saida
 
 
 def primeiro_acesso(db: Session, token: str, senha: str) -> dict[str, str]:

@@ -55,3 +55,4 @@ class UsuarioSaida(BaseModel):
 
 class MensagemSaida(BaseModel):
     mensagem: str
+    link_primeiro_acesso: str | None = None

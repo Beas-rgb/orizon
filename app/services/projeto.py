@@ -200,8 +200,9 @@ def criar_projeto(
         )
     )
     db.commit()
+    link_orgao: str | None = None
     try:
-        criar_convite(
+        convite_saida = criar_convite(
             db,
             consultor,
             dados.razao_social[:160],
@@ -209,6 +210,7 @@ def criar_projeto(
             "ORGAO",
             projeto_id=projeto.id,
         )
+        link_orgao = convite_saida.get("link_primeiro_acesso")
     except ErroAuth as exc:
         # B8: o projeto já nasceu. Não apaga; grava estado legível.
         if exc.status == 409:
@@ -225,7 +227,9 @@ def criar_projeto(
             )
         else:
             raise
-    return _montar(db, projeto)
+    montado = _montar(db, projeto)
+    montado.link_primeiro_acesso = link_orgao
+    return montado
 
 
 def _projeto_da_consultora(db: Session, usuario: Usuario, projeto_id: str) -> Projeto:
@@ -270,7 +274,7 @@ def atualizar_projeto(
     return _montar(db, projeto)
 
 
-def reenviar_convite(db: Session, consultor: Usuario, projeto_id: str) -> str:
+def reenviar_convite(db: Session, consultor: Usuario, projeto_id: str) -> dict[str, str | None]:
     """Novo token se o órgão ainda não aceitou. O token antigo deixa de valer."""
     projeto = _projeto_da_consultora(db, consultor, projeto_id)
     convite = db.scalar(
@@ -288,7 +292,7 @@ def reenviar_convite(db: Session, consultor: Usuario, projeto_id: str) -> str:
     convite.status = "CANCELADO"
     convite.atualizado_em = agora()
     db.commit()
-    criar_convite(
+    saida = criar_convite(
         db,
         consultor,
         convite.nome,
@@ -296,7 +300,10 @@ def reenviar_convite(db: Session, consultor: Usuario, projeto_id: str) -> str:
         convite.papel,
         projeto_id=projeto.id,
     )
-    return convite.email
+    return {
+        "email": convite.email,
+        "link_primeiro_acesso": saida.get("link_primeiro_acesso"),
+    }
 
 
 def listar_equipe(db: Session, consultor: Usuario, projeto_id: str) -> list[dict]:
@@ -504,6 +511,7 @@ class ProjetoSaidaMontada:
         convite_entrega: str,
         onboarding_estado: str,
         convite_motivo: str | None,
+        link_primeiro_acesso: str | None = None,
     ) -> None:
         self.id = id
         self.rotulo_id = rotulo_id
@@ -518,6 +526,7 @@ class ProjetoSaidaMontada:
         self.convite_entrega = convite_entrega
         self.onboarding_estado = onboarding_estado
         self.convite_motivo = convite_motivo
+        self.link_primeiro_acesso = link_primeiro_acesso
 
 
 def _tratar_orgao_ja_existente(
