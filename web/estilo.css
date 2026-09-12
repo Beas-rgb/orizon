@@ -734,3 +734,71 @@ body.painel .historico button.linha {
   font: inherit;
   cursor: pointer;
 }
+
+.home-teste {
+  max-width: 40rem;
+}
+
+.home-teste .cartao {
+  margin: 1.25rem 0;
+}
+
+.home-teste .escolha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.8rem 0 1rem;
+}
+
+.lista.compacta li {
+  font-size: 0.95rem;
+}
+
+.roteiro {
+  padding-left: 1.2rem;
+}
+
+.roteiro li {
+  margin: 1rem 0;
+}
+
+.roteiro p {
+  margin: 0.35rem 0 0;
+  color: #57534e;
+}
+
+body.painel-papel main {
+  max-width: 48rem;
+}
+
+.topo-simples {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.tabela-wrap {
+  overflow-x: auto;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.tabela-equipe {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 0.92rem;
+}
+
+.tabela-equipe th,
+.tabela-equipe td {
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+.tabela-equipe th {
+  color: #57534e;
+  font-weight: 600;
+}
+

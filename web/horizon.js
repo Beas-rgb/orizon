@@ -96,3 +96,54 @@ async function baixarArquivo(documentoId, nome) {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+const ONBOARDING_TEXTO = {
+  criado: "Projeto criado",
+  convite_pendente: "Convite do órgão pendente",
+  convite_enviado: "Convite enviado — aguardando aceite",
+  orgao_aceitou: "Órgão entrou no trabalho",
+  convite_expirado: "Convite expirado",
+};
+
+const MOTIVO_TEXTO = {
+  sem_convite: "Ainda não há convite registrado.",
+  aguardando_envio: "Convite ainda não saiu. Use reenviar.",
+  limite_de_convites: "Limite temporário de convites. Aguarde e reenvie.",
+  falha_de_envio: "O e-mail falhou ao sair. Reenvie o convite.",
+  email_ja_e_funcionario: "Este e-mail já é de um funcionário.",
+  email_ja_e_consultor: "Este e-mail já é de uma consultora.",
+  email_ja_e_ti: "Este e-mail já é da conta de TI.",
+  conta_inativa: "A conta deste e-mail está inativa.",
+  email_ja_tem_acesso: "Este e-mail já tem outro tipo de acesso.",
+  email_indisponivel: "Não foi possível usar este e-mail.",
+};
+
+function textoOnboarding(item) {
+  const estado = item.onboarding_estado || "";
+  const base = ONBOARDING_TEXTO[estado] || estado || "—";
+  if (!item.convite_motivo) return base;
+  const motivo = MOTIVO_TEXTO[item.convite_motivo] || item.convite_motivo;
+  return base + " — " + motivo;
+}
+
+async function copiarTexto(texto) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    await navigator.clipboard.writeText(texto);
+    return;
+  }
+  const campo = document.createElement("textarea");
+  campo.value = texto;
+  document.body.appendChild(campo);
+  campo.select();
+  document.execCommand("copy");
+  campo.remove();
+}
+
+function mascaraCnpj(valor) {
+  const d = String(valor || "").replace(/\D/g, "").slice(0, 14);
+  return d
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}

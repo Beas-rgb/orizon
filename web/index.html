@@ -3,20 +3,48 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Horizon</title>
+    <title>Horizon — tela de teste</title>
     <link rel="stylesheet" href="estilo.css" />
   </head>
   <body>
-    <main>
-      <p class="olho">Tela de teste</p>
+    <main class="home-teste">
+      <p class="olho">Tela de teste · não é o Figma</p>
       <h1>Horizon</h1>
       <p class="nota">
-        Escolha como entrar. Esta página ainda não é o desenho final.
+        Use estas páginas para validar o fluxo completo no backend.
+        Layout definitivo vem depois.
       </p>
-      <div class="escolha">
-        <a class="acao" href="cadastro.html">Sou consultora</a>
-        <a class="acao secundaria" href="entrar.html">Entrar</a>
-      </div>
+
+      <section class="cartao">
+        <h2>Entrar por papel</h2>
+        <div class="escolha">
+          <a class="acao" href="cadastro.html">Cadastrar consultora</a>
+          <a class="acao secundaria" href="entrar.html">Entrar</a>
+        </div>
+        <ul class="lista compacta">
+          <li><strong>TI / Dev</strong> — conta <code>ADMIN_*</code> no .env → <a href="dev.html">dev.html</a></li>
+          <li><strong>Consultora</strong> — cadastro + autorização no painel Dev → <a href="painel.html">painel.html</a></li>
+          <li><strong>Órgão</strong> — primeiro acesso pelo e-mail → <a href="orgao.html">orgao.html</a></li>
+          <li><strong>Funcionário</strong> — convite da consultora → <a href="funcionario.html">funcionario.html</a></li>
+        </ul>
+      </section>
+
+      <section class="cartao">
+        <h2>Ferramentas de teste</h2>
+        <div class="escolha">
+          <a class="acao secundaria" href="guia.html">Roteiro E2E completo</a>
+          <a class="acao secundaria" href="biblioteca.html">Biblioteca</a>
+          <a class="acao secundaria" href="responder.html">Responder pesquisa</a>
+          <a class="acao secundaria" href="primeiro-acesso.html">Primeiro acesso</a>
+          <a class="acao secundaria" href="redefinir.html">Redefinir senha</a>
+          <a class="acao secundaria" href="apresentacao.html">Apresentação</a>
+        </div>
+      </section>
+
+      <p class="nota">
+        Senha: mínimo 8 caracteres, maiúscula, número e caractere especial.
+        Token de convite nunca aparece nestas listas — só no e-mail.
+      </p>
     </main>
   </body>
 </html>

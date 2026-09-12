@@ -9,7 +9,7 @@
   <body class="painel">
     <header class="topo">
       <a class="marca" href="painel.html">
-        <span class="selo">OR</span>
+        <span class="selo">HZ</span>
         <div>Horizon<small>Consultora</small></div>
       </a>
       <label class="busca">
@@ -209,10 +209,22 @@
 
           <div id="painel-equipe" hidden>
             <h2>Quem entra neste trabalho</h2>
-            <p class="sub">A lista mostra órgão e funcionários. Pendente ainda não criou senha. Ativo já entrou. O token do e-mail não aparece aqui.</p>
-            <ul class="lista" id="lista-equipe"></ul>
+            <p class="sub">Pendente ainda não criou senha. Ativo já entrou. O token do e-mail não aparece aqui.</p>
+            <div class="tabela-wrap">
+              <table class="tabela-equipe" id="tabela-equipe">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>E-mail</th>
+                    <th>Papel</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="lista-equipe"></tbody>
+              </table>
+            </div>
             <h2>Convidar funcionário</h2>
-            <p class="sub">Entra só neste trabalho. A senha ele cria no primeiro acesso. Não abre outra consultora.</p>
+            <p class="sub">Entra só neste trabalho. A senha ele cria no primeiro acesso.</p>
             <form id="form-funcionario">
               <label>Nome
                 <input name="nome" minlength="2" required />
@@ -385,7 +397,8 @@
           linhaFicha("Rótulo", projeto.rotulo),
           linhaFicha("Vínculo", projeto.vinculo_tipo + " — " + projeto.vinculo_titulo),
           linhaFicha("Estado", projeto.estado),
-          linhaFicha("Convite", projeto.convite_entrega),
+          linhaFicha("Entrega do convite", projeto.convite_entrega),
+          linhaFicha("Onboarding", textoOnboarding(projeto)),
         );
       }
 
@@ -393,18 +406,32 @@
         const lista = document.getElementById("lista-equipe");
         lista.replaceChildren();
         if (!projetoId || previa) {
-          lista.appendChild(itemLista("A equipe aparece depois de criar o trabalho."));
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 4;
+          td.textContent = "A equipe aparece depois de criar o trabalho.";
+          tr.appendChild(td);
+          lista.appendChild(tr);
           return;
         }
         const pessoas = await api("/projetos/" + projetoId + "/equipe");
         if (!pessoas.length) {
-          lista.appendChild(itemLista("Ninguém além da consultora neste trabalho."));
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 4;
+          td.textContent = "Ninguém além da consultora neste trabalho.";
+          tr.appendChild(td);
+          lista.appendChild(tr);
           return;
         }
         pessoas.forEach((item) => {
-          lista.appendChild(
-            itemLista(item.nome + " — " + item.email + " — " + item.papel + " — " + item.situacao)
-          );
+          const tr = document.createElement("tr");
+          [item.nome, item.email, item.papel, item.situacao].forEach((valor) => {
+            const td = document.createElement("td");
+            td.textContent = valor;
+            tr.appendChild(td);
+          });
+          lista.appendChild(tr);
         });
       }
 
@@ -511,6 +538,8 @@
           vinculo_titulo: "Pesquisa de clima organizacional",
           email_orgao: "gabinete@techcorp.exemplo",
           convite_entrega: "ENVIADO",
+          onboarding_estado: "convite_enviado",
+          convite_motivo: null,
         };
         projetoId = "exemplo";
         document.getElementById("pesquisas").checked = true;
@@ -552,14 +581,20 @@
           await carregarDocs();
           mostrar(params.get("aba") || "editar");
           if (
+            projeto.onboarding_estado &&
+            projeto.onboarding_estado !== "orgao_aceitou" &&
+            projeto.onboarding_estado !== "convite_enviado"
+          ) {
+            aviso("Onboarding: " + textoOnboarding(projeto));
+          } else if (
             projeto.convite_entrega &&
             projeto.convite_entrega !== "ENVIADO" &&
             projeto.convite_entrega !== "ENTREGUE"
           ) {
             aviso(
               "Convite do órgão: " +
-                projeto.convite_entrega +
-                ". Use reenviar convite se ainda não aceitou."
+                textoOnboarding(projeto) +
+                ". Use reenviar se ainda não aceitou."
             );
           }
           return;
@@ -573,6 +608,13 @@
 
       document.getElementById("sair").addEventListener("click", sair);
 
+      const campoCnpj = document.querySelector('#form-criar input[name="cnpj"]');
+      if (campoCnpj) {
+        campoCnpj.addEventListener("input", () => {
+          campoCnpj.value = mascaraCnpj(campoCnpj.value);
+        });
+      }
+
       document.getElementById("form-criar").addEventListener("submit", async (evento) => {
         evento.preventDefault();
         aviso("");
@@ -582,12 +624,17 @@
           return;
         }
         const form = evento.currentTarget;
+        const digitos = form.cnpj.value.replace(/\D/g, "");
+        if (digitos.length !== 14) {
+          aviso("CNPJ deve ter 14 dígitos.");
+          return;
+        }
         try {
           const criado = await api("/projetos", {
             method: "POST",
             json: {
               rotulo_id: form.rotulo_id.value,
-              cnpj: form.cnpj.value,
+              cnpj: digitos,
               email_orgao: form.email_orgao.value,
               vinculo_tipo: form.vinculo_tipo.value,
               vinculo_titulo: form.vinculo_titulo.value,
@@ -628,9 +675,20 @@
           aviso("Exemplo visual. O convite não foi reenviado.");
           return;
         }
+        if (
+          !window.confirm(
+            "Reenviar cancela o token antigo. O órgão precisará do link novo. Continuar?"
+          )
+        ) {
+          return;
+        }
         try {
-          const resposta = await api("/projetos/" + projetoId + "/reenviar-convite", { method: "POST" });
-          aviso(resposta.mensagem);
+          const resposta = await api("/projetos/" + projetoId + "/reenviar-convite", {
+            method: "POST",
+          });
+          projeto = await api("/projetos/" + projetoId);
+          preencherEditar();
+          aviso(resposta.mensagem || "Convite reenviado. " + textoOnboarding(projeto));
         } catch (exc) {
           aviso(exc.message);
         }
@@ -748,7 +806,8 @@
           const token = dados.tokens[0];
           const link = new URL("responder.html", window.location.href);
           link.hash = token;
-          aviso("Link de resposta (copie): " + link.href);
+          await copiarTexto(link.href);
+          aviso("Link copiado. Também está aqui: " + link.href);
         } catch (exc) {
           aviso(exc.message);
         }

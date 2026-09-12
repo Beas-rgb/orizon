@@ -59,3 +59,5 @@ class ProjetoSaida(BaseModel):
     vinculo_tipo: str
     vinculo_titulo: str
     convite_entrega: str
+    onboarding_estado: str = "convite_pendente"
+    convite_motivo: str | None = None

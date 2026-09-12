@@ -21,19 +21,22 @@ Cada cliente fica isolado. Conhecer o ID de um projeto ou pesquisa de outro
 Backend das fases 0–5 e 7 concluído e coberto por testes. Fase 6 (IA) suspensa
 (`ia_modo = DESATIVADA`).
 
-Há **tela de teste** em `web/`, servida em `/app` (HTML/JS puro). Não é o
-desenho final do Figma. A pasta React antiga foi arquivada em
-`arquivo/frontend/` e não deve receber trabalho novo.
+Há **tela de teste** em `web/`, servida em `/app` (HTML/JS puro). É funcional
+para validar fluxos e autorização — **não** é o desenho final do Figma e não
+serve de referência visual definitiva para agentes. A pasta React antiga ficou
+em `arquivo/frontend/` e não recebe trabalho novo.
 
-Fluxos já usáveis na tela de teste:
+Fluxos cobertos na tela de teste:
 
-- entrar / recuperar senha / primeiro acesso
-- pedido de conta da consultora + painel do TI (pedidos, consultores, análise)
-- painel da consultora (lista, criar/editar projeto, configuração, setores,
-  pesquisas, equipe)
-- painéis simples de órgão e funcionário (só o que o vínculo libera)
+- home com mapa de papéis + [roteiro E2E](web/guia.html)
+- entrar / recuperar senha / primeiro acesso / cadastro da consultora
+- painel do TI (pedidos, consultores, diagnóstico)
+- painel da consultora (lista com onboarding, criar/editar projeto, config,
+  setores, pesquisas com link copiável, equipe em tabela, biblioteca)
+- painel do órgão (trabalhos + resultado agregado da pesquisa)
+- painel do funcionário (trabalhos + abrir token/link de resposta)
+- biblioteca e `responder.html` por token
 
-Ainda sem tela de teste: nenhuma (biblioteca e resposta por token já têm tela).
 Desenho Figma final e R2 em produção ficam para depois.
 
 ## Como rodar

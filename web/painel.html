@@ -9,7 +9,7 @@
   <body class="painel">
     <header class="topo">
       <div class="marca">
-        <span class="selo">OR</span>
+        <span class="selo">HZ</span>
         <div>Horizon<small>Consultora</small></div>
       </div>
       <label class="busca">
@@ -106,16 +106,26 @@
       }
 
       function convitePendente(item) {
+        if (item.onboarding_estado === "orgao_aceitou") return false;
+        if (item.onboarding_estado === "convite_enviado") return false;
         const entrega = item.convite_entrega || "NAO_ENVIADO";
         return entrega !== "ENVIADO" && entrega !== "ENTREGUE";
       }
 
       function estadoVisual(item) {
+        if (item.onboarding_estado && item.onboarding_estado !== "orgao_aceitou") {
+          if (item.onboarding_estado === "convite_enviado") {
+            return { texto: "Aguardando órgão", classe: "meio", faixa: "meio", largura: 55 };
+          }
+          return {
+            texto: item.convite_motivo ? "Convite pendente" : "Onboarding",
+            classe: "alerta",
+            faixa: "meio",
+            largura: 35,
+          };
+        }
         if (convitePendente(item)) {
-          const entrega = item.convite_entrega || "NAO_ENVIADO";
-          const texto =
-            entrega === "FALHA" ? "Convite com falha" : "Convite não enviado";
-          return { texto, classe: "alerta", faixa: "meio", largura: 35 };
+          return { texto: "Convite pendente", classe: "alerta", faixa: "meio", largura: 35 };
         }
         if (ENCERRADOS.has(item.estado)) {
           return { texto: "Concluído", classe: "ok", faixa: "ok", largura: 100 };
@@ -155,7 +165,7 @@
           avisoConvites.hidden = false;
           avisoConvites.textContent =
             parados.length +
-            " trabalho(s) com convite do órgão não enviado ou com falha. Abra o trabalho e use reenviar convite.";
+            " trabalho(s) com onboarding do órgão incompleto. Abra o trabalho para ver o motivo e reenviar.";
         } else {
           avisoConvites.hidden = true;
           avisoConvites.textContent = "";
@@ -241,14 +251,18 @@
           const li = document.createElement("li");
           const marca = document.createElement("span");
           marca.className = "iniciais";
-          marca.textContent = iniciais(nomeOrgao(item)).toUpperCase() || "OR";
+          marca.textContent = iniciais(nomeOrgao(item)).toUpperCase() || "HZ";
 
           const texto = document.createElement("div");
           const titulo = document.createElement("h3");
           titulo.textContent = item.vinculo_titulo || nomeOrgao(item);
           const sub = document.createElement("p");
           sub.className = "sub";
-          sub.textContent = nomeOrgao(item) + " · " + item.rotulo;
+          sub.textContent =
+            nomeOrgao(item) +
+            " · " +
+            item.rotulo +
+            (item.onboarding_estado ? " · " + textoOnboarding(item) : "");
           texto.append(titulo, sub);
 
           const progresso = document.createElement("div");

@@ -5,10 +5,12 @@ rótulo vem do banco, nome do órgão vem do CNPJ, e-mail do órgão recebe
 o convite. Sem linha em projeto_usuarios, o ID do projeto não abre nada.
 """
 
+from datetime import UTC, timedelta
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.tokens import novo_id
+from app.core.tokens import hash_token, novo_id, novo_token_opaco
 from app.integrations.cnpj import (
     CnpjIndisponivel,
     CnpjInvalido,
@@ -151,6 +153,19 @@ def criar_projeto(
 
     endereco = email_acesso(email_orgao)
     orgao = _org_por_cnpj(db, dados)
+    # B7: mesmo CNPJ ativo na mesma consultora = retry/duplicata.
+    duplicado = db.scalar(
+        select(Projeto.id)
+        .join(Organizacao, Organizacao.id == Projeto.organizacao_id)
+        .where(
+            Projeto.consultor_id == consultor.id,
+            Projeto.deleted_at.is_(None),
+            Organizacao.cnpj == dados.cnpj,
+            Organizacao.deleted_at.is_(None),
+        )
+    )
+    if duplicado is not None:
+        raise ErroAuth(409, "Já existe projeto ativo com este CNPJ.")
     projeto = Projeto(
         organizacao_id=orgao.id,
         consultor_id=consultor.id,
@@ -195,55 +210,21 @@ def criar_projeto(
             projeto_id=projeto.id,
         )
     except ErroAuth as exc:
-        # Projeto já nasceu. Sem engolir em silêncio: audita e, se o
-        # e-mail já é um órgão ativo, vincula neste trabalho.
-        if exc.status != 409:
-            raise
-        existente = db.scalar(
-            select(Usuario).where(
-                Usuario.email == endereco,
-                Usuario.deleted_at.is_(None),
+        # B8: o projeto já nasceu. Não apaga; grava estado legível.
+        if exc.status == 409:
+            _tratar_orgao_ja_existente(db, consultor, projeto, endereco)
+        elif exc.status == 429:
+            _registrar_convite_pendente(
+                db,
+                consultor,
+                projeto,
+                dados.razao_social[:160],
+                endereco,
+                motivo="limite_de_convites",
+                acao="CONVITE_AGUARDANDO",
             )
-        )
-        if (
-            existente is not None
-            and existente.papel == "ORGAO"
-            and existente.ativo
-        ):
-            ja = db.scalar(
-                select(ProjetoUsuario.id).where(
-                    ProjetoUsuario.projeto_id == projeto.id,
-                    ProjetoUsuario.usuario_id == existente.id,
-                )
-            )
-            if ja is None:
-                db.add(
-                    ProjetoUsuario(
-                        id=novo_id(),
-                        projeto_id=projeto.id,
-                        usuario_id=existente.id,
-                        papel="ORGAO",
-                    )
-                )
-            db.add(
-                LogAuditoria(
-                    id=novo_id(),
-                    usuario_id=consultor.id,
-                    acao="ORGAO_VINCULADO",
-                    criado_em=agora(),
-                )
-            )
-            db.commit()
         else:
-            db.add(
-                LogAuditoria(
-                    id=novo_id(),
-                    usuario_id=consultor.id,
-                    acao="CONVITE_NAO_ENVIADO",
-                    criado_em=agora(),
-                )
-            )
-            db.commit()
+            raise
     return _montar(db, projeto)
 
 
@@ -521,6 +502,8 @@ class ProjetoSaidaMontada:
         vinculo_tipo: str,
         vinculo_titulo: str,
         convite_entrega: str,
+        onboarding_estado: str,
+        convite_motivo: str | None,
     ) -> None:
         self.id = id
         self.rotulo_id = rotulo_id
@@ -533,6 +516,121 @@ class ProjetoSaidaMontada:
         self.vinculo_tipo = vinculo_tipo
         self.vinculo_titulo = vinculo_titulo
         self.convite_entrega = convite_entrega
+        self.onboarding_estado = onboarding_estado
+        self.convite_motivo = convite_motivo
+
+
+def _tratar_orgao_ja_existente(
+    db: Session,
+    consultor: Usuario,
+    projeto: Projeto,
+    endereco: str,
+) -> None:
+    existente = db.scalar(
+        select(Usuario).where(
+            Usuario.email == endereco,
+            Usuario.deleted_at.is_(None),
+        )
+    )
+    if (
+        existente is not None
+        and existente.papel == "ORGAO"
+        and existente.ativo
+    ):
+        ja = db.scalar(
+            select(ProjetoUsuario.id).where(
+                ProjetoUsuario.projeto_id == projeto.id,
+                ProjetoUsuario.usuario_id == existente.id,
+            )
+        )
+        if ja is None:
+            db.add(
+                ProjetoUsuario(
+                    id=novo_id(),
+                    projeto_id=projeto.id,
+                    usuario_id=existente.id,
+                    papel="ORGAO",
+                )
+            )
+        db.add(
+            LogAuditoria(
+                id=novo_id(),
+                usuario_id=consultor.id,
+                acao="ORGAO_VINCULADO",
+                criado_em=agora(),
+            )
+        )
+        db.commit()
+        return
+    motivo = _motivo_nao_enviado(existente)
+    _registrar_convite_pendente(
+        db,
+        consultor,
+        projeto,
+        (existente.nome if existente else endereco.split("@")[0])[:160],
+        endereco,
+        motivo=motivo,
+        acao="CONVITE_NAO_ENVIADO",
+        status="CANCELADO",
+    )
+
+
+def _motivo_nao_enviado(existente: Usuario | None) -> str:
+    if existente is None:
+        return "email_indisponivel"
+    if not existente.ativo:
+        return "conta_inativa"
+    if existente.papel == "FUNCIONARIO":
+        return "email_ja_e_funcionario"
+    if existente.papel == "CONSULTOR":
+        return "email_ja_e_consultor"
+    if existente.papel == "TI":
+        return "email_ja_e_ti"
+    if existente.papel == "ORGAO":
+        return "conta_inativa"
+    return "email_ja_tem_acesso"
+
+
+def _registrar_convite_pendente(
+    db: Session,
+    consultor: Usuario,
+    projeto: Projeto,
+    nome: str,
+    endereco: str,
+    *,
+    motivo: str,
+    acao: str,
+    status: str = "PENDENTE",
+) -> None:
+    """Guarda o e-mail pretendido sem token válido de primeiro acesso.
+
+    Assim a tela mostra onboarding e motivo (B8/B9) mesmo quando o
+    criar_convite não chegou a gravar a linha.
+    """
+    entrega = "LIMITE_CONVITES" if motivo == "limite_de_convites" else "NAO_ENVIADO"
+    token = novo_token_opaco()
+    db.add(
+        Convite(
+            email=endereco,
+            nome=nome.strip()[:160],
+            papel="ORGAO",
+            token_hash=hash_token(token),
+            status=status,
+            entrega=entrega,
+            expira_em=agora() + timedelta(hours=48),
+            convidado_por_id=consultor.id,
+            projeto_id=projeto.id,
+        )
+    )
+    db.add(
+        LogAuditoria(
+            id=novo_id(),
+            usuario_id=consultor.id,
+            acao=acao,
+            criado_em=agora(),
+        )
+    )
+    db.commit()
 
 
 def _montar(db: Session, projeto: Projeto) -> "ProjetoSaidaMontada":
@@ -548,18 +646,25 @@ def _montar(db: Session, projeto: Projeto) -> "ProjetoSaidaMontada":
     )
     email_orgao = convite.email if convite else ""
     entrega = convite.entrega if convite else "NAO_ENVIADO"
-    if not email_orgao:
-        vinculo = db.scalar(
-            select(ProjetoUsuario).where(
-                ProjetoUsuario.projeto_id == projeto.id,
-                ProjetoUsuario.papel == "ORGAO",
-            )
+    orgao_vinculado = False
+    vinculo = db.scalar(
+        select(ProjetoUsuario).where(
+            ProjetoUsuario.projeto_id == projeto.id,
+            ProjetoUsuario.papel == "ORGAO",
         )
-        if vinculo is not None:
-            pessoa = db.get(Usuario, vinculo.usuario_id)
-            if pessoa is not None and pessoa.deleted_at is None:
-                email_orgao = pessoa.email
+    )
+    if vinculo is not None:
+        pessoa_orgao = db.get(Usuario, vinculo.usuario_id)
+        if pessoa_orgao is not None and pessoa_orgao.deleted_at is None:
+            orgao_vinculado = True
+            if not email_orgao:
+                email_orgao = pessoa_orgao.email
+            if convite is None or convite.status not in {"PENDENTE", "CANCELADO"}:
                 entrega = "ENVIADO"
+
+    onboarding, motivo = _estado_onboarding(
+        db, convite, orgao_vinculado, email_orgao
+    )
     return ProjetoSaidaMontada(
         id=projeto.id,
         rotulo_id=projeto.rotulo_id,
@@ -572,4 +677,41 @@ def _montar(db: Session, projeto: Projeto) -> "ProjetoSaidaMontada":
         vinculo_tipo=projeto.vinculo_tipo,
         vinculo_titulo=projeto.vinculo_titulo,
         convite_entrega=entrega,
+        onboarding_estado=onboarding,
+        convite_motivo=motivo,
     )
+
+
+def _estado_onboarding(
+    db: Session,
+    convite: Convite | None,
+    orgao_vinculado: bool,
+    email_orgao: str,
+) -> tuple[str, str | None]:
+    if orgao_vinculado:
+        return "orgao_aceitou", None
+    if convite is None:
+        return "convite_pendente", "sem_convite"
+    expira = convite.expira_em
+    if expira.tzinfo is None:
+        expira = expira.replace(tzinfo=UTC)
+    if convite.status == "PENDENTE" and expira <= agora():
+        return "convite_expirado", None
+    if convite.entrega == "LIMITE_CONVITES":
+        return "convite_pendente", "limite_de_convites"
+    if convite.entrega == "FALHA":
+        return "convite_pendente", "falha_de_envio"
+    if convite.status == "CANCELADO" or convite.entrega == "NAO_ENVIADO":
+        existente = db.scalar(
+            select(Usuario).where(
+                Usuario.email == email_orgao,
+                Usuario.deleted_at.is_(None),
+            )
+        )
+        if existente is not None:
+            return "convite_pendente", _motivo_nao_enviado(existente)
+        return "convite_pendente", "aguardando_envio"
+    if convite.status == "PENDENTE" and convite.entrega == "ENVIADO":
+        return "convite_enviado", None
+    return "convite_pendente", None
+

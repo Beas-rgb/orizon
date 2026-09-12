@@ -6,33 +6,100 @@
     <title>Horizon — órgão</title>
     <link rel="stylesheet" href="estilo.css" />
   </head>
-  <body>
+  <body class="painel-papel">
     <main>
-      <p class="olho">Tela de teste</p>
-      <h1>Painel do órgão</h1>
-      <p class="nota" id="quem"></p>
+      <header class="topo-simples">
+        <div>
+          <p class="olho">Tela de teste</p>
+          <h1>Painel do órgão</h1>
+          <p class="nota" id="quem"></p>
+        </div>
+        <button type="button" id="sair">Sair</button>
+      </header>
       <p class="nota">
-        Você vê só o trabalho em que foi convidado. Não cria projeto, não edita,
-        não lista funcionário e não abre a tela da consultora. O backend
-        responde 404 se o ID for de outro cliente.
+        Você vê só o trabalho em que foi convidado. Resultado agregado da
+        pesquisa — sem lista de quem respondeu. ID de outro cliente = 404.
       </p>
-      <ul class="lista" id="lista"></ul>
+      <div id="trabalhos"></div>
       <p id="erro" class="erro"></p>
-      <button type="button" id="sair">Sair</button>
     </main>
     <script src="horizon.js"></script>
     <script>
       document.getElementById("sair").addEventListener("click", sair);
+      const erro = document.getElementById("erro");
 
-      function linhaSegura(item) {
-        const li = document.createElement("li");
-        li.textContent =
-          (item.vinculo_titulo || "Trabalho") +
-          " — " +
+      function cartaoProjeto(item) {
+        const secao = document.createElement("section");
+        secao.className = "cartao";
+        const titulo = document.createElement("h2");
+        titulo.textContent = item.vinculo_titulo || "Trabalho";
+        const meta = document.createElement("p");
+        meta.className = "nota";
+        meta.textContent =
           (item.razao_social || "") +
-          " — " +
-          (item.estado || "");
-        return li;
+          " · " +
+          (item.estado || "") +
+          " · " +
+          textoOnboarding(item);
+        const lista = document.createElement("ul");
+        lista.className = "lista";
+        lista.id = "pesq-" + item.id;
+        lista.textContent = "Carregando pesquisas…";
+        secao.append(titulo, meta, lista);
+        return secao;
+      }
+
+      async function carregarPesquisas(projetoId, lista) {
+        try {
+          const pesquisas = await api("/projetos/" + projetoId + "/pesquisas");
+          lista.replaceChildren();
+          if (!pesquisas.length) {
+            lista.textContent = "Nenhuma pesquisa neste trabalho.";
+            return;
+          }
+          for (const p of pesquisas) {
+            const li = document.createElement("li");
+            const texto = document.createElement("p");
+            texto.textContent = p.titulo + " — " + p.status;
+            li.appendChild(texto);
+            if (p.status === "PUBLICADA" || p.status === "ENCERRADA") {
+              const botao = document.createElement("button");
+              botao.type = "button";
+              botao.textContent = "Ver resultado";
+              botao.addEventListener("click", async () => {
+                erro.textContent = "";
+                try {
+                  const painel = await api("/pesquisas/" + p.id + "/painel");
+                  const detalhes = document.createElement("ul");
+                  detalhes.className = "lista compacta";
+                  if (!painel.length) {
+                    detalhes.textContent = "Sem respostas ainda.";
+                  } else {
+                    painel.forEach((pergunta) => {
+                      const item = document.createElement("li");
+                      item.textContent =
+                        (pergunta.texto || "Pergunta") +
+                        " — média: " +
+                        (pergunta.media ?? "—") +
+                        " (" +
+                        (pergunta.respostas || 0) +
+                        " resp.)";
+                      detalhes.appendChild(item);
+                    });
+                  }
+                  li.appendChild(detalhes);
+                  botao.disabled = true;
+                } catch (exc) {
+                  erro.textContent = exc.message;
+                }
+              });
+              li.appendChild(botao);
+            }
+            lista.appendChild(li);
+          }
+        } catch (exc) {
+          lista.textContent = exc.message;
+        }
       }
 
       api("/auth/eu")
@@ -45,15 +112,19 @@
           document.getElementById("quem").textContent = `${eu.nome} — ${eu.email}`;
           return api("/projetos");
         })
-        .then((projetos) => {
+        .then(async (projetos) => {
           if (!projetos) return;
-          const lista = document.getElementById("lista");
-          lista.replaceChildren();
+          const raiz = document.getElementById("trabalhos");
+          raiz.replaceChildren();
           if (!projetos.length) {
-            lista.textContent = "Nenhum trabalho vinculado a esta conta.";
+            raiz.textContent = "Nenhum trabalho vinculado a esta conta.";
             return;
           }
-          projetos.forEach((item) => lista.appendChild(linhaSegura(item)));
+          for (const item of projetos) {
+            const cartao = cartaoProjeto(item);
+            raiz.appendChild(cartao);
+            await carregarPesquisas(item.id, cartao.querySelector("ul"));
+          }
         })
         .catch(() => {
           sessionStorage.clear();

@@ -431,8 +431,13 @@ def criar_convite(
         consultor.id,
     )
     convite.entrega = "ENVIADO" if entrega.status == "ENVIADO" else "FALHA"
+    # B6: o contador de espera é só para abuso / falha real de envio.
+    # Somar em sucesso travava o 4º convite de órgão (429 falso).
     if papel != "FUNCIONARIO":
-        registrar_falha(db, chave)
+        if convite.entrega == "ENVIADO":
+            limpar_falhas(db, chave)
+        else:
+            registrar_falha(db, chave)
     convite.atualizado_em = _agora()
     _auditar(db, "CONVITE_CRIADO", consultor.id)
     db.commit()
