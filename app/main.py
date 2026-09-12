@@ -42,6 +42,23 @@ app.include_router(notificacoes_router)
 app.include_router(projetos_router)
 app.include_router(biblioteca_router)
 app.include_router(pesquisas_router)
+# Frontend React (build) — rota /app/v2 para teste lado a lado
+_react_dist = Path(__file__).resolve().parent.parent / "web" / "app"
+if _react_dist.exists():
+    from fastapi.responses import FileResponse
+
+    @app.get("/app/v2")
+    @app.get("/app/v2/{caminho:path}")
+    def spa_react(caminho: str = "") -> FileResponse:
+        # Arquivos estáticos (js, css, svg, png) servidos direto
+        if caminho and "." in caminho.split("/")[-1]:
+            arquivo = _react_dist / caminho
+            if arquivo.exists():
+                return FileResponse(arquivo)
+        # SPA fallback: qualquer outra rota serve o index.html
+        return FileResponse(_react_dist / "index.html")
+
+# Frontend legado (HTML/JS puro) — rota /app
 app.mount(
     "/app",
     StaticFiles(directory=Path(__file__).resolve().parent.parent / "web", html=True),

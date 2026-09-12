@@ -21,21 +21,21 @@ Cada cliente fica isolado. Conhecer o ID de um projeto ou pesquisa de outro
 Backend das fases 0–5 e 7 concluído e coberto por testes. Fase 6 (IA) suspensa
 (`ia_modo = DESATIVADA`).
 
-Há **tela de teste** em `web/`, servida em `/app` (HTML/JS puro). É funcional
-para validar fluxos e autorização — **não** é o desenho final do Figma e não
-serve de referência visual definitiva para agentes. A pasta React antiga ficou
-em `arquivo/frontend/` e não recebe trabalho novo.
+**Frontend definitivo**: React 19 + Vite + TypeScript + Tailwind 4 em
+`frontend/`. Build de produção em `web/app/`, servido em `/app/v2` (rota SPA
+com fallback para `index.html`).
 
-Fluxos cobertos na tela de teste:
+**Frontend legado (teste)**: HTML/JS puro em `web/`, servido em `/app`. Ainda
+funcional para validação rápida, mas não recebe trabalho novo. A pasta React
+antiga ficou em `arquivo/frontend/` e não recebe trabalho novo.
 
-- home com mapa de papéis + [roteiro E2E](web/guia.html)
+Fluxos cobertos no React:
 - entrar / recuperar senha / primeiro acesso / cadastro da consultora
-- painel do TI (pedidos, consultores, diagnóstico)
-- painel da consultora (lista com onboarding, criar/editar projeto, config,
-  setores, pesquisas com link copiável, equipe em tabela, biblioteca)
-- painel do órgão (trabalhos + resultado agregado da pesquisa)
-- painel do funcionário (trabalhos + abrir token/link de resposta)
-- biblioteca e `responder.html` por token
+- painel da consultora (dashboard, trabalhos, criar projeto, detalhe com
+  equipe, pesquisas, biblioteca)
+- painel do órgão (trabalhos + resultado agregado)
+- painel do funcionário (trabalhos + link de resposta)
+- painel do TI (pedidos, consultores, diagnóstico, link de primeiro acesso)
 
 Desenho Figma final e R2 em produção ficam para depois.
 
