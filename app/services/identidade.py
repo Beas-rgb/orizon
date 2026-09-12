@@ -637,8 +637,12 @@ def listar_consultores(db: Session, usuario: Usuario) -> list[Usuario]:
     )
 
 
-def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> None:
-    """Cria a conta sem senha e manda o primeiro acesso. Só o dev autoriza."""
+def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str, str]:
+    """Cria a conta sem senha e manda o primeiro acesso. Só o dev autoriza.
+
+    Se o e-mail estiver em modo local (ou a entrega falhar), devolve o link
+    só para o TI — assim o teste no Render não fica preso sem Mailtrap.
+    """
     if operador.papel != "TI":
         raise ErroAuth(404, "Pedido não encontrado.")
     _expirar_pedidos(db)
@@ -664,6 +668,7 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> None:
     db.add(usuario)
     db.flush()
     token = novo_token_opaco()
+    link = _link_com_token("primeiro-acesso.html", token)
     convite = Convite(
         email=pedido.email,
         nome=pedido.nome,
@@ -677,6 +682,7 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> None:
     )
     db.add(convite)
     db.flush()
+    from app.integrations.email import modo_envio
     from app.services.notificacao import entregar_email
 
     entrega = entregar_email(
@@ -687,7 +693,7 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> None:
             "Sua conta de consultora foi autorizada.\n"
             "Abra o link e crie sua senha. Ela não é enviada neste e-mail.\n"
             "Válido por 48 horas:\n\n"
-            f"{_link_com_token('primeiro-acesso.html', token)}\n\n"
+            f"{link}\n\n"
             f"{token}\n"
         ),
         "CONVITE",
@@ -702,6 +708,18 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> None:
     pedido.atualizado_em = agora
     _auditar(db, "CONSULTORA_AUTORIZADA", operador.id)
     db.commit()
+    saida = {
+        "mensagem": "Conta autorizada. O primeiro acesso foi enviado ao e-mail.",
+        "email": pedido.email,
+    }
+    # Token só para o TI quando não há e-mail real — nunca na rota pública.
+    if modo_envio() == "local" or entrega.status != "ENVIADO":
+        saida["mensagem"] = (
+            "Conta autorizada. E-mail em modo teste: use o link abaixo "
+            "(válido 48h) para a consultora criar a senha."
+        )
+        saida["link_primeiro_acesso"] = link
+    return saida
 
 
 def diagnostico(db: Session, usuario: Usuario) -> dict[str, object]:

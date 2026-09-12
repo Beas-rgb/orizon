@@ -43,6 +43,8 @@ class ConsultoraSaida(BaseModel):
 
 class MensagemSaida(BaseModel):
     mensagem: str
+    email: str | None = None
+    link_primeiro_acesso: str | None = None
 
 
 def _chamar(acao):
@@ -115,7 +117,5 @@ def autorizar(
     db: Session = Depends(get_db),
 ) -> MensagemSaida:
     """Cria a conta sem senha e envia o primeiro acesso ao e-mail cadastrado."""
-    _chamar(lambda: autorizar_pedido(db, usuario, pedido_id))
-    return MensagemSaida(
-        mensagem="Conta autorizada. O primeiro acesso foi enviado ao e-mail."
-    )
+    saida = _chamar(lambda: autorizar_pedido(db, usuario, pedido_id))
+    return MensagemSaida(**saida)

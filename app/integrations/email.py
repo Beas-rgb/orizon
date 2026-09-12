@@ -47,8 +47,8 @@ class CaixaEmail:
         if settings.smtp_host:
             _enviar_smtp(destino, assunto, corpo)
             return
-        if settings.app_env != "development":
-            raise EmailNaoEnviado("E-mail não configurado")
+        # Sem provedor: grava caixa local. Também em produção, para o TI
+        # não perder o token enquanto o Mailtrap não estiver no Render.
         OUTBOX.mkdir(parents=True, exist_ok=True)
         arquivo = OUTBOX / "ultimo.txt"
         arquivo.write_text(

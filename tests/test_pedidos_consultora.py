@@ -29,6 +29,8 @@ def test_consultora_so_entra_depois_da_autorizacao(client) -> None:
         headers=dev,
     )
     assert autorizado.status_code == 200
+    # Modo local nos testes: o TI recebe o link para não depender de SMTP.
+    assert autorizado.json().get("link_primeiro_acesso")
     assert "senha" not in caixa_email.mensagens[-1]["assunto"].lower()
 
     token = caixa_email.mensagens[-1]["corpo"].strip().split()[-1]

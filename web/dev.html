@@ -13,7 +13,10 @@
           <p class="olho">Tela de teste</p>
           <h1>Painel de desenvolvimento</h1>
           <p class="nota" id="quem"></p>
-          <p class="nota">Este painel não abre trabalho de consultora. Autoriza conta, lista consultores e vê a estabilidade.</p>
+          <p class="nota">
+            Aqui você cria o pedido da consultora, autoriza e (se o e-mail estiver
+            em modo local) recebe o link de primeiro acesso para testar.
+          </p>
         </div>
         <button type="button" id="sair">Sair</button>
       </header>
@@ -25,8 +28,30 @@
       </nav>
 
       <section id="pedidos" class="aba">
-        <p class="nota">Pedidos pendentes. Autorizar cria a conta e envia o primeiro acesso.</p>
+        <div class="cartao">
+          <h2>Criar pedido de consultora</h2>
+          <p class="sub">
+            Use um e-mail diferente do TI. Depois autorize na lista abaixo.
+          </p>
+          <form id="form-pedido">
+            <label>Nome
+              <input name="nome" minlength="2" required placeholder="Ana Consultora" />
+            </label>
+            <label>E-mail
+              <input name="email" type="email" required placeholder="ana@exemplo.com" />
+            </label>
+            <button class="acao" type="submit">Registrar pedido</button>
+          </form>
+        </div>
+        <p class="nota">Pedidos pendentes. Autorizar cria a conta.</p>
         <ul id="lista-pedidos" class="lista"></ul>
+        <p id="ok" class="nota"></p>
+        <p id="link-box" class="cartao" hidden>
+          <strong>Link de primeiro acesso (modo teste)</strong>
+          <input id="link-acesso" readonly />
+          <button type="button" id="copiar-link">Copiar link</button>
+          <a id="abrir-link" href="#" target="_blank" rel="noopener">Abrir primeiro acesso</a>
+        </p>
       </section>
 
       <section id="consultores" class="aba" hidden>
@@ -46,6 +71,7 @@
     <script src="horizon.js"></script>
     <script>
       const erro = document.getElementById("erro");
+      const ok = document.getElementById("ok");
 
       function mostrarAba(nome) {
         document.querySelectorAll(".abas button").forEach((botao) => {
@@ -60,12 +86,22 @@
         return new Date(valor).toLocaleString("pt-BR");
       }
 
+      function mostrarLink(link) {
+        const caixa = document.getElementById("link-box");
+        const campo = document.getElementById("link-acesso");
+        const abrir = document.getElementById("abrir-link");
+        caixa.hidden = !link;
+        if (!link) return;
+        campo.value = link;
+        abrir.href = link;
+      }
+
       async function carregarPedidos() {
         const lista = document.getElementById("lista-pedidos");
         const itens = await api("/dev/pedidos");
         lista.replaceChildren();
         if (!itens.length) {
-          lista.textContent = "Nenhum pedido pendente.";
+          lista.textContent = "Nenhum pedido pendente. Crie um no formulário acima.";
           return;
         }
         for (const item of itens) {
@@ -77,11 +113,17 @@
           botao.textContent = "Autorizar";
           botao.addEventListener("click", async () => {
             erro.textContent = "";
+            ok.textContent = "";
             botao.disabled = true;
             try {
-              await api(`/dev/pedidos/${item.id}/autorizar`, { method: "POST" });
+              const saida = await api(`/dev/pedidos/${item.id}/autorizar`, {
+                method: "POST",
+              });
+              ok.textContent = saida.mensagem;
+              mostrarLink(saida.link_primeiro_acesso || "");
               await carregarPedidos();
               await carregarConsultores();
+              await carregarAnalise();
             } catch (exc) {
               erro.textContent = exc.message;
               botao.disabled = false;
@@ -102,7 +144,7 @@
         }
         for (const item of itens) {
           const li = document.createElement("li");
-          li.textContent = `${item.nome} — ${item.email} — ${item.ativo ? "ativa" : "inativa"}`;
+          li.textContent = `${item.nome} — ${item.email} — ${item.ativo ? "ativa" : "aguardando senha"}`;
           lista.append(li);
         }
       }
@@ -121,10 +163,14 @@
       async function carregarAnalise() {
         const dados = await api("/dev/diagnostico");
         const cartoes = document.getElementById("cartoes");
+        const rotuloEmail =
+          dados.email === "mailtrap" || dados.email === "smtp"
+            ? "envio real (" + dados.email + ")"
+            : "caixa local (sem Mailtrap no Render)";
         cartoes.replaceChildren(
           cartao("API", dados.api),
           cartao("Banco", `${dados.banco} (${dados.banco_ms} ms)`),
-          cartao("E-mail", dados.email === "smtp" ? "envio real" : "caixa local"),
+          cartao("E-mail", rotuloEmail),
           cartao("Pedidos pendentes", dados.pedidos_pendentes),
           cartao("Projetos", dados.projetos),
           cartao("Pesquisas", dados.pesquisas),
@@ -154,6 +200,39 @@
         carregarAnalise().catch((exc) => {
           erro.textContent = exc.message;
         });
+      });
+      document.getElementById("copiar-link").addEventListener("click", async () => {
+        const link = document.getElementById("link-acesso").value;
+        if (!link) return;
+        try {
+          await copiarTexto(link);
+          ok.textContent = "Link copiado.";
+        } catch (_) {
+          erro.textContent = "Não foi possível copiar. Selecione o campo e copie manualmente.";
+        }
+      });
+
+      document.getElementById("form-pedido").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        erro.textContent = "";
+        ok.textContent = "";
+        mostrarLink("");
+        const form = evento.currentTarget;
+        try {
+          const saida = await api("/auth/cadastro-consultora", {
+            method: "POST",
+            json: {
+              nome: form.nome.value,
+              email: form.email.value,
+            },
+          });
+          ok.textContent = saida.mensagem + " Agora clique em Autorizar na lista.";
+          form.reset();
+          await carregarPedidos();
+          await carregarAnalise();
+        } catch (exc) {
+          erro.textContent = exc.message;
+        }
       });
 
       api("/auth/eu")

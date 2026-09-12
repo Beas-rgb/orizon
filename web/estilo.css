@@ -797,8 +797,17 @@ body.painel-papel main {
   border-bottom: 1px solid #e7e5e4;
 }
 
-.tabela-equipe th {
-  color: #57534e;
-  font-weight: 600;
+#link-box input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.5rem 0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.85rem;
 }
+
+#link-box a {
+  display: inline-block;
+  margin-left: 0.75rem;
+}
+
 
