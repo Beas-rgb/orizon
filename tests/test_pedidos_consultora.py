@@ -70,3 +70,36 @@ def test_diagnostico_so_para_o_dev(client) -> None:
     assert corpo["banco"] == "ok"
     assert "DATABASE_URL" not in analise.text
     assert corpo["contas"]["CONSULTOR"] == 1
+
+
+def test_autorizar_reativa_consultora_soft_deleted(client, db) -> None:
+    """E-mail soft-deletado ainda ocupa o unique: autorizar deve reativar."""
+    from app.models.base import agora
+    from app.models.usuario import Usuario
+
+    abrir_consultora(client, email="volta@horizon.dev", nome="Volta")
+    pessoa = db.query(Usuario).filter(Usuario.email == "volta@horizon.dev").one()
+    pessoa.deleted_at = agora()
+    pessoa.ativo = False
+    pessoa.senha_hash = None
+    db.commit()
+
+    dev = abrir_dev(client)
+    pedido = client.post(
+        "/auth/cadastro-consultora",
+        json={"nome": "Volta de Novo", "email": "volta@horizon.dev"},
+    )
+    assert pedido.status_code == 200
+    lista = client.get("/dev/pedidos", headers=dev)
+    autorizado = client.post(
+        f"/dev/pedidos/{lista.json()[0]['id']}/autorizar",
+        headers=dev,
+    )
+    assert autorizado.status_code == 200, autorizado.text
+    assert autorizado.json().get("link_primeiro_acesso")
+
+    db.expire_all()
+    pessoa = db.query(Usuario).filter(Usuario.email == "volta@horizon.dev").one()
+    assert pessoa.deleted_at is None
+    assert pessoa.ativo is False
+    assert pessoa.senha_hash is None

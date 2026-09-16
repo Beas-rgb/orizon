@@ -193,6 +193,16 @@ def _usuario_por_email(db: Session, email: str) -> Usuario | None:
     )
 
 
+def _usuario_soft_por_email(db: Session, email: str) -> Usuario | None:
+    """Conta apagada logicamente. O e-mail ainda ocupa o unique no banco."""
+    return db.scalar(
+        select(Usuario).where(
+            Usuario.email == email,
+            Usuario.deleted_at.is_not(None),
+        )
+    )
+
+
 def garantir_admin(db: Session) -> None:
     """Cria a conta do TI a partir do .env, se ainda não existir.
 
@@ -680,15 +690,27 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
     if _usuario_por_email(db, pedido.email) is not None:
         raise ErroAuth(409, "Este e-mail já tem acesso.")
     agora = _agora()
-    usuario = Usuario(
-        nome=pedido.nome,
-        email=pedido.email,
-        senha_hash=None,
-        papel="CONSULTOR",
-        ativo=False,
-        tentativas_falhas=0,
-    )
-    db.add(usuario)
+    # Soft-delete anterior deixa o e-mail no unique: reativa em vez de INSERT.
+    usuario = _usuario_soft_por_email(db, pedido.email)
+    if usuario is not None:
+        usuario.nome = pedido.nome
+        usuario.senha_hash = None
+        usuario.papel = "CONSULTOR"
+        usuario.ativo = False
+        usuario.tentativas_falhas = 0
+        usuario.bloqueado_ate = None
+        usuario.deleted_at = None
+        usuario.atualizado_em = agora
+    else:
+        usuario = Usuario(
+            nome=pedido.nome,
+            email=pedido.email,
+            senha_hash=None,
+            papel="CONSULTOR",
+            ativo=False,
+            tentativas_falhas=0,
+        )
+        db.add(usuario)
     db.flush()
     token = novo_token_opaco()
     link = _link_com_token("primeiro-acesso.html", token)
@@ -742,10 +764,17 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
         or modo_envio() == "local"
         or entrega.status != "ENVIADO"
     ):
-        saida["mensagem"] = (
-            "Conta autorizada. Em desenvolvimento o link aparece aqui "
-            "(válido 48h) para a consultora criar a senha. Senha nunca vai no e-mail."
-        )
+        if entrega.status != "ENVIADO":
+            saida["mensagem"] = (
+                "Conta autorizada, mas o e-mail falhou. Use o link abaixo "
+                "(válido 48h). Senha nunca vai no e-mail."
+            )
+            saida["aviso_email"] = entrega.erro or "Falha ao enviar e-mail."
+        else:
+            saida["mensagem"] = (
+                "Conta autorizada. Em desenvolvimento o link aparece aqui "
+                "(válido 48h) para a consultora criar a senha. Senha nunca vai no e-mail."
+            )
         saida["link_primeiro_acesso"] = link
     return saida
 
@@ -825,10 +854,17 @@ def reenviar_primeiro_acesso_consultora(
         or modo_envio() == "local"
         or entrega.status != "ENVIADO"
     ):
-        saida["mensagem"] = (
-            "Novo link gerado (válido 48h). Senha nunca vai no e-mail — "
-            "a consultora define no primeiro acesso."
-        )
+        if entrega.status != "ENVIADO":
+            saida["mensagem"] = (
+                "E-mail falhou. Novo link gerado (válido 48h) — use o link abaixo. "
+                "Senha nunca vai no e-mail."
+            )
+            saida["aviso_email"] = entrega.erro or "Falha ao enviar e-mail."
+        else:
+            saida["mensagem"] = (
+                "Novo link gerado (válido 48h). Senha nunca vai no e-mail — "
+                "a consultora define no primeiro acesso."
+            )
         saida["link_primeiro_acesso"] = link
     return saida
 

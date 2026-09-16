@@ -222,6 +222,7 @@ export function DevPainel() {
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [linkAcesso, setLinkAcesso] = useState("");
+  const [avisoEmail, setAvisoEmail] = useState("");
 
   useEffect(() => {
     api<{ status: string }>("/health").then(setSaude).catch(() => setSaude({ status: "falha" }));
@@ -243,15 +244,18 @@ export function DevPainel() {
     setMsg("");
     setErro("");
     setLinkAcesso("");
+    setAvisoEmail("");
     try {
       const resp = await api<{
         mensagem: string;
         link_primeiro_acesso?: string | null;
+        aviso_email?: string | null;
         email?: string;
       }>(`/dev/pedidos/${id}/autorizar`, {
         method: "POST",
       });
       setMsg(resp.mensagem || "Autorizado.");
+      if (resp.aviso_email) setAvisoEmail(resp.aviso_email);
       if (resp.link_primeiro_acesso) {
         setLinkAcesso(resp.link_primeiro_acesso);
       }
@@ -266,12 +270,15 @@ export function DevPainel() {
     setMsg("");
     setErro("");
     setLinkAcesso("");
+    setAvisoEmail("");
     try {
       const resp = await api<{
         mensagem: string;
         link_primeiro_acesso?: string | null;
+        aviso_email?: string | null;
       }>(`/dev/consultores/${id}/reenviar-primeiro-acesso`, { method: "POST" });
       setMsg(resp.mensagem || "Reenviado.");
+      if (resp.aviso_email) setAvisoEmail(resp.aviso_email);
       if (resp.link_primeiro_acesso) {
         setLinkAcesso(resp.link_primeiro_acesso);
       }
@@ -288,6 +295,9 @@ export function DevPainel() {
       </p>
       {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
       {msg ? <p className="text-[#1E7A4A] text-[13px] mb-3">{msg}</p> : null}
+      {avisoEmail ? (
+        <p className="text-[#A07020] text-[13px] mb-3">{avisoEmail}</p>
+      ) : null}
       {linkAcesso ? (
         <div
           className="rounded-2xl p-4 mb-5 text-[12px] break-all"
@@ -387,9 +397,11 @@ export function DevPainel() {
             background: "rgba(30,122,74,0.08)",
           }}
         >
-          Canal de e-mail ativo (<strong>{email.modo}</strong>). Convites devem chegar ao
-          destinatário. Se não chegar, confira o Inbox/Spam do Mailtrap e o remetente
-          autorizado.
+          Canal de e-mail ativo (<strong>{email.modo}</strong>). Se o Gmail não
+          receber nada: olhe <strong>Email Logs / Sending</strong> no Mailtrap —
+          o e-mail do dono da conta Mailtrap não é a caixa de entrega. Remetente{" "}
+          <code>demomailtrap.co</code> costuma não entregar no Gmail real; use o
+          link do TI ou verifique um domínio próprio.
         </div>
       ) : null}
 

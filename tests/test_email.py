@@ -90,3 +90,16 @@ def test_sem_token_nao_chama_mailtrap(monkeypatch) -> None:
     caixa_email.enviar("a@b.dev", "assunto", "corpo")
     assert chamado == []
     assert caixa_email.mensagens[-1]["destino"] == "a@b.dev"
+
+
+def test_erro_entrega_seguro_nao_vaza_segredo() -> None:
+    from app.services.notificacao import _erro_entrega_seguro
+
+    msg = _erro_entrega_seguro(Exception("Unauthorized invalid token Bearer abc"))
+    assert "token ou permissão" in msg
+    assert "Bearer" not in msg
+    dominio = _erro_entrega_seguro(Exception("Sender domain not verified"))
+    assert "domínio" in dominio.lower() or "remetente" in dominio.lower()
+    limpo = _erro_entrega_seguro(Exception("password=segredo postgres://x"))
+    assert "segredo" not in limpo
+    assert "postgres" not in limpo.lower()

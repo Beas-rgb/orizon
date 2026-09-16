@@ -46,6 +46,7 @@ class MensagemSaida(BaseModel):
     mensagem: str
     email: str | None = None
     link_primeiro_acesso: str | None = None
+    aviso_email: str | None = None
 
 
 def _chamar(acao):

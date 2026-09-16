@@ -110,15 +110,57 @@ def entregar_email(
     db.add(entrega)
     try:
         caixa_email.enviar(destino, assunto, corpo, categoria=referencia)
-    except Exception:
+    except Exception as exc:
         entrega.status = "FALHA"
-        entrega.erro = "Falha ao enviar e-mail."
+        entrega.erro = _erro_entrega_seguro(exc)
         entrega.atualizado_em = agora()
         return entrega
     entrega.status = "ENVIADO"
     entrega.enviado_em = agora()
     entrega.atualizado_em = entrega.enviado_em
     return entrega
+
+
+def _erro_entrega_seguro(exc: BaseException) -> str:
+    """Mensagem curta para o TI. Sem token, senha nem URL de banco."""
+    bruto = " ".join(str(exc).split())
+    baixo = bruto.lower()
+    if any(
+        chave in baixo
+        for chave in (
+            "unauthorized",
+            "forbidden",
+            "401",
+            "403",
+            "invalid api",
+            "invalid token",
+        )
+    ):
+        return "Falha Mailtrap: token ou permissão inválidos."
+    if any(
+        chave in baixo
+        for chave in (
+            "sender",
+            "from",
+            "domain",
+            "not verified",
+            "not allowed",
+            "remetente",
+        )
+    ):
+        return (
+            "Falha Mailtrap: remetente/domínio não autorizado. "
+            "demomailtrap.co costuma não entregar no Gmail real."
+        )
+    if "remetente mailtrap não configurado" in baixo:
+        return "Falha: MAILTRAP_FROM_EMAIL não configurado."
+    if not bruto:
+        return "Falha ao enviar e-mail."
+    limpo = bruto[:160]
+    for trecho in ("Bearer ", "token=", "api_key=", "password=", "postgres://"):
+        if trecho.lower() in limpo.lower():
+            return "Falha ao enviar e-mail."
+    return f"Falha ao enviar e-mail: {limpo}"
 
 
 def reservar_telefone(

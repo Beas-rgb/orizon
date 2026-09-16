@@ -93,6 +93,12 @@ Conta do TI (opcional): preencha `ADMIN_NOME`, `ADMIN_EMAIL` e `ADMIN_SENHA` no
 
 Sem esses valores, o envio continua em `local` (sem caixa real).
 
+**Importante:** o e-mail do *dono da conta* Mailtrap (Account Settings) **não**
+é a caixa onde caem os convites. Em **Sending → Email Logs** você vê se a API
+aceitou o envio. O remetente `hello@demomailtrap.co` costuma **não entregar no
+Gmail real** — para produção use domínio verificado no Mailtrap. Enquanto isso,
+o painel do TI mostra o link de primeiro acesso quando a entrega falha.
+
 ## Testes
 
 ```powershell
