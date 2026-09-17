@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -20,12 +22,65 @@ def test_health_email_mailtrap_nao_vaza_segredo(monkeypatch) -> None:
     assert "token-de-teste" not in resposta.text
 
 
-def test_modo_envio_prioriza_mailtrap(monkeypatch) -> None:
+def test_modo_envio_prioriza_sendgrid(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "sendgrid_api_key", "SG.teste")
+    monkeypatch.setattr(settings, "mailtrap_api_token", "token-de-teste")
+    monkeypatch.setattr(settings, "smtp_host", "smtp.exemplo.dev")
+    monkeypatch.setattr(settings, "smtp_user", "user")
+    monkeypatch.setattr(settings, "smtp_password", "senha")
+    assert modo_envio() == "sendgrid"
+
+
+def test_modo_envio_prioriza_mailtrap_sobre_smtp(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "sendgrid_api_key", "")
     monkeypatch.setattr(settings, "mailtrap_api_token", "token-de-teste")
     monkeypatch.setattr(settings, "smtp_host", "smtp.exemplo.dev")
     monkeypatch.setattr(settings, "smtp_user", "user")
     monkeypatch.setattr(settings, "smtp_password", "senha")
     assert modo_envio() == "mailtrap"
+
+
+def test_envia_pelo_sendgrid(monkeypatch) -> None:
+    visto: dict[str, object] = {}
+
+    class RespostaFalsa:
+        status = 202
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def urlopen_falso(pedido, timeout=20):
+        visto["url"] = pedido.full_url
+        visto["auth"] = pedido.get_header("Authorization")
+        corpo = json.loads(pedido.data.decode("utf-8"))
+        visto["destino"] = corpo["personalizations"][0]["to"][0]["email"]
+        visto["remetente"] = corpo["from"]["email"]
+        visto["nome"] = corpo["from"]["name"]
+        visto["assunto"] = corpo["subject"]
+        visto["texto"] = corpo["content"][0]["value"]
+        return RespostaFalsa()
+
+    monkeypatch.setattr(settings, "sendgrid_api_key", "SG.teste")
+    monkeypatch.setattr(settings, "sendgrid_from_email", "noreply@orizon.dev")
+    monkeypatch.setattr(settings, "sendgrid_from_name", "Horizon")
+    monkeypatch.setattr("urllib.request.urlopen", urlopen_falso)
+
+    caixa_email.enviar(
+        "destinatario@exemplo.dev",
+        "Você é incrível!",
+        "Parabéns pelo envio de teste.",
+    )
+
+    assert visto["url"] == "https://api.sendgrid.com/v3/mail/send"
+    assert visto["auth"] == "Bearer SG.teste"
+    assert visto["destino"] == "destinatario@exemplo.dev"
+    assert visto["remetente"] == "noreply@orizon.dev"
+    assert visto["nome"] == "Horizon"
+    assert visto["assunto"] == "Você é incrível!"
+    assert visto["texto"] == "Parabéns pelo envio de teste."
 
 
 def test_envia_pelo_sdk_mailtrap(monkeypatch) -> None:
@@ -48,6 +103,7 @@ def test_envia_pelo_sdk_mailtrap(monkeypatch) -> None:
     monkeypatch.setattr(settings, "mailtrap_api_token", "token-de-teste")
     monkeypatch.setattr(settings, "mailtrap_from_email", "hello@demomailtrap.co")
     monkeypatch.setattr(settings, "mailtrap_from_name", "Horizon")
+    monkeypatch.setattr(settings, "sendgrid_api_key", "")
     monkeypatch.setattr("mailtrap.MailtrapClient", ClienteFalso)
 
     caixa_email.enviar(
@@ -69,6 +125,7 @@ def test_envia_pelo_sdk_mailtrap(monkeypatch) -> None:
 
 
 def test_mailtrap_sem_remetente_falha(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "sendgrid_api_key", "")
     monkeypatch.setattr(settings, "mailtrap_api_token", "token-de-teste")
     monkeypatch.setattr(settings, "mailtrap_from_email", "")
     monkeypatch.setattr(settings, "smtp_from", "")
@@ -103,3 +160,6 @@ def test_erro_entrega_seguro_nao_vaza_segredo() -> None:
     limpo = _erro_entrega_seguro(Exception("password=segredo postgres://x"))
     assert "segredo" not in limpo
     assert "postgres" not in limpo.lower()
+    rede = _erro_entrega_seguro(Exception("[Errno 101] Network is unreachable"))
+    assert "SendGrid" in rede
+    assert "587" in rede

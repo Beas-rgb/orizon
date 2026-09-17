@@ -348,28 +348,38 @@ export function DevPainel() {
         >
           <p className="font-bold text-gray-800 mb-2">E-mail ainda em modo local</p>
           <p className="mb-2">
-            Convites não chegam na caixa real. Para testar envio/recebimento de verdade,
-            preencha no painel do <strong>Render</strong> (Environment):
+            No Render free o Gmail SMTP (porta 587) é bloqueado. Para demo real use{" "}
+            <strong>SendGrid</strong> (API HTTPS) no serviço <code>orizon-api</code>:
           </p>
           <ol className="list-decimal pl-5 mb-2 space-y-1">
             <li>
-              Em <a className="text-[#1D5FAF] underline" href="https://mailtrap.io" target="_blank" rel="noreferrer">mailtrap.io</a>{" "}
-              crie um token de API (Email Sending).
+              Crie conta em{" "}
+              <a
+                className="text-[#1D5FAF] underline"
+                href="https://sendgrid.com"
+                target="_blank"
+                rel="noreferrer"
+              >
+                sendgrid.com
+              </a>{" "}
+              → Settings → Sender Authentication →{" "}
+              <strong>Single Sender Verification</strong> (seu Gmail).
             </li>
             <li>
-              No Render → serviço <code>orizon-api</code> → Environment, defina:
+              Crie uma API Key (Mail Send) e no Render defina:
               <br />
-              <code className="text-[11px] break-all">MAILTRAP_API_TOKEN</code> = o token
+              <code className="text-[11px] break-all">SENDGRID_API_KEY</code>
               <br />
-              <code className="text-[11px] break-all">MAILTRAP_FROM_EMAIL</code> = remetente
-              liberado no Mailtrap
+              <code className="text-[11px] break-all">SENDGRID_FROM_EMAIL</code> = o
+              Gmail verificado
               <br />
-              <code className="text-[11px]">MAILTRAP_FROM_NAME</code> = Horizon
-              <br />
-              <code className="text-[11px] break-all">APP_PUBLIC_URL</code> =
-              https://orizon-api.onrender.com/app
+              <code className="text-[11px]">SENDGRID_FROM_NAME</code> = Horizon
             </li>
-            <li>Salve e aguarde o redeploy (ou Manual Deploy).</li>
+            <li>
+              Apague ou esvazie <code>MAILTRAP_API_TOKEN</code> e as vars{" "}
+              <code>SMTP_*</code> para não misturar canais.
+            </li>
+            <li>Salve e aguarde o redeploy.</li>
             <li>
               Confira{" "}
               <a
@@ -380,13 +390,26 @@ export function DevPainel() {
               >
                 /health/email
               </a>{" "}
-              → deve mostrar <code>{`{"modo":"mailtrap"}`}</code>.
+              → <code>{`{"modo":"sendgrid"}`}</code>.
             </li>
           </ol>
           <p className="text-gray-600">
-            Enquanto estiver em <code>local</code>, use o link de primeiro acesso que aparece
-            após autorizar (acima). Senha nunca vai por e-mail.
+            Enquanto estiver em <code>local</code>, use o link de primeiro acesso que
+            aparece após autorizar. Senha nunca vai por e-mail.
           </p>
+        </div>
+      ) : email?.modo === "sendgrid" ? (
+        <div
+          className="rounded-3xl p-4 mb-5 text-[12px] text-[#1E7A4A]"
+          style={{
+            ...glassStyle,
+            border: "1px solid rgba(30,122,74,0.3)",
+            background: "rgba(30,122,74,0.08)",
+          }}
+        >
+          Canal <strong>SendGrid</strong> ativo (HTTPS — ok no Render free). Convites
+          saem do remetente verificado. Se não chegar, confira Inbox/Spam e o Activity
+          do SendGrid.
         </div>
       ) : email?.modo === "mailtrap" || email?.modo === "smtp" ? (
         <div
@@ -397,11 +420,9 @@ export function DevPainel() {
             background: "rgba(30,122,74,0.08)",
           }}
         >
-          Canal de e-mail ativo (<strong>{email.modo}</strong>). Se o Gmail não
-          receber nada: olhe <strong>Email Logs / Sending</strong> no Mailtrap —
-          o e-mail do dono da conta Mailtrap não é a caixa de entrega. Remetente{" "}
-          <code>demomailtrap.co</code> costuma não entregar no Gmail real; use o
-          link do TI ou verifique um domínio próprio.
+          Canal de e-mail ativo (<strong>{email.modo}</strong>). No Render free, SMTP
+          costuma falhar com &quot;Network is unreachable&quot; — prefira SendGrid. Mailtrap
+          demo pode não entregar no Gmail real.
         </div>
       ) : null}
 

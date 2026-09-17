@@ -128,6 +128,20 @@ def _erro_entrega_seguro(exc: BaseException) -> str:
     if any(
         chave in baixo
         for chave in (
+            "network is unreachable",
+            "errno 101",
+            "enetunreach",
+            "timed out",
+            "etimedout",
+        )
+    ):
+        return (
+            "Falha de rede SMTP. No Render free as portas 587/465 são "
+            "bloqueadas — use SendGrid (API HTTPS)."
+        )
+    if any(
+        chave in baixo
+        for chave in (
             "unauthorized",
             "forbidden",
             "401",
@@ -136,7 +150,7 @@ def _erro_entrega_seguro(exc: BaseException) -> str:
             "invalid token",
         )
     ):
-        return "Falha Mailtrap: token ou permissão inválidos."
+        return "Falha: token ou permissão inválidos no provedor de e-mail."
     if any(
         chave in baixo
         for chave in (
@@ -149,9 +163,11 @@ def _erro_entrega_seguro(exc: BaseException) -> str:
         )
     ):
         return (
-            "Falha Mailtrap: remetente/domínio não autorizado. "
-            "demomailtrap.co costuma não entregar no Gmail real."
+            "Falha: remetente não verificado no provedor. "
+            "No SendGrid use Single Sender Verification."
         )
+    if "remetente sendgrid não configurado" in baixo:
+        return "Falha: SENDGRID_FROM_EMAIL não configurado."
     if "remetente mailtrap não configurado" in baixo:
         return "Falha: MAILTRAP_FROM_EMAIL não configurado."
     if not bruto:

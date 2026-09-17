@@ -72,32 +72,30 @@ Conta do TI (opcional): preencha `ADMIN_NOME`, `ADMIN_EMAIL` e `ADMIN_SENHA` no
 
 ## E-mail e storage
 
-- **E-mail:** Mailtrap (preferido) → SMTP → outbox local. Em modo `local`, a API
-  pode devolver `link_primeiro_acesso` para a consultora/TI testarem.
+- **E-mail:** SendGrid (API HTTPS) → Mailtrap → SMTP → outbox local.
+  No **Render free**, SMTP (Gmail porta 587) é bloqueado (`Network is unreachable`).
+  Use SendGrid para demo real.
 - **R2:** vars `R2_*` no `.env` / Render (`sync: false`). Sem R2, o backend usa
   fallback local.
 
-### Ativar e-mail real no Render (checklist)
+### Ativar e-mail real no Render (SendGrid)
 
-1. Crie conta em [mailtrap.io](https://mailtrap.io) → API Tokens (Email Sending).
-2. No Render → `orizon-api` → **Environment**, preencha:
-   - `MAILTRAP_API_TOKEN` — token do Mailtrap
-   - `MAILTRAP_FROM_EMAIL` — remetente autorizado no Mailtrap
-   - `MAILTRAP_FROM_NAME` — `Horizon`
+1. Crie conta em [sendgrid.com](https://sendgrid.com).
+2. **Settings → Sender Authentication → Single Sender Verification** e verifique
+   o seu Gmail (clique no link que o SendGrid envia).
+3. Crie uma **API Key** com permissão de Mail Send.
+4. No Render → `orizon-api` → **Environment**:
+   - `SENDGRID_API_KEY` — a chave
+   - `SENDGRID_FROM_EMAIL` — o **mesmo** Gmail verificado
+   - `SENDGRID_FROM_NAME` — `Horizon`
    - `APP_PUBLIC_URL` — `https://orizon-api.onrender.com/app`
-3. Salve e aguarde o redeploy.
-4. Confira `https://orizon-api.onrender.com/health/email` → deve ser
-   `{"modo":"mailtrap"}`.
-5. No painel TI (`/app/inicio`) o cartão de e-mail deixa de mostrar o aviso
-   amarelo de modo local.
+5. Esvazie `MAILTRAP_API_TOKEN` e `SMTP_*` (para o canal ser só SendGrid).
+6. Salve e aguarde o redeploy.
+7. Confira `https://orizon-api.onrender.com/health/email` →
+   `{"modo":"sendgrid"}`.
 
-Sem esses valores, o envio continua em `local` (sem caixa real).
-
-**Importante:** o e-mail do *dono da conta* Mailtrap (Account Settings) **não**
-é a caixa onde caem os convites. Em **Sending → Email Logs** você vê se a API
-aceitou o envio. O remetente `hello@demomailtrap.co` costuma **não entregar no
-Gmail real** — para produção use domínio verificado no Mailtrap. Enquanto isso,
-o painel do TI mostra o link de primeiro acesso quando a entrega falha.
+**Importante:** não cole a API Key no chat nem no git. Se o envio falhar, o painel
+do TI mostra o motivo e o link de primeiro acesso.
 
 ## Testes
 

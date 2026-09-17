@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
 
+    # SendGrid API (HTTPS). Preferido no Render free — SMTP fica bloqueado.
+    sendgrid_api_key: str = ""
+    sendgrid_from_email: str = ""
+    sendgrid_from_name: str = "Horizon"
+
     # Mailtrap Email API. O token é segredo; o remetente é valor de setup.
     mailtrap_api_token: str = ""
     mailtrap_from_email: str = ""

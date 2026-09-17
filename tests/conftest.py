@@ -15,7 +15,8 @@ from app.models.base import Base
 
 @pytest.fixture(autouse=True)
 def _sem_envio_real(monkeypatch) -> None:
-    """Nenhum teste fala com Mailtrap ou SMTP de verdade."""
+    """Nenhum teste fala com Mailtrap, SendGrid ou SMTP de verdade."""
+    monkeypatch.setattr(settings, "sendgrid_api_key", "")
     monkeypatch.setattr(settings, "mailtrap_api_token", "")
     monkeypatch.setattr(settings, "smtp_host", "")
     caixa_email.mensagens.clear()
