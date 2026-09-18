@@ -27,7 +27,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!usuario) return <Navigate to="/entrar" replace />;
+  if (!usuario) return <Navigate to="/" replace />;
   return children;
 }
 
