@@ -773,7 +773,8 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
         else:
             saida["mensagem"] = (
                 "Conta autorizada. Em desenvolvimento o link aparece aqui "
-                "(válido 48h) para a consultora criar a senha. Senha nunca vai no e-mail."
+                "(válido 48h) para a consultora criar a senha. "
+                "Senha nunca vai no e-mail."
             )
         saida["link_primeiro_acesso"] = link
     return saida

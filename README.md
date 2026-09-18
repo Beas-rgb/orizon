@@ -108,3 +108,9 @@ pytest
 - **Backend** decide autenticação, autorização, regras de negócio, convites,
   tokens, isolamento (IDOR = 404), auditoria.
 - **React** só apresenta telas e chama a API.
+
+## Auditoria e backlog
+
+Análise crítica (segurança, anonimato do clima, carga do banco, usabilidade
+vs Yespper/Leel, acesso TI de teste e roadmap): ver
+[`docs/AUDITORIA_2026-09.md`](docs/AUDITORIA_2026-09.md).

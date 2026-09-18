@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 
-from app.core.config import settings
+from app.core.config import conferir_producao, settings
 from app.core.database import check_db
 from app.core.observabilidade import LogAcesso
 from app.integrations.email import modo_envio
@@ -14,6 +14,8 @@ from app.routers.dev import router as dev_router
 from app.routers.notificacoes import router as notificacoes_router
 from app.routers.pesquisas import router as pesquisas_router
 from app.routers.projetos import router as projetos_router
+
+conferir_producao()
 
 app = FastAPI(title="Horizon", version="0.1.0")
 
@@ -48,6 +50,23 @@ app.include_router(pesquisas_router)
 _react_dist = Path(__file__).resolve().parent.parent / "web" / "app"
 
 
+def _arquivo_do_build(caminho: str) -> Path | None:
+    """Confina o pedido dentro de web/app.
+
+    O caminho chega da URL já decodificado, então `..` e `%2f` viram
+    subida de diretório. Sem este confinamento, `/app/..%2f..%2f.env`
+    devolveria segredos do servidor.
+    """
+    raiz = _react_dist.resolve()
+    try:
+        alvo = (raiz / caminho).resolve()
+    except (OSError, ValueError):
+        return None
+    if alvo != raiz and not alvo.is_relative_to(raiz):
+        return None
+    return alvo
+
+
 @app.get("/app")
 @app.get("/app/{caminho:path}")
 def spa_react(caminho: str = "") -> FileResponse:
@@ -55,8 +74,8 @@ def spa_react(caminho: str = "") -> FileResponse:
     if not _react_dist.exists():
         raise HTTPException(status_code=503, detail="Frontend indisponível.")
     if caminho and "." in caminho.split("/")[-1]:
-        arquivo = _react_dist / caminho
-        if arquivo.is_file():
+        arquivo = _arquivo_do_build(caminho)
+        if arquivo is not None and arquivo.is_file():
             return FileResponse(arquivo)
         raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
     return FileResponse(_react_dist / "index.html")

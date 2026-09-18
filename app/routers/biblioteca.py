@@ -119,7 +119,11 @@ def arquivo(
     return Response(
         content=conteudo,
         media_type=doc.mime,
-        headers={"Content-Disposition": f'attachment; filename="{doc.nome}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{doc.nome}"',
+            # O navegador não deve adivinhar outro tipo a partir do conteúdo.
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

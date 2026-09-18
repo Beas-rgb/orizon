@@ -16,9 +16,10 @@ RAIZ_MIDIA = Path("data/pesquisas")
 LIMITE_BYTES = 10 * 1024 * 1024
 LIMITE_IMAGEM = 5 * 1024 * 1024
 LIMITE_VIDEO = 50 * 1024 * 1024
+DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 MIMES = {
     "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    DOCX,
     "image/png",
     "image/jpeg",
     "text/plain",
@@ -71,6 +72,26 @@ def detectar_mime(conteudo: bytes) -> str | None:
     return None
 
 
+def _assinatura_documento(conteudo: bytes) -> str | None:
+    """MIME real de documento. None quando não há assinatura conhecida."""
+    if conteudo[:5] == b"%PDF-":
+        return "application/pdf"
+    if conteudo[:4] == b"PK\x03\x04":
+        return DOCX
+    return detectar_mime(conteudo)
+
+
+def _parece_texto(conteudo: bytes) -> bool:
+    """Texto puro de verdade: UTF-8, sem byte nulo e sem cara de HTML."""
+    if b"\x00" in conteudo:
+        return False
+    try:
+        texto = conteudo.decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+    return not texto.lstrip().startswith("<")
+
+
 def _validar(conteudo: bytes, mime: str) -> str:
     if not conteudo:
         raise ArquivoInvalido("Arquivo vazio.")
@@ -78,6 +99,14 @@ def _validar(conteudo: bytes, mime: str) -> str:
         raise ArquivoInvalido("Arquivo maior que 10 MB.")
     if mime not in MIMES:
         raise ArquivoInvalido("Tipo de arquivo não permitido.")
+    # O navegador declara o Content-Type; quem manda são os bytes. Sem isto,
+    # um HTML com script entraria na biblioteca rotulado como PDF.
+    real = _assinatura_documento(conteudo)
+    if real is None:
+        if mime != "text/plain" or not _parece_texto(conteudo):
+            raise ArquivoInvalido("O conteúdo não corresponde ao tipo enviado.")
+    elif real != mime:
+        raise ArquivoInvalido("O conteúdo não corresponde ao tipo enviado.")
     return hashlib.sha256(conteudo).hexdigest()
 
 

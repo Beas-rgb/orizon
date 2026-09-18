@@ -70,6 +70,25 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
+def conferir_producao() -> None:
+    """Em produção, segredo ausente derruba o boot — não a primeira requisição.
+
+    Sem isto, a API sobe sem JWT_SECRET e só falha quando alguém tenta
+    entrar, com erro opaco de 500.
+    """
+    if settings.app_env != "production":
+        return
+    obrigatorios = (
+        ("JWT_SECRET", settings.jwt_secret),
+        ("DATABASE_URL", settings.database_url),
+    )
+    faltando = [nome for nome, valor in obrigatorios if not valor.strip()]
+    if faltando:
+        raise RuntimeError(
+            "Configuração obrigatória ausente em produção: " + ", ".join(faltando)
+        )
+
+
 def url_publica() -> str:
     """Endereço da tela. No Render usa o host público, não o localhost."""
     externa = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
