@@ -79,6 +79,8 @@ class PerguntaSaida(BaseModel):
     obrigatoria: bool
     ordem: int
     opcoes: list[dict[str, str | int]]
+    midia_tipo: str | None = None
+    tem_midia: bool = False
 
 
 class NotaSaida(BaseModel):

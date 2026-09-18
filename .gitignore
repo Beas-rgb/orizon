@@ -14,5 +14,6 @@ __pycache__/
 .env
 data/outbox/
 data/biblioteca/
+data/pesquisas/
 *.log
 .DS_Store

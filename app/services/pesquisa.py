@@ -9,6 +9,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.tokens import novo_id
+from app.integrations.arquivos import (
+    ArquivoInvalido,
+    copiar_midia,
+    guardar_midia,
+    ler_midia,
+)
 from app.models.auditoria import LogAuditoria
 from app.models.base import agora
 from app.models.configuracao import ConfiguracaoProjeto
@@ -382,6 +388,95 @@ def reordenar_perguntas(
     )
 
 
+def anexar_midia_pergunta(
+    db: Session,
+    consultor: Usuario,
+    pesquisa_id: str,
+    pergunta_id: str,
+    conteudo: bytes,
+) -> Pergunta:
+    """Upload de foto/vídeo. Só em RASCUNHO. Chave interna, nunca o nome do arquivo."""
+    pesquisa = _exigir_rascunho_consultor(db, consultor, pesquisa_id)
+    pergunta = db.get(Pergunta, pergunta_id)
+    if (
+        pergunta is None
+        or pergunta.pesquisa_id != pesquisa.id
+        or pergunta.deleted_at is not None
+    ):
+        raise ErroAuth(404, "Pergunta não encontrada.")
+    objeto_id = novo_id()
+    try:
+        chave, midia_tipo, _mime = guardar_midia(objeto_id, conteudo)
+    except ArquivoInvalido as exc:
+        raise ErroAuth(422, str(exc)) from None
+    pergunta.midia_key = chave
+    pergunta.midia_tipo = midia_tipo
+    pergunta.atualizado_em = agora()
+    pesquisa.atualizado_em = pergunta.atualizado_em
+    _auditar(db, "PERGUNTA_MIDIA", consultor.id)
+    db.commit()
+    return pergunta
+
+
+def remover_midia_pergunta(
+    db: Session,
+    consultor: Usuario,
+    pesquisa_id: str,
+    pergunta_id: str,
+) -> Pergunta:
+    pesquisa = _exigir_rascunho_consultor(db, consultor, pesquisa_id)
+    pergunta = db.get(Pergunta, pergunta_id)
+    if (
+        pergunta is None
+        or pergunta.pesquisa_id != pesquisa.id
+        or pergunta.deleted_at is not None
+    ):
+        raise ErroAuth(404, "Pergunta não encontrada.")
+    pergunta.midia_key = None
+    pergunta.midia_tipo = None
+    pergunta.atualizado_em = agora()
+    pesquisa.atualizado_em = pergunta.atualizado_em
+    _auditar(db, "PERGUNTA_MIDIA_REMOVIDA", consultor.id)
+    db.commit()
+    return pergunta
+
+
+def baixar_midia_pergunta(
+    db: Session,
+    usuario: Usuario,
+    pesquisa_id: str,
+    pergunta_id: str,
+) -> tuple[bytes, str]:
+    """Consultora/órgão do projeto ou funcionário vinculado. Sem vazar key."""
+    pesquisa = _pesquisa_viva(db, pesquisa_id)
+    papel = _papel(db, usuario, pesquisa.projeto_id)
+    if papel not in {"CONSULTOR", "ORGAO", "FUNCIONARIO"}:
+        raise ErroAuth(404, "Pergunta não encontrada.")
+    pergunta = db.get(Pergunta, pergunta_id)
+    if (
+        pergunta is None
+        or pergunta.pesquisa_id != pesquisa.id
+        or pergunta.deleted_at is not None
+        or not pergunta.midia_key
+    ):
+        raise ErroAuth(404, "Mídia não encontrada.")
+    try:
+        conteudo = ler_midia(pergunta.midia_key)
+    except FileNotFoundError:
+        raise ErroAuth(404, "Mídia não encontrada.") from None
+    mime = "application/octet-stream"
+    if pergunta.midia_tipo == "IMAGEM":
+        mime = "image/jpeg"
+    elif pergunta.midia_tipo == "VIDEO":
+        mime = "video/mp4"
+    from app.integrations.arquivos import detectar_mime
+
+    detectado = detectar_mime(conteudo)
+    if detectado:
+        mime = detectado
+    return conteudo, mime
+
+
 def publicar(db: Session, consultor: Usuario, pesquisa_id: str) -> Pesquisa:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
     if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
@@ -481,6 +576,14 @@ def salvar_modelo(
         .order_by(Pergunta.ordem)
     ).all()
     for item in perguntas:
+        midia_key = None
+        midia_tipo = item.midia_tipo
+        if item.midia_key:
+            try:
+                midia_key = copiar_midia(item.midia_key, novo_id())
+            except (ArquivoInvalido, FileNotFoundError, OSError):
+                midia_key = None
+                midia_tipo = None
         copia = TemplatePergunta(
             id=novo_id(),
             template_id=modelo.id,
@@ -488,6 +591,8 @@ def salvar_modelo(
             tipo=item.tipo,
             obrigatoria=item.obrigatoria,
             ordem=item.ordem,
+            midia_tipo=midia_tipo if midia_key else None,
+            midia_key=midia_key,
             criado_em=agora_,
             atualizado_em=agora_,
             deleted_at=None,
@@ -574,6 +679,14 @@ def criar_de_modelo(
         .order_by(TemplatePergunta.ordem)
     ).all()
     for item in perguntas:
+        midia_key = None
+        midia_tipo = item.midia_tipo
+        if item.midia_key:
+            try:
+                midia_key = copiar_midia(item.midia_key, novo_id())
+            except (ArquivoInvalido, FileNotFoundError, OSError):
+                midia_key = None
+                midia_tipo = None
         pergunta = Pergunta(
             id=novo_id(),
             pesquisa_id=pesquisa.id,
@@ -581,6 +694,8 @@ def criar_de_modelo(
             tipo=item.tipo,
             obrigatoria=item.obrigatoria,
             ordem=item.ordem,
+            midia_tipo=midia_tipo if midia_key else None,
+            midia_key=midia_key,
             criado_em=agora_,
             atualizado_em=agora_,
         )

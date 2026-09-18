@@ -2,7 +2,8 @@
 autenticado. O painel do órgão não devolve token nem nome.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -26,6 +27,8 @@ from app.schemas.pesquisa import (
 from app.services.identidade import ErroAuth
 from app.services.pesquisa import (
     adicionar_pergunta,
+    anexar_midia_pergunta,
+    baixar_midia_pergunta,
     criar_de_modelo,
     criar_pesquisa,
     editar_pergunta,
@@ -41,6 +44,7 @@ from app.services.pesquisa import (
     perguntas_do_token,
     publicar,
     registrar_respostas,
+    remover_midia_pergunta,
     reordenar_perguntas,
     salvar_modelo,
 )
@@ -108,6 +112,8 @@ def _pergunta_saida(db: Session, pergunta) -> PerguntaSaida:
             {"id": item.id, "texto": item.texto, "ordem": item.ordem}
             for item in opcoes
         ],
+        midia_tipo=pergunta.midia_tipo,
+        tem_midia=bool(pergunta.midia_key),
     )
 
 
@@ -210,6 +216,56 @@ def reordenar(
         )
     )
     return [_pergunta_saida(db, item) for item in itens]
+
+
+@router.post(
+    "/pesquisas/{pesquisa_id}/perguntas/{pergunta_id}/midia",
+    response_model=PerguntaSaida,
+)
+async def upload_midia(
+    pesquisa_id: str,
+    pergunta_id: str,
+    arquivo: UploadFile = File(...),
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> PerguntaSaida:
+    """Anexa foto/vídeo. MIME real pelos bytes; chave interna (não usa o nome)."""
+    conteudo = await arquivo.read()
+    pergunta = _chamar(
+        lambda: anexar_midia_pergunta(
+            db, consultor, pesquisa_id, pergunta_id, conteudo
+        )
+    )
+    return _pergunta_saida(db, pergunta)
+
+
+@router.delete(
+    "/pesquisas/{pesquisa_id}/perguntas/{pergunta_id}/midia",
+    response_model=PerguntaSaida,
+)
+def apagar_midia(
+    pesquisa_id: str,
+    pergunta_id: str,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> PerguntaSaida:
+    pergunta = _chamar(
+        lambda: remover_midia_pergunta(db, consultor, pesquisa_id, pergunta_id)
+    )
+    return _pergunta_saida(db, pergunta)
+
+
+@router.get("/pesquisas/{pesquisa_id}/perguntas/{pergunta_id}/midia")
+def baixar_midia(
+    pesquisa_id: str,
+    pergunta_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> Response:
+    conteudo, mime = _chamar(
+        lambda: baixar_midia_pergunta(db, usuario, pesquisa_id, pergunta_id)
+    )
+    return Response(content=conteudo, media_type=mime)
 
 
 @router.post("/pesquisas/{pesquisa_id}/encerrar", response_model=PesquisaSaida)
@@ -326,23 +382,7 @@ def formulario(
     _pesquisa, perguntas = _chamar(
         lambda: perguntas_do_token(db, token, usuario)
     )
-    saida = []
-    for item in perguntas:
-        opcoes = opcoes_da(db, item.id)
-        saida.append(
-            PerguntaSaida(
-                id=item.id,
-                texto=item.texto,
-                tipo=item.tipo,
-                obrigatoria=item.obrigatoria,
-                ordem=item.ordem,
-                opcoes=[
-                    {"id": opcao.id, "texto": opcao.texto, "ordem": opcao.ordem}
-                    for opcao in opcoes
-                ],
-            )
-        )
-    return saida
+    return [_pergunta_saida(db, item) for item in perguntas]
 
 
 @router.post("/responder/{token}", response_model=NotaSaida)

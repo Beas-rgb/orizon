@@ -4,13 +4,18 @@ O caminho no disco não é URL pública. O download só acontece depois
 da checagem de visibilidade no service.
 """
 
+from __future__ import annotations
+
 import hashlib
 from pathlib import Path
 
 from app.core.config import settings
 
 RAIZ = Path("data/biblioteca")
+RAIZ_MIDIA = Path("data/pesquisas")
 LIMITE_BYTES = 10 * 1024 * 1024
+LIMITE_IMAGEM = 5 * 1024 * 1024
+LIMITE_VIDEO = 50 * 1024 * 1024
 MIMES = {
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -18,6 +23,8 @@ MIMES = {
     "image/jpeg",
     "text/plain",
 }
+MIMES_IMAGEM = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MIMES_VIDEO = {"video/mp4", "video/webm"}
 
 
 class ArquivoInvalido(Exception):
@@ -43,6 +50,25 @@ def _cliente_r2():
         aws_secret_access_key=settings.r2_secret_access_key,
         region_name="auto",
     )
+
+
+def detectar_mime(conteudo: bytes) -> str | None:
+    """MIME real pelos bytes iniciais — não confia na extensão do cliente."""
+    if len(conteudo) < 12:
+        return None
+    if conteudo[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if conteudo[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if conteudo[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    if conteudo[:4] == b"RIFF" and conteudo[8:12] == b"WEBP":
+        return "image/webp"
+    if conteudo[4:8] == b"ftyp":
+        return "video/mp4"
+    if conteudo[:4] == b"\x1a\x45\xdf\xa3":
+        return "video/webm"
+    return None
 
 
 def _validar(conteudo: bytes, mime: str) -> str:
@@ -72,6 +98,45 @@ def guardar(documento_id: str, conteudo: bytes, mime: str) -> tuple[str, str]:
     return str(destino.as_posix()), resumo
 
 
+def guardar_midia(objeto_id: str, conteudo: bytes) -> tuple[str, str, str]:
+    """Salva mídia de pergunta. Devolve (key, midia_tipo, mime)."""
+    if not conteudo:
+        raise ArquivoInvalido("Arquivo vazio.")
+    mime = detectar_mime(conteudo)
+    if mime is None:
+        raise ArquivoInvalido("Tipo de mídia não permitido.")
+    if mime in MIMES_IMAGEM:
+        if len(conteudo) > LIMITE_IMAGEM:
+            raise ArquivoInvalido("Imagem maior que 5 MB.")
+        midia_tipo = "IMAGEM"
+    elif mime in MIMES_VIDEO:
+        if len(conteudo) > LIMITE_VIDEO:
+            raise ArquivoInvalido("Vídeo maior que 50 MB.")
+        midia_tipo = "VIDEO"
+    else:
+        raise ArquivoInvalido("Tipo de mídia não permitido.")
+    if _r2_pronto():
+        chave = f"pesquisas/{objeto_id}"
+        _cliente_r2().put_object(
+            Bucket=settings.r2_bucket,
+            Key=chave,
+            Body=conteudo,
+            ContentType=mime,
+        )
+        return f"r2:{chave}", midia_tipo, mime
+    RAIZ_MIDIA.mkdir(parents=True, exist_ok=True)
+    destino = RAIZ_MIDIA / objeto_id
+    destino.write_bytes(conteudo)
+    return str(destino.as_posix()), midia_tipo, mime
+
+
+def copiar_midia(chave_origem: str, novo_id: str) -> str:
+    """Copia bytes para nova chave interna (modelo ↔ pesquisa)."""
+    conteudo = ler_midia(chave_origem)
+    chave, _tipo, _mime = guardar_midia(novo_id, conteudo)
+    return chave
+
+
 def ler(key: str) -> bytes:
     if key.startswith("r2:"):
         objeto = _cliente_r2().get_object(
@@ -83,5 +148,21 @@ def ler(key: str) -> bytes:
     if not caminho.is_file():
         raise FileNotFoundError(key)
     if "biblioteca" not in caminho.as_posix():
+        raise FileNotFoundError(key)
+    return caminho.read_bytes()
+
+
+def ler_midia(key: str) -> bytes:
+    if key.startswith("r2:"):
+        objeto = _cliente_r2().get_object(
+            Bucket=settings.r2_bucket,
+            Key=key.removeprefix("r2:"),
+        )
+        return objeto["Body"].read()
+    caminho = Path(key)
+    if not caminho.is_file():
+        raise FileNotFoundError(key)
+    posix = caminho.as_posix()
+    if "pesquisas" not in posix and "biblioteca" not in posix:
         raise FileNotFoundError(key)
     return caminho.read_bytes()

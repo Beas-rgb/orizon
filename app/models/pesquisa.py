@@ -53,6 +53,8 @@ class Pergunta(Base):
     tipo: Mapped[str] = mapped_column(String(40))
     obrigatoria: Mapped[bool] = mapped_column(Boolean, default=True)
     ordem: Mapped[int] = mapped_column(SmallInteger, default=1)
+    midia_tipo: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    midia_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(
@@ -161,6 +163,8 @@ class TemplatePergunta(Base):
     tipo: Mapped[str] = mapped_column(String(40))
     obrigatoria: Mapped[bool] = mapped_column(Boolean, default=True)
     ordem: Mapped[int] = mapped_column(SmallInteger, default=1)
+    midia_tipo: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    midia_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(
