@@ -74,6 +74,7 @@ class PesquisaSaida(BaseModel):
 
 class PerguntaSaida(BaseModel):
     id: str
+    pesquisa_id: str | None = None
     texto: str
     tipo: str
     obrigatoria: bool
@@ -97,3 +98,24 @@ class PainelPergunta(BaseModel):
     respostas: int
     media: float | None = None
     contagem_opcoes: list[dict[str, str | int]] | None = None
+
+
+class MinhaPesquisaSaida(BaseModel):
+    """Item da tela Minhas pesquisas (funcionário)."""
+
+    pesquisa_id: str
+    projeto_id: str
+    titulo: str
+    tipo: str
+    status_participacao: str
+    disponivel_ate: str | None = None
+    token: str | None = None
+
+
+class ParticipanteStatusSaida(BaseModel):
+    """Status do funcionário na pesquisa — sem conteúdo da resposta."""
+
+    usuario_id: str
+    nome: str
+    email: str
+    status: str

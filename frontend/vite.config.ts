@@ -19,6 +19,7 @@ export default defineConfig({
       "/health": "http://127.0.0.1:8000",
       "/dev": "http://127.0.0.1:8000",
       "/responder": "http://127.0.0.1:8000",
+      "/eu": "http://127.0.0.1:8000",
     },
   },
 });

@@ -11,10 +11,12 @@ from app.core.deps import usuario_atual
 from app.models.usuario import Usuario
 from app.schemas.pesquisa import (
     EnvioRespostas,
+    MinhaPesquisaSaida,
     ModeloSaida,
     ModeloSalvar,
     NotaSaida,
     PainelPergunta,
+    ParticipanteStatusSaida,
     PerguntaAtualizar,
     PerguntaCriar,
     PerguntaSaida,
@@ -28,6 +30,7 @@ from app.services.identidade import ErroAuth
 from app.services.pesquisa import (
     adicionar_pergunta,
     anexar_midia_pergunta,
+    baixar_midia_pelo_token,
     baixar_midia_pergunta,
     criar_de_modelo,
     criar_pesquisa,
@@ -36,7 +39,10 @@ from app.services.pesquisa import (
     encerrar,
     excluir_pergunta,
     gerar_tokens,
+    listar_minhas_pesquisas,
     listar_modelos,
+    listar_participantes_status,
+    listar_perguntas_pesquisa,
     listar_pesquisas,
     nota_do_token,
     opcoes_da,
@@ -104,6 +110,7 @@ def _pergunta_saida(db: Session, pergunta) -> PerguntaSaida:
     opcoes = opcoes_da(db, pergunta.id)
     return PerguntaSaida(
         id=pergunta.id,
+        pesquisa_id=pergunta.pesquisa_id,
         texto=pergunta.texto,
         tipo=pergunta.tipo,
         obrigatoria=pergunta.obrigatoria,
@@ -115,6 +122,51 @@ def _pergunta_saida(db: Session, pergunta) -> PerguntaSaida:
         midia_tipo=pergunta.midia_tipo,
         tem_midia=bool(pergunta.midia_key),
     )
+
+
+@router.get("/eu/pesquisas", response_model=list[MinhaPesquisaSaida])
+def minhas_pesquisas(
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[MinhaPesquisaSaida]:
+    """Minhas pesquisas do funcionário (PENDENTE / EM_ANDAMENTO / RESPONDIDA)."""
+    return [
+        MinhaPesquisaSaida(**item)
+        for item in _chamar(lambda: listar_minhas_pesquisas(db, usuario))
+    ]
+
+
+@router.get(
+    "/pesquisas/{pesquisa_id}/participantes",
+    response_model=list[ParticipanteStatusSaida],
+)
+def participantes(
+    pesquisa_id: str,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[ParticipanteStatusSaida]:
+    """Status dos funcionários — sem conteúdo de resposta."""
+    return [
+        ParticipanteStatusSaida(**item)
+        for item in _chamar(
+            lambda: listar_participantes_status(db, consultor, pesquisa_id)
+        )
+    ]
+
+
+@router.get("/pesquisas/{pesquisa_id}/perguntas", response_model=list[PerguntaSaida])
+def listar_perguntas(
+    pesquisa_id: str,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[PerguntaSaida]:
+    """Estrutura da pesquisa para o editor/preview. Sem respostas."""
+    return [
+        _pergunta_saida(db, item)
+        for item in _chamar(
+            lambda: listar_perguntas_pesquisa(db, consultor, pesquisa_id)
+        )
+    ]
 
 
 @router.post("/pesquisas/{pesquisa_id}/perguntas", response_model=PerguntaSaida)
@@ -383,6 +435,20 @@ def formulario(
         lambda: perguntas_do_token(db, token, usuario)
     )
     return [_pergunta_saida(db, item) for item in perguntas]
+
+
+@router.get("/responder/{token}/perguntas/{pergunta_id}/midia")
+def midia_pelo_token(
+    token: str,
+    pergunta_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Mídia da pergunta no fluxo de resposta (funcionário autenticado)."""
+    conteudo, mime = _chamar(
+        lambda: baixar_midia_pelo_token(db, token, pergunta_id, usuario)
+    )
+    return Response(content=conteudo, media_type=mime)
 
 
 @router.post("/responder/{token}", response_model=NotaSaida)

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../lib/api";
 import { ACCENT, glassStyle } from "../lib/theme";
+import { consumirRetornoResponder } from "./ResponderPage";
 
 export function LoginPage() {
   const [erro, setErro] = useState("");
@@ -11,7 +12,10 @@ export function LoginPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (pronto && usuario) navigate("/inicio", { replace: true });
+    if (!pronto || !usuario) return;
+    // Já logado ao abrir /entrar (ex.: link de pesquisa).
+    const retorno = consumirRetornoResponder();
+    navigate(retorno || "/inicio", { replace: true });
   }, [pronto, usuario, navigate]);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
@@ -35,8 +39,10 @@ export function LoginPage() {
         setErro("Este acesso não abre painel.");
         return;
       }
+      const retorno = sessionStorage.getItem("horizon_responder_retorno");
       await entrarComTokens(dados);
-      navigate("/inicio");
+      // useEffect consome o retorno e redireciona após setUsuario.
+      if (!retorno) navigate("/inicio");
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Falha no login");
     } finally {

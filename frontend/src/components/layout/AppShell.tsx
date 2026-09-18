@@ -101,16 +101,10 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
                 title: "Principal",
                 items: [
                   {
-                    icon: iconMap.LayoutDashboard,
-                    label: "Início",
+                    icon: iconMap.ClipboardList,
+                    label: "Minhas pesquisas",
                     active: active === "dashboard",
                     onClick: () => navigate("/inicio"),
-                  },
-                  {
-                    icon: iconMap.ClipboardList,
-                    label: "Responder",
-                    active: active === "responder",
-                    onClick: () => navigate("/responder"),
                   },
                 ],
               },

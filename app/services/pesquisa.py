@@ -135,6 +135,27 @@ def listar_pesquisas(db: Session, usuario: Usuario, projeto_id: str) -> list[Pes
     )
 
 
+def listar_perguntas_pesquisa(
+    db: Session,
+    usuario: Usuario,
+    pesquisa_id: str,
+) -> list[Pergunta]:
+    """Consultora do projeto vê a estrutura (rascunho ou publicada). Sem respostas."""
+    pesquisa = _pesquisa_viva(db, pesquisa_id)
+    if _papel(db, usuario, pesquisa.projeto_id) != "CONSULTOR":
+        raise ErroAuth(404, "Pesquisa não encontrada.")
+    return list(
+        db.scalars(
+            select(Pergunta)
+            .where(
+                Pergunta.pesquisa_id == pesquisa.id,
+                Pergunta.deleted_at.is_(None),
+            )
+            .order_by(Pergunta.ordem.asc())
+        ).all()
+    )
+
+
 def adicionar_pergunta(
     db: Session,
     consultor: Usuario,
@@ -505,6 +526,7 @@ def publicar(db: Session, consultor: Usuario, pesquisa_id: str) -> Pesquisa:
     pesquisa.disponivel_ate = agora_ + timedelta(days=14)
     pesquisa.atualizado_em = agora_
     _auditar(db, "PESQUISA_PUBLICADA", consultor.id)
+    _sincronizar_participantes(db, pesquisa)
     from app.services.notificacao import avisar, membros_orgao
 
     for membro in membros_orgao(db, pesquisa.projeto_id):
@@ -520,6 +542,194 @@ def publicar(db: Session, consultor: Usuario, pesquisa_id: str) -> Pesquisa:
         )
     db.commit()
     return pesquisa
+
+
+def _sincronizar_participantes(db: Session, pesquisa: Pesquisa) -> str | None:
+    """Cria PENDENTE para cada FUNCIONÁRIO do projeto e garante 1 token de entrada."""
+    agora_ = agora()
+    vinculos = db.scalars(
+        select(ProjetoUsuario).where(
+            ProjetoUsuario.projeto_id == pesquisa.projeto_id,
+            ProjetoUsuario.papel == "FUNCIONARIO",
+        )
+    ).all()
+    for vinculo in vinculos:
+        existe = db.scalar(
+            select(PesquisaParticipante.id).where(
+                PesquisaParticipante.pesquisa_id == pesquisa.id,
+                PesquisaParticipante.usuario_id == vinculo.usuario_id,
+                PesquisaParticipante.deleted_at.is_(None),
+            )
+        )
+        if existe is not None:
+            continue
+        db.add(
+            PesquisaParticipante(
+                id=novo_id(),
+                pesquisa_id=pesquisa.id,
+                usuario_id=vinculo.usuario_id,
+                status="PENDENTE",
+                token_id=None,
+                iniciado_em=None,
+                respondido_em=None,
+                criado_em=agora_,
+                atualizado_em=agora_,
+                deleted_at=None,
+            )
+        )
+    token_entrada = db.scalar(
+        select(TokenResposta.token)
+        .where(TokenResposta.pesquisa_id == pesquisa.id)
+        .order_by(TokenResposta.criado_em.asc())
+        .limit(1)
+    )
+    if token_entrada:
+        return token_entrada
+    token = str(uuid.uuid4())
+    db.add(
+        TokenResposta(
+            id=novo_id(),
+            pesquisa_id=pesquisa.id,
+            setor_id=None,
+            token=token,
+            usado=False,
+            expira_em=pesquisa.disponivel_ate,
+            criado_em=agora_,
+        )
+    )
+    return token
+
+
+def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
+    """Pesquisas PUBLICADAS dos projetos do funcionário + status de participação."""
+    if usuario.papel != "FUNCIONARIO":
+        return []
+    projeto_ids = list(
+        db.scalars(
+            select(ProjetoUsuario.projeto_id).where(
+                ProjetoUsuario.usuario_id == usuario.id,
+                ProjetoUsuario.papel == "FUNCIONARIO",
+            )
+        ).all()
+    )
+    if not projeto_ids:
+        return []
+    pesquisas = db.scalars(
+        select(Pesquisa)
+        .where(
+            Pesquisa.projeto_id.in_(projeto_ids),
+            Pesquisa.status == "PUBLICADA",
+            Pesquisa.deleted_at.is_(None),
+            Pesquisa.bloqueada.is_(False),
+        )
+        .order_by(Pesquisa.publicada_em.desc())
+    ).all()
+    saida: list[dict] = []
+    agora_ = agora()
+    for pesquisa in pesquisas:
+        participante = db.scalar(
+            select(PesquisaParticipante).where(
+                PesquisaParticipante.pesquisa_id == pesquisa.id,
+                PesquisaParticipante.usuario_id == usuario.id,
+                PesquisaParticipante.deleted_at.is_(None),
+            )
+        )
+        if participante is None:
+            participante = PesquisaParticipante(
+                id=novo_id(),
+                pesquisa_id=pesquisa.id,
+                usuario_id=usuario.id,
+                status="PENDENTE",
+                token_id=None,
+                iniciado_em=None,
+                respondido_em=None,
+                criado_em=agora_,
+                atualizado_em=agora_,
+                deleted_at=None,
+            )
+            db.add(participante)
+            db.flush()
+        token = None
+        if participante.token_id:
+            pessoal = db.get(TokenResposta, participante.token_id)
+            if pessoal is not None:
+                token = pessoal.token
+        if token is None:
+            token = db.scalar(
+                select(TokenResposta.token)
+                .where(TokenResposta.pesquisa_id == pesquisa.id)
+                .order_by(TokenResposta.criado_em.asc())
+                .limit(1)
+            )
+        if token is None:
+            token = _sincronizar_participantes(db, pesquisa)
+        prazo = _ciente(pesquisa.disponivel_ate)
+        saida.append(
+            {
+                "pesquisa_id": pesquisa.id,
+                "projeto_id": pesquisa.projeto_id,
+                "titulo": pesquisa.titulo,
+                "tipo": pesquisa.tipo,
+                "status_participacao": participante.status,
+                "disponivel_ate": prazo.isoformat() if prazo else None,
+                "token": token,
+            }
+        )
+    db.commit()
+    return saida
+
+
+def listar_participantes_status(
+    db: Session,
+    consultor: Usuario,
+    pesquisa_id: str,
+) -> list[dict]:
+    """Funcionários do projeto e status na pesquisa — sem respostas."""
+    pesquisa = _pesquisa_viva(db, pesquisa_id)
+    if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+        raise ErroAuth(404, "Pesquisa não encontrada.")
+    vinculos = db.scalars(
+        select(ProjetoUsuario).where(
+            ProjetoUsuario.projeto_id == pesquisa.projeto_id,
+            ProjetoUsuario.papel == "FUNCIONARIO",
+        )
+    ).all()
+    saida: list[dict] = []
+    for vinculo in vinculos:
+        pessoa = db.get(Usuario, vinculo.usuario_id)
+        if pessoa is None or pessoa.deleted_at is not None:
+            continue
+        participante = db.scalar(
+            select(PesquisaParticipante).where(
+                PesquisaParticipante.pesquisa_id == pesquisa.id,
+                PesquisaParticipante.usuario_id == pessoa.id,
+                PesquisaParticipante.deleted_at.is_(None),
+            )
+        )
+        saida.append(
+            {
+                "usuario_id": pessoa.id,
+                "nome": pessoa.nome,
+                "email": pessoa.email,
+                "status": participante.status if participante else "PENDENTE",
+            }
+        )
+    saida.sort(key=lambda item: (item["status"], item["nome"].lower()))
+    return saida
+
+
+def baixar_midia_pelo_token(
+    db: Session,
+    token: str,
+    pergunta_id: str,
+    usuario: Usuario,
+) -> tuple[bytes, str]:
+    """Mesma autorização do formulário de resposta."""
+    linha = _token_convite(db, token)
+    pesquisa = _pesquisa_viva(db, linha.pesquisa_id)
+    _participante_da_pesquisa(db, usuario, pesquisa, para_envio=False)
+    db.commit()
+    return baixar_midia_pergunta(db, usuario, pesquisa.id, pergunta_id)
 
 
 def encerrar(db: Session, consultor: Usuario, pesquisa_id: str) -> Pesquisa:

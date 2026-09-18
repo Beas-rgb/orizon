@@ -607,6 +607,13 @@ export function ProjetoDetalhePage() {
                     </p>
                   </button>
                   <div className="flex gap-2 flex-wrap">
+                    <Link
+                      to={`/projetos/${id}/pesquisas/${p.id}`}
+                      className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
+                      style={{ background: "#164A8A" }}
+                    >
+                      Abrir editor
+                    </Link>
                     {p.status === "RASCUNHO" ? (
                       <button
                         type="button"

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { api } from "../lib/api";
 import { ACCENT, glassStyle } from "../lib/theme";
@@ -143,68 +144,94 @@ export function OrgaoPainel() {
   );
 }
 
+type MinhaPesquisa = {
+  pesquisa_id: string;
+  projeto_id: string;
+  titulo: string;
+  tipo: string;
+  status_participacao: string;
+  disponivel_ate?: string | null;
+  token?: string | null;
+};
+
+function rotuloStatus(status: string) {
+  if (status === "EM_ANDAMENTO") return "Em andamento";
+  if (status === "RESPONDIDA") return "Concluída";
+  return "Pendente";
+}
+
 export function FuncionarioPainel() {
-  const [projetos, setProjetos] = useState<Projeto[]>([]);
+  const [itens, setItens] = useState<MinhaPesquisa[]>([]);
   const [erro, setErro] = useState("");
-  const [token, setToken] = useState("");
 
   useEffect(() => {
-    api<Projeto[]>("/projetos")
-      .then(setProjetos)
+    api<MinhaPesquisa[]>("/eu/pesquisas")
+      .then(setItens)
       .catch((exc) => setErro(exc instanceof Error ? exc.message : "Erro"));
   }, []);
 
+  const grupos: { chave: string; titulo: string; filtro: string[] }[] = [
+    { chave: "pendentes", titulo: "Pendentes", filtro: ["PENDENTE"] },
+    { chave: "andamento", titulo: "Em andamento", filtro: ["EM_ANDAMENTO"] },
+    { chave: "concluidas", titulo: "Concluídas", filtro: ["RESPONDIDA"] },
+  ];
+
   return (
     <AppShell active="dashboard">
-      <h1 className="text-[18px] font-bold text-gray-800 mb-1">Início do funcionário</h1>
+      <h1 className="text-[18px] font-bold text-gray-800 mb-1">Minhas pesquisas</h1>
       <p className="text-[12px] text-gray-500 mb-5">
-        Seus trabalhos. Responda pelo link da pesquisa (token) e veja a própria nota quando houver.
+        Responda só com a sua conta de funcionário. O órgão vê o consolidado, não a sua resposta.
       </p>
       {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
-      <div className="rounded-3xl p-5 mb-4" style={glassStyle}>
-        <p className="text-[13px] font-bold text-gray-800 mb-2">Abrir pesquisa pelo token</p>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="Cole o token do link"
-            className="flex-1 rounded-xl px-3 py-2.5 text-[13px] outline-none bg-white/70 border border-white/80"
-          />
-          <a
-            href={token.trim() ? `/app/responder/${encodeURIComponent(token.trim())}` : "#"}
-            className="rounded-xl py-2.5 px-4 text-center text-white text-[13px] font-bold"
-            style={{ background: ACCENT, opacity: token.trim() ? 1 : 0.5 }}
-            onClick={(e) => {
-              if (!token.trim()) e.preventDefault();
-            }}
-          >
-            Responder
-          </a>
-        </div>
-      </div>
-      <div className="rounded-3xl p-5" style={glassStyle}>
-        <ul className="flex flex-col gap-2">
-          {projetos.map((p) => (
-            <li
-              key={p.id}
-              className="p-4 rounded-2xl"
-              style={{
-                background: "rgba(255,255,255,0.55)",
-                border: "1px solid rgba(255,255,255,0.65)",
-              }}
-            >
-              <p className="text-[14px] font-semibold text-gray-800">
-                {p.vinculo_titulo || nomeCliente(p)}
-              </p>
-              <p className="text-[12px] text-gray-500 mt-1">
-                {nomeCliente(p)} · {p.rotulo} · {p.estado}
-              </p>
-            </li>
-          ))}
-          {projetos.length === 0 ? (
-            <p className="text-gray-500 text-[13px]">Nenhum trabalho atribuído.</p>
-          ) : null}
-        </ul>
+
+      <div className="flex flex-col gap-5">
+        {grupos.map((g) => {
+          const lista = itens.filter((i) => g.filtro.includes(i.status_participacao));
+          return (
+            <div key={g.chave} className="rounded-3xl p-5" style={glassStyle}>
+              <h2 className="text-[14px] font-bold mb-3">
+                {g.titulo}{" "}
+                <span className="text-gray-400 font-semibold">({lista.length})</span>
+              </h2>
+              <ul className="flex flex-col gap-2">
+                {lista.map((p) => (
+                  <li
+                    key={p.pesquisa_id}
+                    className="p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3"
+                    style={{
+                      background: "rgba(255,255,255,0.55)",
+                      border: "1px solid rgba(255,255,255,0.65)",
+                    }}
+                  >
+                    <div>
+                      <p className="text-[14px] font-semibold text-gray-800">{p.titulo}</p>
+                      <p className="text-[12px] text-gray-500 mt-1">
+                        {p.tipo} · {rotuloStatus(p.status_participacao)}
+                        {p.disponivel_ate
+                          ? ` · prazo ${new Date(p.disponivel_ate).toLocaleDateString("pt-BR")}`
+                          : ""}
+                      </p>
+                    </div>
+                    {p.status_participacao !== "RESPONDIDA" && p.token ? (
+                      <Link
+                        to={`/responder/${encodeURIComponent(p.token)}`}
+                        className="rounded-xl py-2 px-4 text-white text-[12px] font-bold"
+                        style={{ background: ACCENT }}
+                      >
+                        {p.status_participacao === "EM_ANDAMENTO" ? "Continuar" : "Responder"}
+                      </Link>
+                    ) : p.status_participacao === "RESPONDIDA" ? (
+                      <span className="text-[12px] font-bold text-[#1E7A4A]">Respondida</span>
+                    ) : null}
+                  </li>
+                ))}
+                {lista.length === 0 ? (
+                  <p className="text-gray-500 text-[13px]">Nenhuma neste grupo.</p>
+                ) : null}
+              </ul>
+            </div>
+          );
+        })}
       </div>
     </AppShell>
   );

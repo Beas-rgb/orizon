@@ -10,6 +10,7 @@ import {
 } from "./pages/AuthPages";
 import { ConsultoraDashboard } from "./pages/ConsultoraDashboard";
 import { DevPainel, FuncionarioPainel, OrgaoPainel } from "./pages/Paineis";
+import { PesquisaEditorPage } from "./pages/PesquisaEditorPage";
 import {
   NovoProjetoPage,
   ProjetoDetalhePage,
@@ -40,7 +41,7 @@ function HomeApp() {
 }
 
 /**
- * basename="/app" → URLs públicas: /app/, /app/entrar, /app/projetos...
+ * basename="/app") → URLs públicas: /app/, /app/entrar, /app/projetos...
  * Paths aqui NÃO repetem /app.
  */
 export default function App() {
@@ -82,6 +83,14 @@ export default function App() {
         element={
           <RequireAuth>
             <ProjetoDetalhePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/projetos/:projetoId/pesquisas/:pesquisaId"
+        element={
+          <RequireAuth>
+            <PesquisaEditorPage />
           </RequireAuth>
         }
       />
