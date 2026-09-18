@@ -34,11 +34,29 @@ class PerguntaCriar(BaseModel):
     opcoes: list[OpcaoEntrada] = []
 
 
+class PesquisaAtualizar(BaseModel):
+    titulo: str | None = Field(default=None, min_length=2, max_length=200)
+    descricao: str | None = None
+
+
+class PerguntaAtualizar(BaseModel):
+    texto: str | None = Field(default=None, min_length=2)
+    tipo: str | None = None
+    obrigatoria: bool | None = None
+    opcoes: list[OpcaoEntrada] | None = None
+
+
+class ReordenarPerguntas(BaseModel):
+    pergunta_ids: list[str] = Field(min_length=1)
+
+
 class RespostaEntrada(BaseModel):
     pergunta_id: str
     valor_texto: str | None = None
     valor_numerico: int | None = None
     opcao_id: str | None = None
+    # CHECKBOX: várias opções. Demais tipos usam opcao_id.
+    opcao_ids: list[str] = Field(default_factory=list)
 
 
 class EnvioRespostas(BaseModel):
@@ -73,5 +91,7 @@ class PainelPergunta(BaseModel):
     pergunta_id: str
     texto: str
     tipo: str
+    # Participantes distintos (não linhas soltas de checkbox).
     respostas: int
     media: float | None = None
+    contagem_opcoes: list[dict[str, str | int]] | None = None

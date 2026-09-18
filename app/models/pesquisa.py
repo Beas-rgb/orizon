@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -72,7 +72,8 @@ class OpcaoResposta(Base):
 
 
 class TokenResposta(Base):
-    """Link de resposta. Não guarda o nome de quem vai responder."""
+    """Link de convite/entrada. Não autoriza sozinho — quem responde é o
+    funcionário autenticado (ver PesquisaParticipante)."""
 
     __tablename__ = "tokens_resposta"
 
@@ -90,6 +91,42 @@ class TokenResposta(Base):
         nullable=True,
     )
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class PesquisaParticipante(Base):
+    """Quem pode/deve responder. UNIQUE impede segunda resposta no banco."""
+
+    __tablename__ = "pesquisa_participantes"
+    __table_args__ = (
+        UniqueConstraint(
+            "pesquisa_id",
+            "usuario_id",
+            name="uq_pesquisa_participante",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    pesquisa_id: Mapped[str] = mapped_column(ForeignKey("pesquisas.id"), index=True)
+    usuario_id: Mapped[str] = mapped_column(ForeignKey("usuarios.id"), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="PENDENTE")
+    token_id: Mapped[str | None] = mapped_column(
+        ForeignKey("tokens_resposta.id"),
+        nullable=True,
+    )
+    iniciado_em: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    respondido_em: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
 
 class TemplatePesquisa(Base):

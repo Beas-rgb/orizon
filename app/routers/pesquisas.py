@@ -1,10 +1,8 @@
-"""Pesquisa. Sem tela. O token é o segredo de quem responde.
-
-O painel do órgão não devolve token nem nome. Clima não devolve nota
-individual. Desempenho devolve a nota só para quem apresenta o token.
+"""Pesquisa. O token é o link de entrada; quem responde é o funcionário
+autenticado. O painel do órgão não devolve token nem nome.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -16,18 +14,24 @@ from app.schemas.pesquisa import (
     ModeloSalvar,
     NotaSaida,
     PainelPergunta,
+    PerguntaAtualizar,
     PerguntaCriar,
     PerguntaSaida,
+    PesquisaAtualizar,
     PesquisaCriar,
     PesquisaDeModelo,
     PesquisaSaida,
+    ReordenarPerguntas,
 )
 from app.services.identidade import ErroAuth
 from app.services.pesquisa import (
     adicionar_pergunta,
     criar_de_modelo,
     criar_pesquisa,
+    editar_pergunta,
+    editar_pesquisa,
     encerrar,
+    excluir_pergunta,
     gerar_tokens,
     listar_modelos,
     listar_pesquisas,
@@ -37,6 +41,7 @@ from app.services.pesquisa import (
     perguntas_do_token,
     publicar,
     registrar_respostas,
+    reordenar_perguntas,
     salvar_modelo,
 )
 
@@ -91,6 +96,21 @@ def listar(
     return [_saida(item) for item in itens]
 
 
+def _pergunta_saida(db: Session, pergunta) -> PerguntaSaida:
+    opcoes = opcoes_da(db, pergunta.id)
+    return PerguntaSaida(
+        id=pergunta.id,
+        texto=pergunta.texto,
+        tipo=pergunta.tipo,
+        obrigatoria=pergunta.obrigatoria,
+        ordem=pergunta.ordem,
+        opcoes=[
+            {"id": item.id, "texto": item.texto, "ordem": item.ordem}
+            for item in opcoes
+        ],
+    )
+
+
 @router.post("/pesquisas/{pesquisa_id}/perguntas", response_model=PerguntaSaida)
 def pergunta(
     pesquisa_id: str,
@@ -109,18 +129,87 @@ def pergunta(
             [item.texto for item in corpo.opcoes],
         )
     )
-    opcoes = opcoes_da(db, criada.id)
-    return PerguntaSaida(
-        id=criada.id,
-        texto=criada.texto,
-        tipo=criada.tipo,
-        obrigatoria=criada.obrigatoria,
-        ordem=criada.ordem,
-        opcoes=[
-            {"id": item.id, "texto": item.texto, "ordem": item.ordem}
-            for item in opcoes
-        ],
+    return _pergunta_saida(db, criada)
+
+
+@router.patch("/pesquisas/{pesquisa_id}", response_model=PesquisaSaida)
+def atualizar_pesquisa(
+    pesquisa_id: str,
+    corpo: PesquisaAtualizar,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> PesquisaSaida:
+    campos = corpo.model_dump(exclude_unset=True)
+    pesquisa = _chamar(
+        lambda: editar_pesquisa(
+            db,
+            consultor,
+            pesquisa_id,
+            campos.get("titulo"),
+            campos.get("descricao"),
+            descricao_enviada="descricao" in campos,
+        )
     )
+    return _saida(pesquisa)
+
+
+@router.patch(
+    "/pesquisas/{pesquisa_id}/perguntas/{pergunta_id}",
+    response_model=PerguntaSaida,
+)
+def atualizar_pergunta(
+    pesquisa_id: str,
+    pergunta_id: str,
+    corpo: PerguntaAtualizar,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> PerguntaSaida:
+    campos = corpo.model_dump(exclude_unset=True)
+    opcoes = None
+    if "opcoes" in campos:
+        opcoes = [item["texto"] for item in campos["opcoes"] or []]
+    editada = _chamar(
+        lambda: editar_pergunta(
+            db,
+            consultor,
+            pesquisa_id,
+            pergunta_id,
+            campos.get("texto"),
+            campos.get("tipo"),
+            campos.get("obrigatoria"),
+            opcoes,
+        )
+    )
+    return _pergunta_saida(db, editada)
+
+
+@router.delete("/pesquisas/{pesquisa_id}/perguntas/{pergunta_id}")
+def remover_pergunta(
+    pesquisa_id: str,
+    pergunta_id: str,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    _chamar(lambda: excluir_pergunta(db, consultor, pesquisa_id, pergunta_id))
+    return {"mensagem": "Pergunta removida."}
+
+
+@router.post(
+    "/pesquisas/{pesquisa_id}/perguntas/reordenar",
+    response_model=list[PerguntaSaida],
+)
+def reordenar(
+    pesquisa_id: str,
+    corpo: ReordenarPerguntas,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[PerguntaSaida]:
+    itens = _chamar(
+        lambda: reordenar_perguntas(
+            db, consultor, pesquisa_id, corpo.pergunta_ids
+        )
+    )
+    return [_pergunta_saida(db, item) for item in itens]
 
 
 @router.post("/pesquisas/{pesquisa_id}/encerrar", response_model=PesquisaSaida)
@@ -228,8 +317,15 @@ def painel_rota(
 
 
 @router.get("/responder/{token}", response_model=list[PerguntaSaida])
-def formulario(token: str, db: Session = Depends(get_db)) -> list[PerguntaSaida]:
-    _pesquisa, perguntas = _chamar(lambda: perguntas_do_token(db, token))
+def formulario(
+    token: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[PerguntaSaida]:
+    """Exige funcionário autenticado do projeto. Token só identifica a pesquisa."""
+    _pesquisa, perguntas = _chamar(
+        lambda: perguntas_do_token(db, token, usuario)
+    )
     saida = []
     for item in perguntas:
         opcoes = opcoes_da(db, item.id)
@@ -253,13 +349,18 @@ def formulario(token: str, db: Session = Depends(get_db)) -> list[PerguntaSaida]
 def responder(
     token: str,
     corpo: EnvioRespostas,
+    request: Request,
+    usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> NotaSaida:
+    ip = request.client.host if request.client else None
     tipo, nota = _chamar(
         lambda: registrar_respostas(
             db,
             token,
             [item.model_dump() for item in corpo.respostas],
+            usuario,
+            ip,
         )
     )
     if tipo != "DESEMPENHO":
@@ -276,8 +377,12 @@ def responder(
 
 
 @router.get("/responder/{token}/nota", response_model=NotaSaida)
-def nota(token: str, db: Session = Depends(get_db)) -> NotaSaida:
-    tipo, valor = _chamar(lambda: nota_do_token(db, token))
+def nota(
+    token: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> NotaSaida:
+    tipo, valor = _chamar(lambda: nota_do_token(db, token, usuario))
     if tipo != "DESEMPENHO":
         return NotaSaida(
             tipo=tipo,

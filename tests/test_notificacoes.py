@@ -61,12 +61,36 @@ def test_convite_grava_entrega_sem_token(client, monkeypatch, db) -> None:
 
 
 def test_resposta_avisa_consultora_sem_nome(client, monkeypatch) -> None:
+    from tests.contas import SENHA_FUNC
+
     headers, projeto_id = _projeto(client, monkeypatch)
     client.patch(
         f"/projetos/{projeto_id}/configuracao",
         headers=headers,
         json={"pesquisas_habilitadas": True},
     )
+    convite = client.post(
+        "/auth/convites",
+        headers=headers,
+        json={
+            "nome": "Servidor",
+            "email": "servidor@prefeitura.dev",
+            "papel": "FUNCIONARIO",
+            "projeto_id": projeto_id,
+        },
+    )
+    assert convite.status_code == 200
+    token_acesso = next(
+        item["corpo"].strip().split()[-1]
+        for item in caixa_email.mensagens
+        if item["destino"] == "servidor@prefeitura.dev"
+    )
+    acesso = client.post(
+        "/auth/primeiro-acesso",
+        json={"token": token_acesso, "senha": SENHA_FUNC},
+    )
+    func = {"Authorization": f"Bearer {acesso.json()['access_token']}"}
+
     pesquisa = client.post(
         f"/projetos/{projeto_id}/pesquisas",
         headers=headers,
@@ -84,9 +108,10 @@ def test_resposta_avisa_consultora_sem_nome(client, monkeypatch) -> None:
         headers=headers,
         params={"quantidade": 1},
     ).json()["tokens"][0]
-    pergunta_id = client.get(f"/responder/{token}").json()[0]["id"]
+    pergunta_id = client.get(f"/responder/{token}", headers=func).json()[0]["id"]
     client.post(
         f"/responder/{token}",
+        headers=func,
         json={"respostas": [{"pergunta_id": pergunta_id, "valor_numerico": 4}]},
     )
 

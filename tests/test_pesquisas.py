@@ -1,8 +1,6 @@
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
-from tests.contas import abrir_consultora
-
-SENHA = "Senha-segura1"
+from tests.contas import SENHA_FUNC, SENHA_ORGAO, abrir_consultora
 
 
 def _cnpj_falso(_cnpj: str) -> DadosCnpj:
@@ -13,6 +11,23 @@ def _cnpj_falso(_cnpj: str) -> DadosCnpj:
         municipio="Brasilia",
         uf="DF",
     )
+
+
+def _token_email(destino: str) -> str:
+    return next(
+        item["corpo"].strip().split()[-1]
+        for item in caixa_email.mensagens
+        if item["destino"] == destino
+    )
+
+
+def _entrar(client, destino: str, senha: str) -> dict[str, str]:
+    acesso = client.post(
+        "/auth/primeiro-acesso",
+        json={"token": _token_email(destino), "senha": senha},
+    )
+    assert acesso.status_code == 200
+    return {"Authorization": f"Bearer {acesso.json()['access_token']}"}
 
 
 def _projeto(client, monkeypatch) -> tuple[dict[str, str], str]:
@@ -39,8 +54,24 @@ def _projeto(client, monkeypatch) -> tuple[dict[str, str], str]:
     return headers, projeto.json()["id"]
 
 
+def _funcionario(client, headers, projeto_id: str) -> dict[str, str]:
+    convite = client.post(
+        "/auth/convites",
+        headers=headers,
+        json={
+            "nome": "Servidor",
+            "email": "servidor@prefeitura.dev",
+            "papel": "FUNCIONARIO",
+            "projeto_id": projeto_id,
+        },
+    )
+    assert convite.status_code == 200
+    return _entrar(client, "servidor@prefeitura.dev", SENHA_FUNC)
+
+
 def test_clima_nao_revela_quem_e_orgao_ve_so_media(client, monkeypatch) -> None:
     headers, projeto_id = _projeto(client, monkeypatch)
+    func = _funcionario(client, headers, projeto_id)
     pesquisa = client.post(
         f"/projetos/{projeto_id}/pesquisas",
         headers=headers,
@@ -59,15 +90,16 @@ def test_clima_nao_revela_quem_e_orgao_ve_so_media(client, monkeypatch) -> None:
         params={"quantidade": 1},
     ).json()["tokens"][0]
 
-    pergunta_id = client.get(f"/responder/{token}").json()[0]["id"]
+    pergunta_id = client.get(f"/responder/{token}", headers=func).json()[0]["id"]
     envio = client.post(
         f"/responder/{token}",
+        headers=func,
         json={"respostas": [{"pergunta_id": pergunta_id, "valor_numerico": 4}]},
     )
     assert envio.status_code == 200
     assert envio.json()["nota"] is None
 
-    nota = client.get(f"/responder/{token}/nota")
+    nota = client.get(f"/responder/{token}/nota", headers=func)
     assert nota.json()["nota"] is None
 
     painel = client.get(f"/pesquisas/{pid}/painel", headers=headers)
@@ -79,6 +111,7 @@ def test_clima_nao_revela_quem_e_orgao_ve_so_media(client, monkeypatch) -> None:
 
 def test_desempenho_devolve_nota_so_com_token(client, monkeypatch) -> None:
     headers, projeto_id = _projeto(client, monkeypatch)
+    func = _funcionario(client, headers, projeto_id)
     pesquisa = client.post(
         f"/projetos/{projeto_id}/pesquisas",
         headers=headers,
@@ -92,11 +125,9 @@ def test_desempenho_devolve_nota_so_com_token(client, monkeypatch) -> None:
     )
     client.post(f"/pesquisas/{pid}/publicar", headers=headers)
     token = client.post(f"/pesquisas/{pid}/tokens", headers=headers).json()["tokens"][0]
-    convite = next(
-        item for item in caixa_email.mensagens if item["destino"] == "rh@prefeitura.dev"
-    )
     envio = client.post(
         f"/responder/{token}",
+        headers=func,
         json={
             "respostas": [
                 {"pergunta_id": pergunta.json()["id"], "valor_numerico": 8}
@@ -106,20 +137,20 @@ def test_desempenho_devolve_nota_so_com_token(client, monkeypatch) -> None:
     assert envio.status_code == 200
     assert envio.json()["nota"] == 8
 
-    token_acesso = convite["corpo"].strip().split()[-1]
-    acesso = client.post(
-        "/auth/primeiro-acesso",
-        json={"token": token_acesso, "senha": "Senha-orgao1"},
-    )
-    orgao = {"Authorization": f"Bearer {acesso.json()['access_token']}"}
+    orgao = _entrar(client, "rh@prefeitura.dev", SENHA_ORGAO)
     painel = client.get(f"/pesquisas/{pid}/painel", headers=orgao)
     assert painel.status_code == 200
     assert painel.json()[0]["media"] == 8
     assert token not in painel.text
 
+    nota = client.get(f"/responder/{token}/nota", headers=func)
+    assert nota.status_code == 200
+    assert nota.json()["nota"] == 8
+
 
 def test_encerra_e_reaproveita_modelo(client, monkeypatch) -> None:
     headers, projeto_id = _projeto(client, monkeypatch)
+    func = _funcionario(client, headers, projeto_id)
     pesquisa = client.post(
         f"/projetos/{projeto_id}/pesquisas",
         headers=headers,
@@ -142,7 +173,7 @@ def test_encerra_e_reaproveita_modelo(client, monkeypatch) -> None:
     assert fechada.status_code == 200
     assert fechada.json()["status"] == "ENCERRADA"
     pergunta_id = "nao-importa"
-    negado = client.get(f"/responder/{token}")
+    negado = client.get(f"/responder/{token}", headers=func)
     assert negado.status_code == 404
 
     modelo = client.post(
