@@ -97,7 +97,10 @@ def spa_react(caminho: str = "") -> FileResponse:
         if arquivo is not None and arquivo.is_file():
             return FileResponse(arquivo)
         raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
-    return FileResponse(_react_dist / "index.html")
+    return FileResponse(
+        _react_dist / "index.html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
 
 
 @app.get("/health/email")
