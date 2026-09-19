@@ -166,7 +166,37 @@ export function FuncionarioPainel() {
 
   useEffect(() => {
     api<MinhaPesquisa[]>("/eu/pesquisas")
-      .then(setItens)
+      .then((lista) => {
+        // #region agent log
+        fetch("http://127.0.0.1:7496/ingest/74f2214c-a2bc-4cc8-ac4b-5ae97a5b0219", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "6ef563",
+          },
+          body: JSON.stringify({
+            sessionId: "6ef563",
+            runId: "post-pages",
+            hypothesisId: "H8",
+            location: "Paineis.tsx:FuncionarioPainel",
+            message: "minhas pesquisas loaded",
+            data: {
+              host: window.location.host,
+              path: window.location.pathname,
+              count: lista.length,
+              comToken: lista.filter((p) => Boolean(p.token)).length,
+              pendentes: lista.filter((p) => p.status_participacao !== "RESPONDIDA")
+                .length,
+              bundleHint:
+                document.querySelector('script[type="module"]')?.getAttribute("src") ||
+                "",
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        setItens(lista);
+      })
       .catch((exc) => setErro(exc instanceof Error ? exc.message : "Erro"));
   }, []);
 
