@@ -1,6 +1,7 @@
 """Convites e links de primeiro acesso."""
 
 from datetime import timedelta
+from urllib.parse import quote
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -27,7 +28,11 @@ from .erros import (
 
 
 def _link_com_token(pagina: str, token: str) -> str:
-    """Link do React em /app. Nunca aponta para HTML legado."""
+    """Link do React em /app. Nunca aponta para HTML legado.
+
+    Usa `?t=` (não só `#`): vários clientes de e-mail removem o fragmento
+    e a pessoa abria a tela sem o token.
+    """
     base = url_publica().rstrip("/")
     # pagina legado → rota React equivalente
     rotas = {
@@ -37,11 +42,23 @@ def _link_com_token(pagina: str, token: str) -> str:
         "recuperar": "recuperar",
     }
     caminho = rotas.get(pagina, pagina.removesuffix(".html"))
-    return f"{base}/{caminho}#{token}"
+    return f"{base}/{caminho}?t={quote(token, safe='')}"
 
 
-def _expor_link_primeiro_acesso(*, entrega_ok: bool) -> bool:
-    """Em production o token vai só no e-mail — nunca no JSON (mesmo com FALHA)."""
+def _expor_link_primeiro_acesso(
+    *,
+    entrega_ok: bool,
+    para_ti: bool = False,
+) -> bool:
+    """Quando devolver o link no JSON.
+
+    - Rotas do TI (`para_ti`): sempre — o operador precisa testar/onboard
+      sem depender só da caixa de entrada.
+    - Demais rotas em production: nunca (token só no e-mail).
+    - development / modo local / falha de envio: sim.
+    """
+    if para_ti:
+        return True
     if settings.app_env == "production":
         return False
     from app.integrations.email import modo_envio

@@ -213,7 +213,10 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
         "mensagem": "Conta autorizada. O primeiro acesso foi enviado ao e-mail.",
         "email": pedido.email,
     }
-    if _expor_link_primeiro_acesso(entrega_ok=entrega.status == "ENVIADO"):
+    if _expor_link_primeiro_acesso(
+        entrega_ok=entrega.status == "ENVIADO",
+        para_ti=True,
+    ):
         if entrega.status != "ENVIADO":
             saida["mensagem"] = (
                 "Conta autorizada, mas o e-mail falhou. Use o link abaixo "
@@ -222,8 +225,8 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
             saida["aviso_email"] = entrega.erro or "Falha ao enviar e-mail."
         else:
             saida["mensagem"] = (
-                "Conta autorizada. Em desenvolvimento o link aparece aqui "
-                "(válido 48h) para a consultora criar a senha. "
+                "Conta autorizada. O e-mail foi enviado; o link também "
+                "aparece aqui para o TI (válido 48h). "
                 "Senha nunca vai no e-mail."
             )
         saida["link_primeiro_acesso"] = link
@@ -305,7 +308,10 @@ def reenviar_primeiro_acesso_consultora(
         "mensagem": "Primeiro acesso reenviado ao e-mail.",
         "email": usuario.email,
     }
-    if _expor_link_primeiro_acesso(entrega_ok=entrega.status == "ENVIADO"):
+    if _expor_link_primeiro_acesso(
+        entrega_ok=entrega.status == "ENVIADO",
+        para_ti=True,
+    ):
         if entrega.status != "ENVIADO":
             saida["mensagem"] = (
                 "E-mail falhou. Novo link gerado (válido 48h) — use o link abaixo. "

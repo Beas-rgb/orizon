@@ -166,37 +166,7 @@ export function FuncionarioPainel() {
 
   useEffect(() => {
     api<MinhaPesquisa[]>("/eu/pesquisas")
-      .then((lista) => {
-        // #region agent log
-        fetch("http://127.0.0.1:7496/ingest/74f2214c-a2bc-4cc8-ac4b-5ae97a5b0219", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "6ef563",
-          },
-          body: JSON.stringify({
-            sessionId: "6ef563",
-            runId: "post-pages",
-            hypothesisId: "H8",
-            location: "Paineis.tsx:FuncionarioPainel",
-            message: "minhas pesquisas loaded",
-            data: {
-              host: window.location.host,
-              path: window.location.pathname,
-              count: lista.length,
-              comToken: lista.filter((p) => Boolean(p.token)).length,
-              pendentes: lista.filter((p) => p.status_participacao !== "RESPONDIDA")
-                .length,
-              bundleHint:
-                document.querySelector('script[type="module"]')?.getAttribute("src") ||
-                "",
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
-        setItens(lista);
-      })
+      .then(setItens)
       .catch((exc) => setErro(exc instanceof Error ? exc.message : "Erro"));
   }, []);
 
@@ -365,8 +335,8 @@ export function DevPainel() {
         >
           <p className="font-bold text-gray-800 mb-1">Link de primeiro acesso (só para o TI)</p>
           <p className="text-gray-600 mb-2">
-            Senha nunca vem por e-mail. Abra o link ou use a parte depois do # em
-            /primeiro-acesso.
+            Senha nunca vem por e-mail. Abra o link ou copie o código após{" "}
+            <code className="text-[11px]">?t=</code> em /primeiro-acesso.
           </p>
           <a className="text-[#1D5FAF] font-semibold underline" href={linkAcesso}>
             {linkAcesso}
@@ -374,8 +344,12 @@ export function DevPainel() {
           <p className="mt-2 text-gray-500">
             Em desenvolvimento local:{" "}
             <code className="text-[11px]">
-              http://127.0.0.1:8000/app/primeiro-acesso#
-              {decodeURIComponent(linkAcesso.split("#").pop() || "")}
+              http://127.0.0.1:8000/app/primeiro-acesso?t=
+              {decodeURIComponent(
+                (linkAcesso.split("t=")[1] || linkAcesso.split("#").pop() || "").split(
+                  "&",
+                )[0],
+              )}
             </code>
           </p>
         </div>

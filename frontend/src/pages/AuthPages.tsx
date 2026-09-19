@@ -6,6 +6,14 @@ import { api } from "../lib/api";
 import { ACCENT, ACCENT_DARK } from "../lib/theme";
 import { consumirRetornoResponder } from "./ResponderPage";
 
+/** Token do e-mail: `?t=` (preferido) ou `#` (links antigos). */
+function tokenDaUrl(): string {
+  const params = new URLSearchParams(window.location.search);
+  const query = (params.get("t") || params.get("token") || "").trim();
+  if (query) return query;
+  return decodeURIComponent(window.location.hash.replace(/^#/, "")).trim();
+}
+
 const inputClass =
   "mt-1.5 w-full rounded-xl px-3.5 py-3 text-[14px] text-gray-800 outline-none transition-[border,box-shadow] focus:border-[#1D5FAF]/55 focus:shadow-[0_0_0_3px_rgba(29,95,175,0.12)]";
 
@@ -211,9 +219,7 @@ export function CadastroPage() {
 export function RecuperarPage() {
   const [erro, setErro] = useState("");
   const [ok, setOk] = useState("");
-  const [token, setToken] = useState(() =>
-    decodeURIComponent(window.location.hash.replace(/^#/, "")).trim(),
-  );
+  const [token, setToken] = useState(() => tokenDaUrl());
   const navigate = useNavigate();
   const comToken = Boolean(token);
 
@@ -328,9 +334,7 @@ export function RecuperarPage() {
 
 export function PrimeiroAcessoPage() {
   const [erro, setErro] = useState("");
-  const [token, setToken] = useState(() =>
-    decodeURIComponent(window.location.hash.replace(/^#/, "")).trim(),
-  );
+  const [token, setToken] = useState(() => tokenDaUrl());
   const { entrarComTokens } = useAuth();
   const navigate = useNavigate();
 

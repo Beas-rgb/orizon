@@ -80,74 +80,14 @@ export function ResponderPage() {
     setErro("");
     setReservado(false);
     const caminho = modoPesquisa ? `${baseApi}/formulario` : baseApi;
-    // #region agent log
-    fetch("http://127.0.0.1:7496/ingest/74f2214c-a2bc-4cc8-ac4b-5ae97a5b0219", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "6ef563",
-      },
-      body: JSON.stringify({
-        sessionId: "6ef563",
-        runId: "post-pages",
-        hypothesisId: "H4",
-        location: "ResponderPage.tsx:load",
-        message: "opening formulario",
-        data: {
-          host: window.location.host,
-          modoPesquisa,
-          temPesquisaId: Boolean(pesquisaId),
-          temToken: Boolean(token),
-          caminho,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     api<Pergunta[]>(caminho)
       .then((lista) => {
-        // #region agent log
-        fetch("http://127.0.0.1:7496/ingest/74f2214c-a2bc-4cc8-ac4b-5ae97a5b0219", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "6ef563",
-          },
-          body: JSON.stringify({
-            sessionId: "6ef563",
-            runId: "post-pages",
-            hypothesisId: "H4",
-            location: "ResponderPage.tsx:ok",
-            message: "formulario ok",
-            data: { host: window.location.host, perguntas: lista.length },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         const ordenada = [...lista].sort((a, b) => a.ordem - b.ordem);
         setPerguntas(ordenada);
         setIndice(0);
       })
       .catch((exc) => {
         const msg = exc instanceof Error ? exc.message : "Erro";
-        // #region agent log
-        fetch("http://127.0.0.1:7496/ingest/74f2214c-a2bc-4cc8-ac4b-5ae97a5b0219", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "6ef563",
-          },
-          body: JSON.stringify({
-            sessionId: "6ef563",
-            runId: "post-pages",
-            hypothesisId: "H4",
-            location: "ResponderPage.tsx:err",
-            message: "formulario erro",
-            data: { host: window.location.host, msg: String(msg).slice(0, 120) },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         if (
           usuario.painel !== "funcionario" ||
           /não encontrad|inválido|já usado|Link/i.test(msg)

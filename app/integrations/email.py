@@ -7,7 +7,9 @@ grava numa caixa local. O token viaja no e-mail; a API nunca devolve senha.
 
 from __future__ import annotations
 
+import html as html_lib
 import json
+import re
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -37,6 +39,22 @@ def _tem_provedor_remoto() -> bool:
         settings.sendgrid_api_key
         or settings.mailtrap_api_token
         or settings.smtp_host
+    )
+
+
+def _corpo_para_html(corpo: str) -> str:
+    """HTML simples com links clicáveis (clientes que abrem só a parte HTML)."""
+    escapado = html_lib.escape(corpo)
+    com_links = re.sub(
+        r"https?://[^\s<&]+",
+        lambda m: f'<a href="{m.group(0)}">{m.group(0)}</a>',
+        escapado,
+    )
+    return (
+        '<div style="font-family:system-ui,sans-serif;font-size:14px;'
+        'line-height:1.5;white-space:pre-wrap">'
+        f"{com_links}"
+        "</div>"
     )
 
 
@@ -85,13 +103,18 @@ caixa_email = CaixaEmail()
 def _enviar_sendgrid(destino: str, assunto: str, corpo: str) -> None:
     remetente = settings.sendgrid_from_email or settings.smtp_from
     if not remetente:
-        raise EmailNaoEnviado("Remetente SendGrid não configurado")
+        raise EmailNaoEnviado(
+            "Remetente SendGrid não configurado (SENDGRID_FROM_EMAIL)"
+        )
     nome = settings.sendgrid_from_name or "Horizon"
     payload = {
         "personalizations": [{"to": [{"email": destino}]}],
         "from": {"email": remetente, "name": nome},
         "subject": assunto,
-        "content": [{"type": "text/plain", "value": corpo}],
+        "content": [
+            {"type": "text/plain", "value": corpo},
+            {"type": "text/html", "value": _corpo_para_html(corpo)},
+        ],
     }
     pedido = urllib.request.Request(
         "https://api.sendgrid.com/v3/mail/send",

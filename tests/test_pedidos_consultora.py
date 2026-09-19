@@ -30,10 +30,12 @@ def test_consultora_so_entra_depois_da_autorizacao(client) -> None:
     )
     assert autorizado.status_code == 200
     # Modo local nos testes: o TI recebe o link para não depender de SMTP.
-    assert autorizado.json().get("link_primeiro_acesso")
+    link = autorizado.json().get("link_primeiro_acesso") or ""
+    assert "/primeiro-acesso?t=" in link
     assert "senha" not in caixa_email.mensagens[-1]["assunto"].lower()
 
     token = caixa_email.mensagens[-1]["corpo"].strip().split()[-1]
+    assert token in link
     acesso = client.post(
         "/auth/primeiro-acesso",
         json={"token": token, "senha": "fraca"},
@@ -103,3 +105,29 @@ def test_autorizar_reativa_consultora_soft_deleted(client, db) -> None:
     assert pessoa.deleted_at is None
     assert pessoa.ativo is False
     assert pessoa.senha_hash is None
+
+
+def test_ti_recebe_link_mesmo_em_production(client, monkeypatch) -> None:
+    """Painel Dev precisa do link em production (e-mail pode falhar ou atrasar)."""
+    dev = abrir_dev(client)
+    pedido = client.post(
+        "/auth/cadastro-consultora",
+        json={"nome": "Prod", "email": "prod-ti@link.dev"},
+    )
+    assert pedido.status_code == 200
+    monkeypatch.setattr("app.core.config.settings.app_env", "production")
+    monkeypatch.setattr(
+        "app.services.identidade.erros.settings.app_env", "production"
+    )
+    monkeypatch.setattr(
+        "app.services.identidade.convites.settings.app_env", "production"
+    )
+    lista = client.get("/dev/pedidos", headers=dev)
+    autorizado = client.post(
+        f"/dev/pedidos/{lista.json()[0]['id']}/autorizar",
+        headers=dev,
+    )
+    assert autorizado.status_code == 200
+    link = autorizado.json().get("link_primeiro_acesso") or ""
+    assert "/primeiro-acesso?t=" in link
+

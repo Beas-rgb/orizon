@@ -61,6 +61,7 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
         visto["nome"] = corpo["from"]["name"]
         visto["assunto"] = corpo["subject"]
         visto["texto"] = corpo["content"][0]["value"]
+        visto["html"] = corpo["content"][1]["value"]
         return RespostaFalsa()
 
     monkeypatch.setattr(settings, "sendgrid_api_key", "SG.teste")
@@ -71,7 +72,7 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
     caixa_email.enviar(
         "destinatario@exemplo.dev",
         "Você é incrível!",
-        "Parabéns pelo envio de teste.",
+        "Parabéns pelo envio de teste.\nhttps://orizon-api.onrender.com/app/primeiro-acesso?t=abc",
     )
 
     assert visto["url"] == "https://api.sendgrid.com/v3/mail/send"
@@ -80,7 +81,10 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
     assert visto["remetente"] == "noreply@orizon.dev"
     assert visto["nome"] == "Horizon"
     assert visto["assunto"] == "Você é incrível!"
-    assert visto["texto"] == "Parabéns pelo envio de teste."
+    assert "Parabéns pelo envio de teste." in str(visto["texto"])
+    assert '<a href="https://orizon-api.onrender.com/app/primeiro-acesso?t=abc">' in str(
+        visto["html"]
+    )
 
 
 def test_envia_pelo_sdk_mailtrap(monkeypatch) -> None:
