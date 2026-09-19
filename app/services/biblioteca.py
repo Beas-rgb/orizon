@@ -31,10 +31,6 @@ def _auditar(db: Session, acao: str, usuario_id: str) -> None:
     )
 
 
-def _papel_no_projeto(db: Session, usuario: Usuario, projeto_id: str) -> str | None:
-    return papel_no_projeto(db, usuario, projeto_id)
-
-
 def pode_ver(db: Session, usuario: Usuario, doc: Documento) -> bool:
     if usuario.papel == "TI" or doc.deleted_at is not None:
         return False
@@ -44,7 +40,7 @@ def pode_ver(db: Session, usuario: Usuario, doc: Documento) -> bool:
         return False
     if doc.projeto_id is None:
         return False
-    papel = _papel_no_projeto(db, usuario, doc.projeto_id)
+    papel = papel_no_projeto(db, usuario, doc.projeto_id)
     if papel is None or papel == "CONSULTOR":
         return False
     if doc.camada != "INTERNA":
@@ -88,7 +84,7 @@ def enviar(
 ) -> Documento:
     if consultor.papel != "CONSULTOR":
         raise ErroAuth(403, "Só a consultora envia arquivo.")
-    dona = _papel_no_projeto(db, consultor, projeto_id) if projeto_id else None
+    dona = papel_no_projeto(db, consultor, projeto_id) if projeto_id else None
     if projeto_id is not None and dona != "CONSULTOR":
         raise ErroAuth(404, "Projeto não encontrado.")
     camada_final, visivel = _resolver_camada(projeto_id, camada, visibilidade)
@@ -124,7 +120,7 @@ def listar(
         raise ErroAuth(403, "Sem acesso à biblioteca.")
     consulta = select(Documento).where(Documento.deleted_at.is_(None))
     if projeto_id is not None:
-        if _papel_no_projeto(db, usuario, projeto_id) is None:
+        if papel_no_projeto(db, usuario, projeto_id) is None:
             raise ErroAuth(404, "Projeto não encontrado.")
         consulta = consulta.where(Documento.projeto_id == projeto_id)
     else:
@@ -192,7 +188,7 @@ def enviar_para_projeto(
     origem = obter(db, consultor, documento_id)
     if origem.camada != "PRINCIPAL":
         raise ErroAuth(422, "Só a biblioteca principal envia para um projeto.")
-    if _papel_no_projeto(db, consultor, projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Projeto não encontrado.")
     try:
         conteudo = ler(origem.armazenamento_key)

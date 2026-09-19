@@ -72,10 +72,6 @@ def _auditar(db: Session, acao: str, usuario_id: str | None) -> None:
     )
 
 
-def _papel(db: Session, usuario: Usuario, projeto_id: str) -> str | None:
-    return papel_no_projeto(db, usuario, projeto_id)
-
-
 def _pesquisa_viva(db: Session, pesquisa_id: str) -> Pesquisa:
     pesquisa = db.get(Pesquisa, pesquisa_id)
     if pesquisa is None or pesquisa.deleted_at is not None:
@@ -91,7 +87,7 @@ def criar_pesquisa(
     tipo: str,
     descricao: str | None,
 ) -> Pesquisa:
-    if _papel(db, consultor, projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Projeto não encontrado.")
     if tipo not in TIPOS:
         raise ErroAuth(422, "Tipo de pesquisa inválido.")
@@ -115,7 +111,7 @@ def criar_pesquisa(
 
 
 def listar_pesquisas(db: Session, usuario: Usuario, projeto_id: str) -> list[Pesquisa]:
-    papel = _papel(db, usuario, projeto_id)
+    papel = papel_no_projeto(db, usuario, projeto_id)
     if papel not in {"CONSULTOR", "ORGAO"}:
         raise ErroAuth(404, "Projeto não encontrado.")
     return list(
@@ -135,7 +131,7 @@ def listar_perguntas_pesquisa(
 ) -> list[Pergunta]:
     """Consultora do projeto vê a estrutura (rascunho ou publicada). Sem respostas."""
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    if _papel(db, usuario, pesquisa.projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, usuario, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
     return list(
         db.scalars(
@@ -159,7 +155,7 @@ def adicionar_pergunta(
     opcoes: list[str],
 ) -> Pergunta:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
     if pesquisa.status != "RASCUNHO":
         raise ErroAuth(422, "Pesquisa já publicada. Não altera pergunta.")
@@ -208,7 +204,7 @@ def _exigir_rascunho_consultor(
     db: Session, consultor: Usuario, pesquisa_id: str
 ) -> Pesquisa:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
     if pesquisa.status != "RASCUNHO":
         raise ErroAuth(
@@ -493,7 +489,7 @@ def baixar_midia_pergunta(
 
 def publicar(db: Session, consultor: Usuario, pesquisa_id: str) -> Pesquisa:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
     if pesquisa.status != "RASCUNHO":
         raise ErroAuth(422, "Só rascunho pode ser publicado.")
@@ -679,7 +675,7 @@ def listar_participantes_status(
 ) -> dict:
     """CLIMA: só totais. Demais tipos: funcionários + status (sem respostas)."""
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
     vinculos = db.scalars(
         select(ProjetoUsuario).where(
@@ -745,7 +741,7 @@ def baixar_midia_pelo_token(
 
 def encerrar(db: Session, consultor: Usuario, pesquisa_id: str) -> Pesquisa:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
     if pesquisa.status != "PUBLICADA":
         raise ErroAuth(422, "Só pesquisa publicada pode ser encerrada.")
@@ -766,7 +762,7 @@ def salvar_modelo(
     nome: str,
 ) -> TemplatePesquisa:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
     if consultor.papel != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
@@ -865,7 +861,7 @@ def criar_de_modelo(
     template_id: str,
     titulo: str | None,
 ) -> Pesquisa:
-    if _papel(db, consultor, projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Projeto não encontrado.")
     modelo = db.get(TemplatePesquisa, template_id)
     if (
@@ -952,7 +948,7 @@ def gerar_tokens(
     quantidade: int,
 ) -> list[str]:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+    if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
     if pesquisa.status != "PUBLICADA":
         raise ErroAuth(422, "Publique a pesquisa antes de gerar o link.")
@@ -1005,7 +1001,7 @@ def _autorizar_funcionario_na_pesquisa(
     """Só FUNCIONÁRIO com vínculo ativo no projeto. Demais papéis → 404."""
     if usuario.papel != "FUNCIONARIO":
         raise ErroAuth(404, "Link inválido ou já usado.")
-    if _papel(db, usuario, pesquisa.projeto_id) != "FUNCIONARIO":
+    if papel_no_projeto(db, usuario, pesquisa.projeto_id) != "FUNCIONARIO":
         raise ErroAuth(404, "Link inválido ou já usado.")
 
 
@@ -1322,7 +1318,7 @@ def nota_do_token(
 
 def painel(db: Session, usuario: Usuario, pesquisa_id: str) -> list[dict]:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    papel = _papel(db, usuario, pesquisa.projeto_id)
+    papel = papel_no_projeto(db, usuario, pesquisa.projeto_id)
     if papel not in {"CONSULTOR", "ORGAO"}:
         raise ErroAuth(404, "Pesquisa não encontrada.")
     perguntas = db.scalars(
