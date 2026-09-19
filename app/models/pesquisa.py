@@ -82,15 +82,14 @@ class OpcaoResposta(Base):
 
 
 class TokenResposta(Base):
-    """Link de convite/entrada. Não autoriza sozinho — quem responde é o
-    funcionário autenticado (ver PesquisaParticipante)."""
+    """Link de convite/entrada. No banco só o hash (como convites)."""
 
     __tablename__ = "tokens_resposta"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     pesquisa_id: Mapped[str] = mapped_column(ForeignKey("pesquisas.id"), index=True)
     setor_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    token: Mapped[str] = mapped_column(String(36), unique=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     usado: Mapped[bool] = mapped_column(Boolean, default=False)
     usado_em: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

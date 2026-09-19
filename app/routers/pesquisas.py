@@ -2,7 +2,15 @@
 autenticado. O painel do órgão não devolve token nem nome.
 """
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -394,11 +402,17 @@ def de_modelo(
 @router.post("/pesquisas/{pesquisa_id}/publicar", response_model=PesquisaSaida)
 def publicar_rota(
     pesquisa_id: str,
+    background_tasks: BackgroundTasks,
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> PesquisaSaida:
-    return _saida(_chamar(lambda: publicar(db, consultor, pesquisa_id)))
-
+    return _saida(
+        _chamar(
+            lambda: publicar(
+                db, consultor, pesquisa_id, tarefas=background_tasks
+            )
+        )
+    )
 
 @router.post("/pesquisas/{pesquisa_id}/tokens")
 def tokens(

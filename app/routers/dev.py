@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -59,10 +59,12 @@ def _chamar(acao):
 @router.post("/auth/cadastro-consultora", response_model=MensagemSaida)
 def cadastrar(
     corpo: CadastroConsultora,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MensagemSaida:
     """Pedido público. Não cria login e não devolve token."""
-    _chamar(lambda: pedir_conta_consultora(db, corpo.nome, corpo.email))
+    ip = request.client.host if request.client else None
+    _chamar(lambda: pedir_conta_consultora(db, corpo.nome, corpo.email, ip=ip))
     return MensagemSaida(
         mensagem="Pedido registrado. A conta só nasce depois da autorização."
     )

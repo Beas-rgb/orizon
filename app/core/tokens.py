@@ -29,12 +29,21 @@ def _agora() -> datetime:
     return datetime.now(UTC)
 
 
-def criar_access_token(usuario_id: str, papel: str) -> str:
+def criar_access_token(
+    usuario_id: str, papel: str, *, sessao_id: str
+) -> str:
+    """Access JWT amarrado à sessão. Logout revoga o sid e invalida o access."""
     if not settings.jwt_secret:
         raise RuntimeError("JWT_SECRET não configurado")
     expira = _agora() + timedelta(minutes=settings.jwt_access_minutos)
     return jwt.encode(
-        {"sub": usuario_id, "papel": papel, "typ": "access", "exp": expira},
+        {
+            "sub": usuario_id,
+            "papel": papel,
+            "typ": "access",
+            "sid": sessao_id,
+            "exp": expira,
+        },
         settings.jwt_secret,
         algorithm=ALGORITMO,
     )
@@ -56,9 +65,13 @@ def ler_access_token(token: str) -> dict[str, str]:
         dados = jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITMO])
     except JWTError as exc:
         raise ValueError("token inválido") from exc
-    if dados.get("typ") != "access" or not dados.get("sub"):
+    if dados.get("typ") != "access" or not dados.get("sub") or not dados.get("sid"):
         raise ValueError("token inválido")
-    return {"sub": str(dados["sub"]), "papel": str(dados.get("papel", ""))}
+    return {
+        "sub": str(dados["sub"]),
+        "papel": str(dados.get("papel", "")),
+        "sid": str(dados["sid"]),
+    }
 
 
 def novo_id() -> str:

@@ -91,7 +91,7 @@ def test_orgao_nao_cria_edita_nem_lista_equipe_alheia(client, monkeypatch) -> No
                 "vinculo_titulo": "Hack",
             },
         ).status_code
-        == 403
+        == 404
     )
     assert (
         client.patch(

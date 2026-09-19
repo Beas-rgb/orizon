@@ -5,7 +5,7 @@ Autorização: login, primeiro acesso, recuperar e redefinir são públicos
 Nenhuma rota devolve senha, hash ou token de e-mail.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -38,6 +38,12 @@ from app.services.identidade import (
 )
 
 router = APIRouter(prefix="/auth", tags=["identidade"])
+
+
+def _ip(request: Request) -> str | None:
+    if request.client is None:
+        return None
+    return request.client.host
 
 
 def _chamar(acao) -> object:
@@ -110,9 +116,12 @@ def convidar(
 @router.post("/primeiro-acesso", response_model=TokensSaida)
 def ativar(
     corpo: PrimeiroAcessoEntrada,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    return _chamar(lambda: primeiro_acesso(db, corpo.token, corpo.senha))
+    return _chamar(
+        lambda: primeiro_acesso(db, corpo.token, corpo.senha, ip=_ip(request))
+    )
 
 
 @router.post("/recuperar-senha", response_model=MensagemSaida)
@@ -128,7 +137,10 @@ def pedir_redefinicao(
 @router.post("/redefinir-senha", response_model=MensagemSaida)
 def gravar_senha_nova(
     corpo: RedefinirEntrada,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MensagemSaida:
-    _chamar(lambda: redefinir_senha(db, corpo.token, corpo.senha))
+    _chamar(
+        lambda: redefinir_senha(db, corpo.token, corpo.senha, ip=_ip(request))
+    )
     return MensagemSaida(mensagem="Senha redefinida. Entre de novo com a senha nova.")

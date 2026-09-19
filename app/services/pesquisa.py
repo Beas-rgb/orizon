@@ -2,14 +2,13 @@
 só a quem tem o token. O órgão vê agregado, nunca a lista de pessoas.
 """
 
-import uuid
 from datetime import timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.autorizacao import papel_no_projeto
-from app.core.tokens import novo_id
+from app.core.tokens import hash_token, novo_id, novo_token_opaco
 from app.integrations.arquivos import (
     ArquivoInvalido,
     copiar_midia,
@@ -487,7 +486,32 @@ def baixar_midia_pergunta(
     return conteudo, mime
 
 
-def publicar(db: Session, consultor: Usuario, pesquisa_id: str) -> Pesquisa:
+def _criar_token_resposta(
+    db: Session,
+    pesquisa: Pesquisa,
+    *,
+    usado: bool = False,
+    usado_em=None,
+) -> tuple[str, str]:
+    """Grava só o hash. Devolve (id, plaintext) — plaintext só na criação."""
+    plain = novo_token_opaco()
+    tid = novo_id()
+    db.add(
+        TokenResposta(
+            id=tid,
+            pesquisa_id=pesquisa.id,
+            setor_id=None,
+            token_hash=hash_token(plain),
+            usado=usado,
+            usado_em=usado_em,
+            expira_em=pesquisa.disponivel_ate,
+            criado_em=agora(),
+        )
+    )
+    return tid, plain
+
+
+def publicar(db: Session, consultor: Usuario, pesquisa_id: str, *, tarefas=None) -> Pesquisa:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
     if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
@@ -528,12 +552,13 @@ def publicar(db: Session, consultor: Usuario, pesquisa_id: str) -> Pesquisa:
             pesquisa.projeto_id,
             "EMAIL",
             "PESQUISA_PUBLICADA",
+            tarefas=tarefas,
         )
     db.commit()
     return pesquisa
 
 
-def _sincronizar_participantes(db: Session, pesquisa: Pesquisa) -> str | None:
+def _sincronizar_participantes(db: Session, pesquisa: Pesquisa) -> None:
     """Cria PENDENTE para cada FUNCIONÁRIO do projeto e garante 1 token de entrada."""
     agora_ = agora()
     vinculos = db.scalars(
@@ -566,27 +591,14 @@ def _sincronizar_participantes(db: Session, pesquisa: Pesquisa) -> str | None:
                 deleted_at=None,
             )
         )
-    token_entrada = db.scalar(
-        select(TokenResposta.token)
+    existe_entrada = db.scalar(
+        select(TokenResposta.id)
         .where(TokenResposta.pesquisa_id == pesquisa.id)
         .order_by(TokenResposta.criado_em.asc())
         .limit(1)
     )
-    if token_entrada:
-        return token_entrada
-    token = str(uuid.uuid4())
-    db.add(
-        TokenResposta(
-            id=novo_id(),
-            pesquisa_id=pesquisa.id,
-            setor_id=None,
-            token=token,
-            usado=False,
-            expira_em=pesquisa.disponivel_ate,
-            criado_em=agora_,
-        )
-    )
-    return token
+    if existe_entrada is None:
+        _criar_token_resposta(db, pesquisa)
 
 
 def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
@@ -638,20 +650,11 @@ def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
             )
             db.add(participante)
             db.flush()
+        # Hash no banco: emite plaintext fresco só para o painel do funcionário.
         token = None
-        if participante.token_id:
-            pessoal = db.get(TokenResposta, participante.token_id)
-            if pessoal is not None:
-                token = pessoal.token
-        if token is None:
-            token = db.scalar(
-                select(TokenResposta.token)
-                .where(TokenResposta.pesquisa_id == pesquisa.id)
-                .order_by(TokenResposta.criado_em.asc())
-                .limit(1)
-            )
-        if token is None:
-            token = _sincronizar_participantes(db, pesquisa)
+        if participante.status != "RESPONDIDA":
+            _sincronizar_participantes(db, pesquisa)
+            _, token = _criar_token_resposta(db, pesquisa)
         prazo = _ciente(pesquisa.disponivel_ate)
         saida.append(
             {
@@ -957,22 +960,10 @@ def gerar_tokens(
             422,
             "Gere até 500 links por vez. Pode repetir até cobrir todos.",
         )
-    agora_ = agora()
     links: list[str] = []
     for _ in range(quantidade):
-        token = str(uuid.uuid4())
-        db.add(
-            TokenResposta(
-                id=novo_id(),
-                pesquisa_id=pesquisa.id,
-                setor_id=None,
-                token=token,
-                usado=False,
-                expira_em=pesquisa.disponivel_ate,
-                criado_em=agora_,
-            )
-        )
-        links.append(token)
+        _, plain = _criar_token_resposta(db, pesquisa)
+        links.append(plain)
     _auditar(db, "TOKENS_GERADOS", consultor.id)
     db.commit()
     return links
@@ -980,7 +971,9 @@ def gerar_tokens(
 
 def _token_convite(db: Session, token: str) -> TokenResposta:
     """Resolve o link de entrada. Não exige `usado` — o controle é o participante."""
-    linha = db.scalar(select(TokenResposta).where(TokenResposta.token == token))
+    linha = db.scalar(
+        select(TokenResposta).where(TokenResposta.token_hash == hash_token(token))
+    )
     if linha is None:
         raise ErroAuth(404, "Link inválido ou já usado.")
     pesquisa = _pesquisa_viva(db, linha.pesquisa_id)
@@ -1042,18 +1035,9 @@ def _participante_da_pesquisa(
     if participante.status in {"EXPIRADA", "CANCELADA"}:
         raise ErroAuth(404, "Link inválido ou já usado.")
     if participante.token_id is None:
-        pessoal = TokenResposta(
-            id=novo_id(),
-            pesquisa_id=pesquisa.id,
-            setor_id=None,
-            token=str(uuid.uuid4()),
-            usado=False,
-            expira_em=pesquisa.disponivel_ate,
-            criado_em=agora_,
-        )
-        db.add(pessoal)
+        tid, _plain = _criar_token_resposta(db, pesquisa)
         db.flush()
-        participante.token_id = pessoal.id
+        participante.token_id = tid
     if participante.status == "PENDENTE":
         participante.status = "EM_ANDAMENTO"
         participante.iniciado_em = agora_
@@ -1136,18 +1120,8 @@ def registrar_respostas(
     agora_ = agora()
     # CLIMA: respostas em token anônimo (sem FK para participante/usuário).
     if pesquisa.tipo in TIPOS_ANONIMOS:
-        token_resposta_id = novo_id()
-        db.add(
-            TokenResposta(
-                id=token_resposta_id,
-                pesquisa_id=pesquisa.id,
-                setor_id=None,
-                token=str(uuid.uuid4()),
-                usado=True,
-                usado_em=agora_,
-                expira_em=pesquisa.disponivel_ate,
-                criado_em=agora_,
-            )
+        token_resposta_id, _plain = _criar_token_resposta(
+            db, pesquisa, usado=True, usado_em=agora_
         )
         db.flush()
         participante.token_id = None
@@ -1321,57 +1295,90 @@ def painel(db: Session, usuario: Usuario, pesquisa_id: str) -> list[dict]:
     papel = papel_no_projeto(db, usuario, pesquisa.projeto_id)
     if papel not in {"CONSULTOR", "ORGAO"}:
         raise ErroAuth(404, "Pesquisa não encontrada.")
-    perguntas = db.scalars(
-        select(Pergunta)
-        .where(
-            Pergunta.pesquisa_id == pesquisa.id,
-            Pergunta.deleted_at.is_(None),
-        )
-        .order_by(Pergunta.ordem)
-    ).all()
+    perguntas = list(
+        db.scalars(
+            select(Pergunta)
+            .where(
+                Pergunta.pesquisa_id == pesquisa.id,
+                Pergunta.deleted_at.is_(None),
+            )
+            .order_by(Pergunta.ordem)
+        ).all()
+    )
+    if not perguntas:
+        return []
+    ids = [p.id for p in perguntas]
+    totais = {
+        row.pergunta_id: int(row.total)
+        for row in db.execute(
+            select(
+                Resposta.pergunta_id,
+                func.count(func.distinct(Resposta.token_id)).label("total"),
+            )
+            .where(Resposta.pergunta_id.in_(ids))
+            .group_by(Resposta.pergunta_id)
+        ).all()
+    }
+    medias = {
+        row.pergunta_id: float(row.media)
+        for row in db.execute(
+            select(
+                Resposta.pergunta_id,
+                func.avg(Resposta.valor_numerico).label("media"),
+            )
+            .where(
+                Resposta.pergunta_id.in_(ids),
+                Resposta.valor_numerico.is_not(None),
+            )
+            .group_by(Resposta.pergunta_id)
+        ).all()
+    }
+    contagens_por_pergunta: dict[str, list[dict]] = {pid: [] for pid in ids}
+    opcoes = list(
+        db.scalars(
+            select(OpcaoResposta)
+            .where(OpcaoResposta.pergunta_id.in_(ids))
+            .order_by(OpcaoResposta.ordem)
+        ).all()
+    )
+    if opcoes:
+        opcao_ids = [o.id for o in opcoes]
+        qtd_por_opcao = {
+            row.opcao_id: int(row.total)
+            for row in db.execute(
+                select(
+                    Resposta.opcao_id,
+                    func.count(Resposta.id).label("total"),
+                )
+                .where(Resposta.opcao_id.in_(opcao_ids))
+                .group_by(Resposta.opcao_id)
+            ).all()
+        }
+        for opcao in opcoes:
+            contagens_por_pergunta[opcao.pergunta_id].append(
+                {
+                    "opcao_id": opcao.id,
+                    "texto": opcao.texto,
+                    "total": qtd_por_opcao.get(opcao.id, 0),
+                }
+            )
     saida = []
     for pergunta in perguntas:
-        # Participantes únicos (token de submissão), não linhas de checkbox.
-        total = int(
-            db.scalar(
-                select(func.count(func.distinct(Resposta.token_id))).where(
-                    Resposta.pergunta_id == pergunta.id
-                )
-            )
-            or 0
-        )
+        total = totais.get(pergunta.id, 0)
         suprimido = pesquisa.tipo in TIPOS_ANONIMOS and total < K_ANONIMATO
         media = None
         contagem_opcoes = None
         if not suprimido:
-            media = db.scalar(
-                select(func.avg(Resposta.valor_numerico)).where(
-                    Resposta.pergunta_id == pergunta.id,
-                    Resposta.valor_numerico.is_not(None),
-                )
-            )
+            media = medias.get(pergunta.id)
             if pergunta.tipo in {"CHECKBOX", "MULTIPLA_ESCOLHA", "SIM_NAO"}:
-                contagem_opcoes = []
-                for opcao in opcoes_da(db, pergunta.id):
-                    qtd = db.scalar(
-                        select(func.count(Resposta.id)).where(
-                            Resposta.opcao_id == opcao.id
-                        )
-                    )
-                    contagem_opcoes.append(
-                        {
-                            "opcao_id": opcao.id,
-                            "texto": opcao.texto,
-                            "total": int(qtd or 0),
-                        }
-                    )
+                contagem_opcoes = contagens_por_pergunta.get(pergunta.id, [])
         saida.append(
             {
                 "pergunta_id": pergunta.id,
                 "texto": pergunta.texto,
                 "tipo": pergunta.tipo,
                 "respostas": total,
-                "media": float(media) if media is not None else None,
+                "media": media,
                 "contagem_opcoes": contagem_opcoes,
                 "suprimido": suprimido,
             }

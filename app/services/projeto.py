@@ -119,7 +119,7 @@ def criar_projeto(
     vinculo_titulo: str,
 ) -> "ProjetoSaidaMontada":
     if consultor.papel != "CONSULTOR":
-        raise ErroAuth(403, "Só a consultora cria projeto.")
+        raise ErroAuth(404, "Projeto não encontrado.")
     if vinculo_tipo not in VINCULOS:
         raise ErroAuth(422, "Vínculo deve ser EDITAL ou DOCUMENTO.")
     garantir_rotulos(db)

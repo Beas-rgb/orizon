@@ -164,11 +164,11 @@ def _link_com_token(pagina: str, token: str) -> str:
 
 
 def _emitir_sessao(db: Session, usuario: Usuario) -> dict[str, str]:
-    access = criar_access_token(usuario.id, usuario.papel)
+    sessao_id = novo_id()
     cru, token_hash, expira = criar_refresh_token(usuario.id)
     db.add(
         Sessao(
-            id=novo_id(),
+            id=sessao_id,
             usuario_id=usuario.id,
             token_hash=token_hash,
             expira_em=expira,
@@ -176,12 +176,28 @@ def _emitir_sessao(db: Session, usuario: Usuario) -> dict[str, str]:
             criado_em=_agora(),
         )
     )
+    access = criar_access_token(
+        usuario.id, usuario.papel, sessao_id=sessao_id
+    )
     return {
         "access_token": access,
         "refresh_token": cru,
         "token_type": "bearer",
         "painel": painel_de(usuario.papel),
     }
+
+
+def _expor_link_primeiro_acesso(*, entrega_ok: bool) -> bool:
+    """Em production o token vai só no e-mail — nunca no JSON (mesmo com FALHA)."""
+    if settings.app_env == "production":
+        return False
+    from app.integrations.email import modo_envio
+
+    return (
+        settings.app_env == "development"
+        or modo_envio() == "local"
+        or not entrega_ok
+    )
 
 
 def _usuario_por_email(db: Session, email: str) -> Usuario | None:
@@ -464,25 +480,44 @@ def criar_convite(
     convite.atualizado_em = _agora()
     _auditar(db, "CONVITE_CRIADO", consultor.id)
     db.commit()
-    from app.integrations.email import modo_envio
-
     saida: dict[str, str | None] = {
         "email": endereco,
         "entrega": convite.entrega,
         "link_primeiro_acesso": None,
     }
-    # Em modo local (ou falha), a consultora vê o link para testar onboarding.
-    if (
-        settings.app_env == "development"
-        or modo_envio() == "local"
-        or convite.entrega == "FALHA"
-    ):
+    if _expor_link_primeiro_acesso(entrega_ok=convite.entrega == "ENVIADO"):
         saida["link_primeiro_acesso"] = link
     return saida
 
 
-def primeiro_acesso(db: Session, token: str, senha: str) -> dict[str, str]:
-    _exigir_senha(senha)
+def _exigir_rate_publico(db: Session, *chaves: str) -> None:
+    """Bloqueia se qualquer chave estiver em espera (mesmo padrão do login)."""
+    for chave in chaves:
+        if not chave:
+            continue
+        if segundos_bloqueio(db, chave) > 0:
+            db.commit()
+            raise ErroAuth(429, MSG_ESPERA)
+
+
+def primeiro_acesso(
+    db: Session,
+    token: str,
+    senha: str,
+    *,
+    ip: str | None = None,
+) -> dict[str, str]:
+    chave_token = f"primeiro-acesso:tok:{hash_token(token)[:24]}"
+    chave_ip = f"primeiro-acesso:ip:{ip}" if ip else ""
+    _exigir_rate_publico(db, chave_token, chave_ip)
+    try:
+        _exigir_senha(senha)
+    except ErroAuth:
+        registrar_falha(db, chave_token)
+        if chave_ip:
+            registrar_falha(db, chave_ip)
+        db.commit()
+        raise
     convite = db.scalar(
         select(Convite).where(Convite.token_hash == hash_token(token))
     )
@@ -491,9 +526,17 @@ def primeiro_acesso(db: Session, token: str, senha: str) -> dict[str, str]:
         or convite.status != "PENDENTE"
         or (_ciente(convite.expira_em) or _agora()) <= _agora()
     ):
+        registrar_falha(db, chave_token)
+        if chave_ip:
+            registrar_falha(db, chave_ip)
+        db.commit()
         raise ErroAuth(400, MSG_TOKEN)
     existente = _usuario_por_email(db, convite.email)
     if existente is not None and existente.senha_hash:
+        registrar_falha(db, chave_token)
+        if chave_ip:
+            registrar_falha(db, chave_ip)
+        db.commit()
         raise ErroAuth(409, "Este e-mail já tem acesso.")
     if existente is None:
         usuario = Usuario(
@@ -517,6 +560,9 @@ def primeiro_acesso(db: Session, token: str, senha: str) -> dict[str, str]:
     from app.services.projeto import vincular_aceite
 
     vincular_aceite(db, convite, usuario)
+    limpar_falhas(db, chave_token)
+    if chave_ip:
+        limpar_falhas(db, chave_ip)
     _auditar(db, "PRIMEIRO_ACESSO", usuario.id)
     tokens = _emitir_sessao(db, usuario)
     db.commit()
@@ -573,8 +619,24 @@ def recuperar_senha(db: Session, email: str) -> None:
     db.commit()
 
 
-def redefinir_senha(db: Session, token: str, senha: str) -> None:
-    _exigir_senha(senha)
+def redefinir_senha(
+    db: Session,
+    token: str,
+    senha: str,
+    *,
+    ip: str | None = None,
+) -> None:
+    chave_token = f"redefinir:tok:{hash_token(token)[:24]}"
+    chave_ip = f"redefinir:ip:{ip}" if ip else ""
+    _exigir_rate_publico(db, chave_token, chave_ip)
+    try:
+        _exigir_senha(senha)
+    except ErroAuth:
+        registrar_falha(db, chave_token)
+        if chave_ip:
+            registrar_falha(db, chave_ip)
+        db.commit()
+        raise
     linha = db.scalar(
         select(TokenRedefinicao).where(
             TokenRedefinicao.token_hash == hash_token(token)
@@ -585,9 +647,17 @@ def redefinir_senha(db: Session, token: str, senha: str) -> None:
         or linha.usado_em is not None
         or (_ciente(linha.expira_em) or _agora()) <= _agora()
     ):
+        registrar_falha(db, chave_token)
+        if chave_ip:
+            registrar_falha(db, chave_ip)
+        db.commit()
         raise ErroAuth(400, MSG_TOKEN)
     usuario = db.get(Usuario, linha.usuario_id)
     if usuario is None or usuario.deleted_at is not None or not usuario.ativo:
+        registrar_falha(db, chave_token)
+        if chave_ip:
+            registrar_falha(db, chave_ip)
+        db.commit()
         raise ErroAuth(400, MSG_TOKEN)
     usuario.senha_hash = hash_senha(senha)
     usuario.tentativas_falhas = 0
@@ -595,17 +665,37 @@ def redefinir_senha(db: Session, token: str, senha: str) -> None:
     usuario.atualizado_em = _agora()
     linha.usado_em = _agora()
     limpar_falhas(db, f"login:{usuario.email}")
+    limpar_falhas(db, chave_token)
+    if chave_ip:
+        limpar_falhas(db, chave_ip)
     _revogar_sessoes(db, usuario.id)
     _auditar(db, "SENHA_REDEFINIDA", usuario.id)
     db.commit()
 
 
-def pedir_conta_consultora(db: Session, nome: str, email: str) -> None:
+def pedir_conta_consultora(
+    db: Session,
+    nome: str,
+    email: str,
+    *,
+    ip: str | None = None,
+) -> None:
     """Não cria login. O pedido espera autorização por no máximo 5 dias."""
     endereco = email_acesso(email)
+    chave_email = f"cadastro-consultora:email:{endereco}"
+    chave_ip = f"cadastro-consultora:ip:{ip}" if ip else ""
+    _exigir_rate_publico(db, chave_email, chave_ip)
     if len(nome.strip()) < 2:
+        registrar_falha(db, chave_email)
+        if chave_ip:
+            registrar_falha(db, chave_ip)
+        db.commit()
         raise ErroAuth(422, "Informe o nome.")
     if _usuario_por_email(db, endereco) is not None:
+        registrar_falha(db, chave_email)
+        if chave_ip:
+            registrar_falha(db, chave_ip)
+        db.commit()
         raise ErroAuth(409, "Este e-mail já tem acesso.")
     agora = _agora()
     aberto = db.scalar(
@@ -616,6 +706,10 @@ def pedir_conta_consultora(db: Session, nome: str, email: str) -> None:
     )
     if aberto is not None:
         if (_ciente(aberto.expira_em) or agora) > agora:
+            registrar_falha(db, chave_email)
+            if chave_ip:
+                registrar_falha(db, chave_ip)
+            db.commit()
             raise ErroAuth(409, "Já existe um pedido pendente para este e-mail.")
         aberto.status = "EXPIRADO"
         aberto.atualizado_em = agora
@@ -631,6 +725,9 @@ def pedir_conta_consultora(db: Session, nome: str, email: str) -> None:
         autorizado_por_id=None,
     )
     db.add(pedido)
+    registrar_falha(db, chave_email)
+    if chave_ip:
+        registrar_falha(db, chave_ip)
     _auditar(db, "PEDIDO_CONSULTORA", None)
     db.commit()
 
@@ -732,7 +829,6 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
     )
     db.add(convite)
     db.flush()
-    from app.integrations.email import modo_envio
     from app.services.notificacao import entregar_email
 
     entrega = entregar_email(
@@ -762,13 +858,7 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
         "mensagem": "Conta autorizada. O primeiro acesso foi enviado ao e-mail.",
         "email": pedido.email,
     }
-    # Token só para o TI em desenvolvimento / e-mail local / falha de entrega.
-    # Em produção com Mailtrap/SMTP OK, o token vai só no e-mail.
-    if (
-        settings.app_env == "development"
-        or modo_envio() == "local"
-        or entrega.status != "ENVIADO"
-    ):
+    if _expor_link_primeiro_acesso(entrega_ok=entrega.status == "ENVIADO"):
         if entrega.status != "ENVIADO":
             saida["mensagem"] = (
                 "Conta autorizada, mas o e-mail falhou. Use o link abaixo "
@@ -782,6 +872,12 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
                 "Senha nunca vai no e-mail."
             )
         saida["link_primeiro_acesso"] = link
+    elif entrega.status != "ENVIADO":
+        saida["mensagem"] = (
+            "Conta autorizada, mas o e-mail falhou. "
+            "Peça reenvio do primeiro acesso."
+        )
+        saida["aviso_email"] = entrega.erro or "Falha ao enviar e-mail."
     return saida
 
 
@@ -829,7 +925,6 @@ def reenviar_primeiro_acesso_consultora(
     )
     db.add(convite)
     db.flush()
-    from app.integrations.email import modo_envio
     from app.services.notificacao import entregar_email
 
     entrega = entregar_email(
@@ -855,11 +950,7 @@ def reenviar_primeiro_acesso_consultora(
         "mensagem": "Primeiro acesso reenviado ao e-mail.",
         "email": usuario.email,
     }
-    if (
-        settings.app_env == "development"
-        or modo_envio() == "local"
-        or entrega.status != "ENVIADO"
-    ):
+    if _expor_link_primeiro_acesso(entrega_ok=entrega.status == "ENVIADO"):
         if entrega.status != "ENVIADO":
             saida["mensagem"] = (
                 "E-mail falhou. Novo link gerado (válido 48h) — use o link abaixo. "
@@ -872,6 +963,11 @@ def reenviar_primeiro_acesso_consultora(
                 "a consultora define no primeiro acesso."
             )
         saida["link_primeiro_acesso"] = link
+    elif entrega.status != "ENVIADO":
+        saida["mensagem"] = (
+            "E-mail falhou. Peça outro reenvio do primeiro acesso."
+        )
+        saida["aviso_email"] = entrega.erro or "Falha ao enviar e-mail."
     return saida
 
 

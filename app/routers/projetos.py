@@ -57,7 +57,7 @@ def rotulos(
 ) -> list[RotuloSaida]:
     """Rótulos da aba de projetos. Já nascem no banco, a tela não inventa."""
     if usuario.papel == "TI":
-        raise HTTPException(status_code=403, detail="Sem acesso a projetos.")
+        raise HTTPException(status_code=404, detail="Projeto não encontrado.")
     itens = listar_rotulos(db)
     return [
         RotuloSaida(id=item.id, codigo=item.codigo, nome=item.nome)

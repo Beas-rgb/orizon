@@ -38,6 +38,8 @@ def avisar(
     projeto_id: str | None = None,
     canal: str = "EMAIL",
     referencia: str = "SISTEMA",
+    *,
+    tarefas=None,
 ) -> Notificacao:
     """Cria o aviso interno e tenta a entrega no canal pedido."""
     from app.services.identidade import ErroAuth
@@ -69,6 +71,7 @@ def avisar(
             referencia,
             projeto_id,
             usuario.id,
+            tarefas=tarefas,
         )
     elif canal == "TELEFONE":
         reservar_telefone(
@@ -82,6 +85,39 @@ def avisar(
     return aviso
 
 
+def _completar_entrega_email(
+    entrega_id: str,
+    destino: str,
+    assunto: str,
+    corpo: str,
+    categoria: str,
+) -> None:
+    """Roda fora do request: SMTP não segura o pool da API."""
+    from app.core.database import SessionLocal, get_engine
+
+    get_engine()
+    if SessionLocal is None:
+        return
+    status = "ENVIADO"
+    erro = None
+    try:
+        caixa_email.enviar(destino, assunto, corpo, categoria=categoria)
+    except Exception as exc:
+        status = "FALHA"
+        erro = _erro_entrega_seguro(exc)
+    with SessionLocal() as db:
+        entrega = db.get(EntregaMensagem, entrega_id)
+        if entrega is None:
+            return
+        entrega.status = status
+        entrega.erro = erro
+        agora_ = agora()
+        entrega.atualizado_em = agora_
+        if status == "ENVIADO":
+            entrega.enviado_em = agora_
+        db.commit()
+
+
 def entregar_email(
     db: Session,
     destino: str,
@@ -90,8 +126,13 @@ def entregar_email(
     referencia: str,
     projeto_id: str | None = None,
     usuario_id: str | None = None,
+    *,
+    tarefas=None,
 ) -> EntregaMensagem:
-    """Envia o e-mail e grava só o status. O corpo com token não fica no banco."""
+    """Envia o e-mail e grava só o status. O corpo com token não fica no banco.
+
+    Com `tarefas` (BackgroundTasks), o SMTP sai depois da resposta HTTP.
+    """
     agora_ = agora()
     entrega = EntregaMensagem(
         id=novo_id(),
@@ -108,6 +149,17 @@ def entregar_email(
         enviado_em=None,
     )
     db.add(entrega)
+    db.flush()
+    if tarefas is not None:
+        tarefas.add_task(
+            _completar_entrega_email,
+            entrega.id,
+            destino,
+            assunto,
+            corpo,
+            referencia,
+        )
+        return entrega
     try:
         caixa_email.enviar(destino, assunto, corpo, categoria=referencia)
     except Exception as exc:
