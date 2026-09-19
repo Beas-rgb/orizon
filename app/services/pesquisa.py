@@ -15,7 +15,6 @@ from app.integrations.arquivos import (
     guardar_midia,
     ler_midia,
 )
-from app.models.auditoria import LogAuditoria
 from app.models.base import agora
 from app.models.configuracao import ConfiguracaoProjeto
 from app.models.controle_acesso import ControleAcesso
@@ -32,6 +31,7 @@ from app.models.pesquisa import (
 )
 from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.usuario import Usuario
+from app.services.auditoria import registrar as _auditar
 from app.services.identidade import ErroAuth
 
 TIPOS = {"CLIMA", "DESEMPENHO", "CARGOS_SALARIOS", "PERSONALIZADA"}
@@ -58,17 +58,6 @@ def _ciente(valor):
 
         return valor.replace(tzinfo=UTC)
     return valor
-
-
-def _auditar(db: Session, acao: str, usuario_id: str | None) -> None:
-    db.add(
-        LogAuditoria(
-            id=novo_id(),
-            usuario_id=usuario_id,
-            acao=acao,
-            criado_em=agora(),
-        )
-    )
 
 
 def _pesquisa_viva(db: Session, pesquisa_id: str) -> Pesquisa:
@@ -602,7 +591,10 @@ def _sincronizar_participantes(db: Session, pesquisa: Pesquisa) -> None:
 
 
 def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
-    """Pesquisas PUBLICADAS dos projetos do funcionário + status de participação."""
+    """Pesquisas PUBLICADAS dos projetos do funcionário + status de participação.
+
+    GET puro: não cria participante nem token. Isso ocorre em publicar / responder.
+    """
     if usuario.papel != "FUNCIONARIO":
         return []
     projeto_ids = list(
@@ -626,7 +618,6 @@ def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
         .order_by(Pesquisa.publicada_em.desc())
     ).all()
     saida: list[dict] = []
-    agora_ = agora()
     for pesquisa in pesquisas:
         participante = db.scalar(
             select(PesquisaParticipante).where(
@@ -635,25 +626,9 @@ def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
                 PesquisaParticipante.deleted_at.is_(None),
             )
         )
-        if participante is None:
-            participante = PesquisaParticipante(
-                id=novo_id(),
-                pesquisa_id=pesquisa.id,
-                usuario_id=usuario.id,
-                status="PENDENTE",
-                token_id=None,
-                iniciado_em=None,
-                respondido_em=None,
-                criado_em=agora_,
-                atualizado_em=agora_,
-                deleted_at=None,
-            )
-            db.add(participante)
-            db.flush()
-        # Hash no banco: emite plaintext fresco só para o painel do funcionário.
+        status = participante.status if participante else "PENDENTE"
         token = None
-        if participante.status != "RESPONDIDA":
-            _sincronizar_participantes(db, pesquisa)
+        if status != "RESPONDIDA":
             _, token = _criar_token_resposta(db, pesquisa)
         prazo = _ciente(pesquisa.disponivel_ate)
         saida.append(
@@ -662,12 +637,13 @@ def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
                 "projeto_id": pesquisa.projeto_id,
                 "titulo": pesquisa.titulo,
                 "tipo": pesquisa.tipo,
-                "status_participacao": participante.status,
+                "status_participacao": status,
                 "disponivel_ate": prazo.isoformat() if prazo else None,
                 "token": token,
             }
         )
-    db.commit()
+    if any(item["token"] for item in saida):
+        db.commit()
     return saida
 
 

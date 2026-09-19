@@ -22,7 +22,6 @@ from app.core.tokens import (
     novo_id,
     novo_token_opaco,
 )
-from app.models.auditoria import LogAuditoria
 from app.models.controle_acesso import ControleAcesso
 from app.models.convite import Convite
 from app.models.pedido_consultora import PedidoConsultora
@@ -31,6 +30,8 @@ from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.sessao import Sessao
 from app.models.token_redefinicao import TokenRedefinicao
 from app.models.usuario import Usuario
+from app.models.auditoria import LogAuditoria
+from app.services.auditoria import registrar as _auditar
 
 PAPEIS = {"CONSULTOR", "ORGAO", "FUNCIONARIO", "TI"}
 MSG_CREDENCIAL = "E-mail ou senha inválidos."
@@ -62,17 +63,6 @@ def _ciente(valor: datetime | None) -> datetime | None:
 
 def email_acesso(valor: str) -> str:
     return valor.strip().lower()
-
-
-def _auditar(db: Session, acao: str, usuario_id: str | None) -> None:
-    db.add(
-        LogAuditoria(
-            id=novo_id(),
-            usuario_id=usuario_id,
-            acao=acao,
-            criado_em=_agora(),
-        )
-    )
 
 
 def _hash_dummy() -> str:

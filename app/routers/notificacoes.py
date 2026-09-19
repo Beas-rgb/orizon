@@ -1,23 +1,16 @@
 """Avisos da própria conta. Conhecer o ID de outro usuário não abre o aviso."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import usuario_atual
 from app.models.usuario import Usuario
+from app.routers._erro import chamar
 from app.schemas.notificacao import EntregaSaida, NotificacaoSaida
-from app.services.identidade import ErroAuth
 from app.services.notificacao import listar, listar_entregas, marcar_lida
 
 router = APIRouter(tags=["notificacoes"])
-
-
-def _chamar(acao):
-    try:
-        return acao()
-    except ErroAuth as exc:
-        raise HTTPException(status_code=exc.status, detail=exc.detalhe) from None
 
 
 def _aviso(item) -> NotificacaoSaida:
@@ -36,9 +29,14 @@ def _aviso(item) -> NotificacaoSaida:
 def listar_avisos(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
+    limite: int = Query(50, ge=1, le=100),
+    deslocamento: int = Query(0, ge=0),
 ) -> list[NotificacaoSaida]:
     """Só os avisos deste login. Não lista a caixa de outra pessoa."""
-    return [_aviso(item) for item in listar(db, usuario)]
+    return [
+        _aviso(item)
+        for item in listar(db, usuario, limite=limite, deslocamento=deslocamento)
+    ]
 
 
 @router.post("/notificacoes/{aviso_id}/lida", response_model=NotificacaoSaida)
@@ -48,7 +46,7 @@ def lida(
     db: Session = Depends(get_db),
 ) -> NotificacaoSaida:
     """Marca como lido. Aviso de outra conta responde 404."""
-    aviso = _chamar(lambda: marcar_lida(db, usuario, aviso_id))
+    aviso = chamar(lambda: marcar_lida(db, usuario, aviso_id))
     return _aviso(aviso)
 
 
@@ -57,9 +55,15 @@ def entregas(
     projeto_id: str,
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
+    limite: int = Query(50, ge=1, le=100),
+    deslocamento: int = Query(0, ge=0),
 ) -> list[EntregaSaida]:
     """A consultora vê o status do envio. Sem corpo do e-mail e sem token."""
-    itens = _chamar(lambda: listar_entregas(db, usuario, projeto_id))
+    itens = chamar(
+        lambda: listar_entregas(
+            db, usuario, projeto_id, limite=limite, deslocamento=deslocamento
+        )
+    )
     return [
         EntregaSaida(
             id=item.id,

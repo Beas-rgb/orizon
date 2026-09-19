@@ -1,11 +1,13 @@
 from pathlib import Path
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 
 from app.core.config import conferir_producao, settings
-from app.core.database import check_db
+from app.core.database import SessionLocal, check_db, get_engine
 from app.core.observabilidade import LogAcesso
 from app.integrations.email import modo_envio
 from app.routers.auth import router as auth_router
@@ -17,7 +19,24 @@ from app.routers.projetos import router as projetos_router
 
 conferir_producao()
 
-app = FastAPI(title="Horizon", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Seed de rótulos fora do GET (sem side effect na listagem)."""
+    try:
+        get_engine()
+        if SessionLocal is not None:
+            from app.services.projeto import garantir_rotulos
+
+            with SessionLocal() as db:
+                garantir_rotulos(db)
+    except Exception:
+        # Sem DATABASE_URL o /health sobe; seed fica para o 1º criar_projeto.
+        pass
+    yield
+
+
+app = FastAPI(title="Horizon", version="0.1.0", lifespan=lifespan)
 
 _origens = [
     origem.strip()

@@ -43,6 +43,7 @@ def _r2_pronto() -> bool:
 
 def _cliente_r2():
     import boto3
+    from botocore.config import Config
 
     return boto3.client(
         "s3",
@@ -50,6 +51,11 @@ def _cliente_r2():
         aws_access_key_id=settings.r2_access_key_id,
         aws_secret_access_key=settings.r2_secret_access_key,
         region_name="auto",
+        config=Config(
+            connect_timeout=10,
+            read_timeout=30,
+            retries={"max_attempts": 2, "mode": "standard"},
+        ),
     )
 
 

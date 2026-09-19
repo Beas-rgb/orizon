@@ -10,25 +10,14 @@ from sqlalchemy.orm import Session
 from app.core.autorizacao import papel_no_projeto
 from app.core.tokens import novo_id
 from app.integrations.arquivos import ArquivoInvalido, guardar, ler
-from app.models.auditoria import LogAuditoria
 from app.models.base import agora
 from app.models.documento import Documento
 from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.usuario import Usuario
+from app.services.auditoria import registrar as _auditar
 from app.services.identidade import ErroAuth
 
 VISIBILIDADES_INTERNA = {"PRIVADO", "ORGAO", "FUNCIONARIOS", "PUBLICO_PROJETO"}
-
-
-def _auditar(db: Session, acao: str, usuario_id: str) -> None:
-    db.add(
-        LogAuditoria(
-            id=novo_id(),
-            usuario_id=usuario_id,
-            acao=acao,
-            criado_em=agora(),
-        )
-    )
 
 
 def pode_ver(db: Session, usuario: Usuario, doc: Documento) -> bool:

@@ -64,22 +64,33 @@ def garantir_rotulos(db: Session) -> None:
 
 
 def listar_rotulos(db: Session) -> list[RotuloProjeto]:
-    garantir_rotulos(db)
+    """Só leitura. Seed dos rótulos fica em criar_projeto / listagens mutáveis."""
     return list(
         db.scalars(select(RotuloProjeto).order_by(RotuloProjeto.ordem)).all()
     )
 
 
-def listar_projetos(db: Session, usuario: Usuario) -> list["ProjetoSaidaMontada"]:
+def listar_projetos(
+    db: Session,
+    usuario: Usuario,
+    *,
+    limite: int = 50,
+    deslocamento: int = 0,
+) -> list["ProjetoSaidaMontada"]:
     if usuario.papel == "TI":
         raise ErroAuth(404, "Projeto não encontrado.")
-    garantir_rotulos(db)
+    limite = max(1, min(limite, 100))
+    deslocamento = max(0, deslocamento)
     if usuario.papel == "CONSULTOR":
         projetos = db.scalars(
-            select(Projeto).where(
+            select(Projeto)
+            .where(
                 Projeto.consultor_id == usuario.id,
                 Projeto.deleted_at.is_(None),
             )
+            .order_by(Projeto.criado_em.desc())
+            .offset(deslocamento)
+            .limit(limite)
         ).all()
     else:
         ids = db.scalars(
@@ -90,10 +101,14 @@ def listar_projetos(db: Session, usuario: Usuario) -> list["ProjetoSaidaMontada"
         if not ids:
             return []
         projetos = db.scalars(
-            select(Projeto).where(
+            select(Projeto)
+            .where(
                 Projeto.id.in_(ids),
                 Projeto.deleted_at.is_(None),
             )
+            .order_by(Projeto.criado_em.desc())
+            .offset(deslocamento)
+            .limit(limite)
         ).all()
     return [_montar(db, item) for item in projetos]
 

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import usuario_atual
 from app.models.usuario import Usuario
+from app.routers._erro import chamar
 from app.schemas.pesquisa import (
     EnvioRespostas,
     MinhaPesquisaSaida,
@@ -35,7 +36,6 @@ from app.schemas.pesquisa import (
     PesquisaSaida,
     ReordenarPerguntas,
 )
-from app.services.identidade import ErroAuth
 from app.services.pesquisa import (
     adicionar_pergunta,
     anexar_midia_pergunta,
@@ -67,13 +67,6 @@ from app.services.pesquisa import (
 router = APIRouter(tags=["pesquisas"])
 
 
-def _chamar(acao):
-    try:
-        return acao()
-    except ErroAuth as exc:
-        raise HTTPException(status_code=exc.status, detail=exc.detalhe) from None
-
-
 def _saida(pesquisa) -> PesquisaSaida:
     return PesquisaSaida(
         id=pesquisa.id,
@@ -92,7 +85,7 @@ def criar(
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> PesquisaSaida:
-    pesquisa = _chamar(
+    pesquisa = chamar(
         lambda: criar_pesquisa(
             db,
             consultor,
@@ -111,7 +104,7 @@ def listar(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[PesquisaSaida]:
-    itens = _chamar(lambda: listar_pesquisas(db, usuario, projeto_id))
+    itens = chamar(lambda: listar_pesquisas(db, usuario, projeto_id))
     return [_saida(item) for item in itens]
 
 
@@ -141,7 +134,7 @@ def minhas_pesquisas(
     """Minhas pesquisas do funcionário (PENDENTE / EM_ANDAMENTO / RESPONDIDA)."""
     return [
         MinhaPesquisaSaida(**item)
-        for item in _chamar(lambda: listar_minhas_pesquisas(db, usuario))
+        for item in chamar(lambda: listar_minhas_pesquisas(db, usuario))
     ]
 
 
@@ -155,7 +148,7 @@ def participantes(
     db: Session = Depends(get_db),
 ) -> ParticipantesSaida:
     """CLIMA: só totais. Demais tipos: status nominal — sem conteúdo de resposta."""
-    dados = _chamar(
+    dados = chamar(
         lambda: listar_participantes_status(db, consultor, pesquisa_id)
     )
     itens = None
@@ -178,7 +171,7 @@ def listar_perguntas(
     """Estrutura da pesquisa para o editor/preview. Sem respostas."""
     return [
         _pergunta_saida(db, item)
-        for item in _chamar(
+        for item in chamar(
             lambda: listar_perguntas_pesquisa(db, consultor, pesquisa_id)
         )
     ]
@@ -191,7 +184,7 @@ def pergunta(
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> PerguntaSaida:
-    criada = _chamar(
+    criada = chamar(
         lambda: adicionar_pergunta(
             db,
             consultor,
@@ -213,7 +206,7 @@ def atualizar_pesquisa(
     db: Session = Depends(get_db),
 ) -> PesquisaSaida:
     campos = corpo.model_dump(exclude_unset=True)
-    pesquisa = _chamar(
+    pesquisa = chamar(
         lambda: editar_pesquisa(
             db,
             consultor,
@@ -241,7 +234,7 @@ def atualizar_pergunta(
     opcoes = None
     if "opcoes" in campos:
         opcoes = [item["texto"] for item in campos["opcoes"] or []]
-    editada = _chamar(
+    editada = chamar(
         lambda: editar_pergunta(
             db,
             consultor,
@@ -263,7 +256,7 @@ def remover_pergunta(
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    _chamar(lambda: excluir_pergunta(db, consultor, pesquisa_id, pergunta_id))
+    chamar(lambda: excluir_pergunta(db, consultor, pesquisa_id, pergunta_id))
     return {"mensagem": "Pergunta removida."}
 
 
@@ -277,7 +270,7 @@ def reordenar(
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[PerguntaSaida]:
-    itens = _chamar(
+    itens = chamar(
         lambda: reordenar_perguntas(
             db, consultor, pesquisa_id, corpo.pergunta_ids
         )
@@ -298,7 +291,7 @@ async def upload_midia(
 ) -> PerguntaSaida:
     """Anexa foto/vídeo. MIME real pelos bytes; chave interna (não usa o nome)."""
     conteudo = await arquivo.read()
-    pergunta = _chamar(
+    pergunta = chamar(
         lambda: anexar_midia_pergunta(
             db, consultor, pesquisa_id, pergunta_id, conteudo
         )
@@ -316,7 +309,7 @@ def apagar_midia(
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> PerguntaSaida:
-    pergunta = _chamar(
+    pergunta = chamar(
         lambda: remover_midia_pergunta(db, consultor, pesquisa_id, pergunta_id)
     )
     return _pergunta_saida(db, pergunta)
@@ -329,7 +322,7 @@ def baixar_midia(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> Response:
-    conteudo, mime = _chamar(
+    conteudo, mime = chamar(
         lambda: baixar_midia_pergunta(db, usuario, pesquisa_id, pergunta_id)
     )
     return Response(content=conteudo, media_type=mime)
@@ -342,7 +335,7 @@ def encerrar_rota(
     db: Session = Depends(get_db),
 ) -> PesquisaSaida:
     """Fecha a pesquisa. O link deixa de aceitar resposta. O painel continua."""
-    return _saida(_chamar(lambda: encerrar(db, consultor, pesquisa_id)))
+    return _saida(chamar(lambda: encerrar(db, consultor, pesquisa_id)))
 
 
 @router.post("/pesquisas/{pesquisa_id}/modelo", response_model=ModeloSaida)
@@ -353,7 +346,7 @@ def modelo(
     db: Session = Depends(get_db),
 ) -> ModeloSaida:
     """Copia a pesquisa para um modelo da consultora. Não vai para o órgão."""
-    item = _chamar(lambda: salvar_modelo(db, consultor, pesquisa_id, corpo.nome))
+    item = chamar(lambda: salvar_modelo(db, consultor, pesquisa_id, corpo.nome))
     return ModeloSaida(
         id=item.id,
         nome=item.nome,
@@ -367,7 +360,7 @@ def modelos(
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[ModeloSaida]:
-    itens = _chamar(lambda: listar_modelos(db, consultor))
+    itens = chamar(lambda: listar_modelos(db, consultor))
     return [
         ModeloSaida(
             id=item.id,
@@ -387,7 +380,7 @@ def de_modelo(
     db: Session = Depends(get_db),
 ) -> PesquisaSaida:
     """Abre um rascunho no projeto a partir do modelo. Não copia respostas."""
-    pesquisa = _chamar(
+    pesquisa = chamar(
         lambda: criar_de_modelo(
             db,
             consultor,
@@ -407,7 +400,7 @@ def publicar_rota(
     db: Session = Depends(get_db),
 ) -> PesquisaSaida:
     return _saida(
-        _chamar(
+        chamar(
             lambda: publicar(
                 db, consultor, pesquisa_id, tarefas=background_tasks
             )
@@ -424,7 +417,7 @@ def tokens(
     """A consultora recebe tokens e links React. Sem nome de quem responde."""
     from app.core.config import url_publica
 
-    gerados = _chamar(
+    gerados = chamar(
         lambda: gerar_tokens(db, consultor, pesquisa_id, quantidade)
     )
     base = url_publica().rstrip("/")
@@ -441,7 +434,7 @@ def painel_rota(
     db: Session = Depends(get_db),
 ) -> list[PainelPergunta]:
     """Agregado. Sem token, sem nome, sem resposta individual."""
-    linhas = _chamar(lambda: painel(db, usuario, pesquisa_id))
+    linhas = chamar(lambda: painel(db, usuario, pesquisa_id))
     return [PainelPergunta(**linha) for linha in linhas]
 
 
@@ -452,7 +445,7 @@ def formulario(
     db: Session = Depends(get_db),
 ) -> list[PerguntaSaida]:
     """Exige funcionário autenticado do projeto. Token só identifica a pesquisa."""
-    _pesquisa, perguntas = _chamar(
+    _pesquisa, perguntas = chamar(
         lambda: perguntas_do_token(db, token, usuario)
     )
     return [_pergunta_saida(db, item) for item in perguntas]
@@ -466,7 +459,7 @@ def midia_pelo_token(
     db: Session = Depends(get_db),
 ) -> Response:
     """Mídia da pergunta no fluxo de resposta (funcionário autenticado)."""
-    conteudo, mime = _chamar(
+    conteudo, mime = chamar(
         lambda: baixar_midia_pelo_token(db, token, pergunta_id, usuario)
     )
     return Response(content=conteudo, media_type=mime)
@@ -481,7 +474,7 @@ def responder(
     db: Session = Depends(get_db),
 ) -> NotaSaida:
     ip = request.client.host if request.client else None
-    tipo, nota = _chamar(
+    tipo, nota = chamar(
         lambda: registrar_respostas(
             db,
             token,
@@ -509,7 +502,7 @@ def nota(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> NotaSaida:
-    tipo, valor = _chamar(lambda: nota_do_token(db, token, usuario))
+    tipo, valor = chamar(lambda: nota_do_token(db, token, usuario))
     if tipo != "DESEMPENHO":
         return NotaSaida(
             tipo=tipo,

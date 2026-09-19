@@ -117,6 +117,8 @@ def _enviar_sendgrid(destino: str, assunto: str, corpo: str) -> None:
 def _enviar_mailtrap(
     destino: str, assunto: str, corpo: str, categoria: str
 ) -> None:
+    import socket
+
     import mailtrap as mt
 
     remetente = settings.mailtrap_from_email or settings.smtp_from
@@ -133,7 +135,14 @@ def _enviar_mailtrap(
         category=categoria,
     )
     client = mt.MailtrapClient(token=settings.mailtrap_api_token)
-    client.send(mail)
+    antigo = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(20)
+    try:
+        client.send(mail)
+    except TimeoutError as exc:
+        raise EmailNaoEnviado("Mailtrap: tempo esgotado") from exc
+    finally:
+        socket.setdefaulttimeout(antigo)
 
 
 def _enviar_smtp(destino: str, assunto: str, corpo: str) -> None:

@@ -71,11 +71,7 @@ settings = Settings()
 
 
 def conferir_producao() -> None:
-    """Em produção, segredo ausente derruba o boot — não a primeira requisição.
-
-    Sem isto, a API sobe sem JWT_SECRET e só falha quando alguém tenta
-    entrar, com erro opaco de 500.
-    """
+    """Em produção, segredo fraco/ausente derruba o boot — não a 1ª requisição."""
     if settings.app_env != "production":
         return
     obrigatorios = (
@@ -86,6 +82,10 @@ def conferir_producao() -> None:
     if faltando:
         raise RuntimeError(
             "Configuração obrigatória ausente em produção: " + ", ".join(faltando)
+        )
+    if len(settings.jwt_secret.strip()) < 32:
+        raise RuntimeError(
+            "JWT_SECRET em produção deve ter pelo menos 32 caracteres."
         )
 
 

@@ -5,12 +5,13 @@ Autorização: login, primeiro acesso, recuperar e redefinir são públicos
 Nenhuma rota devolve senha, hash ou token de e-mail.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import usuario_atual
 from app.models.usuario import Usuario
+from app.routers._erro import chamar
 from app.schemas.auth import (
     BootstrapEntrada,
     ConviteEntrada,
@@ -25,7 +26,6 @@ from app.schemas.auth import (
 )
 from app.services.identidade import (
     MSG_RECUPERAR,
-    ErroAuth,
     bootstrap,
     criar_convite,
     login,
@@ -46,31 +46,24 @@ def _ip(request: Request) -> str | None:
     return request.client.host
 
 
-def _chamar(acao) -> object:
-    try:
-        return acao()
-    except ErroAuth as exc:
-        raise HTTPException(status_code=exc.status, detail=exc.detalhe) from None
-
-
 @router.post("/bootstrap", response_model=TokensSaida)
 def cadastrar_inicial(
     corpo: BootstrapEntrada,
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """Cria a primeira consultora. Só funciona com a tabela de usuários vazia."""
-    return _chamar(lambda: bootstrap(db, corpo.nome, corpo.email, corpo.senha))
+    return chamar(lambda: bootstrap(db, corpo.nome, corpo.email, corpo.senha))
 
 
 @router.post("/login", response_model=TokensSaida)
 def entrar(corpo: LoginEntrada, db: Session = Depends(get_db)) -> dict[str, str]:
     """Login. 3 senhas erradas no mesmo e-mail bloqueiam por 5 minutos."""
-    return _chamar(lambda: login(db, corpo.email, corpo.senha))
+    return chamar(lambda: login(db, corpo.email, corpo.senha))
 
 
 @router.post("/refresh", response_model=TokensSaida)
 def renovar(corpo: RefreshEntrada, db: Session = Depends(get_db)) -> dict[str, str]:
-    return _chamar(lambda: refresh(db, corpo.refresh_token))
+    return chamar(lambda: refresh(db, corpo.refresh_token))
 
 
 @router.post("/sair", response_model=MensagemSaida)
@@ -97,7 +90,7 @@ def convidar(
     db: Session = Depends(get_db),
 ) -> MensagemSaida:
     """Convite. O e-mail leva o token de primeiro acesso, nunca uma senha."""
-    saida = _chamar(
+    saida = chamar(
         lambda: criar_convite(
             db,
             consultor,
@@ -119,7 +112,7 @@ def ativar(
     request: Request,
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    return _chamar(
+    return chamar(
         lambda: primeiro_acesso(db, corpo.token, corpo.senha, ip=_ip(request))
     )
 
@@ -130,7 +123,7 @@ def pedir_redefinicao(
     db: Session = Depends(get_db),
 ) -> MensagemSaida:
     """Pedido ligado ao e-mail de acesso. A resposta não diz se a conta existe."""
-    _chamar(lambda: recuperar_senha(db, corpo.email))
+    chamar(lambda: recuperar_senha(db, corpo.email))
     return MensagemSaida(mensagem=MSG_RECUPERAR)
 
 
@@ -140,7 +133,7 @@ def gravar_senha_nova(
     request: Request,
     db: Session = Depends(get_db),
 ) -> MensagemSaida:
-    _chamar(
+    chamar(
         lambda: redefinir_senha(db, corpo.token, corpo.senha, ip=_ip(request))
     )
     return MensagemSaida(mensagem="Senha redefinida. Entre de novo com a senha nova.")

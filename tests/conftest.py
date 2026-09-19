@@ -38,6 +38,13 @@ def db() -> Generator[Session, None, None]:
     )
     Base.metadata.create_all(engine)
     fabrica = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    seed = fabrica()
+    try:
+        from app.services.projeto import garantir_rotulos
+
+        garantir_rotulos(seed)
+    finally:
+        seed.close()
 
     def override_get_db() -> Generator[Session, None, None]:
         session = fabrica()

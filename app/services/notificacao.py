@@ -8,25 +8,14 @@ from sqlalchemy.orm import Session
 
 from app.core.tokens import novo_id
 from app.integrations.email import caixa_email
-from app.models.auditoria import LogAuditoria
 from app.models.base import agora
 from app.models.notificacao import EntregaMensagem, Notificacao
 from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.usuario import Usuario
+from app.services.auditoria import registrar as _auditar
 
 CANAIS = {"EMAIL", "TELEFONE"}
 TIPOS = {"CONVITE", "PESQUISA", "DOCUMENTO", "SISTEMA"}
-
-
-def _auditar(db: Session, acao: str, usuario_id: str | None) -> None:
-    db.add(
-        LogAuditoria(
-            id=novo_id(),
-            usuario_id=usuario_id,
-            acao=acao,
-            criado_em=agora(),
-        )
-    )
 
 
 def avisar(
@@ -260,7 +249,15 @@ def reservar_telefone(
     return entrega
 
 
-def listar(db: Session, usuario: Usuario) -> list[Notificacao]:
+def listar(
+    db: Session,
+    usuario: Usuario,
+    *,
+    limite: int = 50,
+    deslocamento: int = 0,
+) -> list[Notificacao]:
+    limite = max(1, min(limite, 100))
+    deslocamento = max(0, deslocamento)
     return list(
         db.scalars(
             select(Notificacao)
@@ -269,6 +266,8 @@ def listar(db: Session, usuario: Usuario) -> list[Notificacao]:
                 Notificacao.deleted_at.is_(None),
             )
             .order_by(Notificacao.criado_em.desc())
+            .offset(deslocamento)
+            .limit(limite)
         ).all()
     )
 
@@ -295,6 +294,9 @@ def listar_entregas(
     db: Session,
     usuario: Usuario,
     projeto_id: str,
+    *,
+    limite: int = 50,
+    deslocamento: int = 0,
 ) -> list[EntregaMensagem]:
     from app.services.identidade import ErroAuth
 
@@ -313,11 +315,15 @@ def listar_entregas(
         )
         if vinculo is None:
             raise ErroAuth(404, "Projeto não encontrado.")
+    limite = max(1, min(limite, 100))
+    deslocamento = max(0, deslocamento)
     return list(
         db.scalars(
             select(EntregaMensagem)
             .where(EntregaMensagem.projeto_id == projeto_id)
             .order_by(EntregaMensagem.criado_em.desc())
+            .offset(deslocamento)
+            .limit(limite)
         ).all()
     )
 

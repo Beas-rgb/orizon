@@ -2,15 +2,15 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import usuario_atual
 from app.models.usuario import Usuario
+from app.routers._erro import chamar
 from app.services.identidade import (
-    ErroAuth,
     autorizar_pedido,
     diagnostico,
     listar_consultores,
@@ -49,13 +49,6 @@ class MensagemSaida(BaseModel):
     aviso_email: str | None = None
 
 
-def _chamar(acao):
-    try:
-        return acao()
-    except ErroAuth as exc:
-        raise HTTPException(status_code=exc.status, detail=exc.detalhe) from None
-
-
 @router.post("/auth/cadastro-consultora", response_model=MensagemSaida)
 def cadastrar(
     corpo: CadastroConsultora,
@@ -64,7 +57,7 @@ def cadastrar(
 ) -> MensagemSaida:
     """Pedido público. Não cria login e não devolve token."""
     ip = request.client.host if request.client else None
-    _chamar(lambda: pedir_conta_consultora(db, corpo.nome, corpo.email, ip=ip))
+    chamar(lambda: pedir_conta_consultora(db, corpo.nome, corpo.email, ip=ip))
     return MensagemSaida(
         mensagem="Pedido registrado. A conta só nasce depois da autorização."
     )
@@ -75,7 +68,7 @@ def pedidos(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[PedidoSaida]:
-    itens = _chamar(lambda: listar_pedidos(db, usuario))
+    itens = chamar(lambda: listar_pedidos(db, usuario))
     return [
         PedidoSaida(
             id=item.id,
@@ -93,7 +86,7 @@ def consultores(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[ConsultoraSaida]:
-    itens = _chamar(lambda: listar_consultores(db, usuario))
+    itens = chamar(lambda: listar_consultores(db, usuario))
     return [
         ConsultoraSaida(
             id=item.id,
@@ -111,7 +104,7 @@ def analise(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     """Estabilidade da API. Só o TI. Sem senha, host nem URL de banco."""
-    return _chamar(lambda: diagnostico(db, usuario))
+    return chamar(lambda: diagnostico(db, usuario))
 
 
 @router.post("/dev/pedidos/{pedido_id}/autorizar", response_model=MensagemSaida)
@@ -121,7 +114,7 @@ def autorizar(
     db: Session = Depends(get_db),
 ) -> MensagemSaida:
     """Cria a conta sem senha e envia o primeiro acesso ao e-mail cadastrado."""
-    saida = _chamar(lambda: autorizar_pedido(db, usuario, pedido_id))
+    saida = chamar(lambda: autorizar_pedido(db, usuario, pedido_id))
     return MensagemSaida(**saida)
 
 
@@ -138,7 +131,7 @@ def reenviar_primeiro_acesso(
 
     Em dev o link volta na resposta.
     """
-    saida = _chamar(
+    saida = chamar(
         lambda: reenviar_primeiro_acesso_consultora(db, usuario, consultor_id)
     )
     return MensagemSaida(**saida)

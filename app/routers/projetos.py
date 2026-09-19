@@ -5,12 +5,13 @@ foi vinculado. ID de outro cliente responde 404, não 403, para não
 confirmar que o projeto existe.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import usuario_atual
 from app.models.usuario import Usuario
+from app.routers._erro import chamar
 from app.schemas.projeto import (
     ConfiguracaoAtualizar,
     ConfiguracaoSaida,
@@ -23,7 +24,6 @@ from app.schemas.projeto import (
     SetorCriar,
     SetorSaida,
 )
-from app.services.identidade import ErroAuth
 from app.services.projeto import (
     atualizar_configuracao,
     atualizar_projeto,
@@ -41,13 +41,6 @@ from app.services.projeto import (
 )
 
 router = APIRouter(prefix="/projetos", tags=["projetos"])
-
-
-def _chamar(acao):
-    try:
-        return acao()
-    except ErroAuth as exc:
-        raise HTTPException(status_code=exc.status, detail=exc.detalhe) from None
 
 
 @router.get("/rotulos", response_model=list[RotuloSaida])
@@ -69,8 +62,14 @@ def rotulos(
 def listar(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
+    limite: int = Query(50, ge=1, le=100),
+    deslocamento: int = Query(0, ge=0),
 ) -> list[ProjetoSaida]:
-    montados = _chamar(lambda: listar_projetos(db, usuario))
+    montados = chamar(
+        lambda: listar_projetos(
+            db, usuario, limite=limite, deslocamento=deslocamento
+        )
+    )
     return [
         ProjetoSaida.model_validate(item, from_attributes=True)
         for item in montados
@@ -83,7 +82,7 @@ def detalhe(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> ProjetoSaida:
-    montado = _chamar(lambda: obter_projeto(db, usuario, projeto_id))
+    montado = chamar(lambda: obter_projeto(db, usuario, projeto_id))
     return ProjetoSaida.model_validate(montado, from_attributes=True)
 
 
@@ -94,7 +93,7 @@ def criar(
     db: Session = Depends(get_db),
 ) -> ProjetoSaida:
     """Cria o projeto, puxa o órgão pelo CNPJ e envia o e-mail de acesso."""
-    montado = _chamar(
+    montado = chamar(
         lambda: criar_projeto(
             db,
             consultor,
@@ -116,7 +115,7 @@ def atualizar(
     db: Session = Depends(get_db),
 ) -> ProjetoSaida:
     """Só a consultora dona altera estado ou título. Órgão recebe 404."""
-    montado = _chamar(
+    montado = chamar(
         lambda: atualizar_projeto(
             db,
             consultor,
@@ -135,7 +134,7 @@ def reenviar(
     db: Session = Depends(get_db),
 ) -> dict[str, str | None]:
     """Reenvia o convite se o órgão ainda não aceitou. Token antigo deixa de valer."""
-    saida = _chamar(lambda: reenviar_convite(db, consultor, projeto_id))
+    saida = chamar(lambda: reenviar_convite(db, consultor, projeto_id))
     return {
         "mensagem": "Convite reenviado.",
         "email": saida["email"],
@@ -151,7 +150,7 @@ def reenviar_funcionario(
     db: Session = Depends(get_db),
 ) -> dict[str, str | None]:
     """Reenvia convite de funcionário pendente. Token antigo deixa de valer."""
-    saida = _chamar(
+    saida = chamar(
         lambda: reenviar_convite_funcionario(
             db, consultor, projeto_id, corpo.email
         )
@@ -170,7 +169,7 @@ def equipe(
     db: Session = Depends(get_db),
 ) -> list[EquipeSaida]:
     """Quem entra neste trabalho. Só a consultora dona. Sem token."""
-    itens = _chamar(lambda: listar_equipe(db, consultor, projeto_id))
+    itens = chamar(lambda: listar_equipe(db, consultor, projeto_id))
     return [EquipeSaida(**item) for item in itens]
 
 
@@ -180,7 +179,7 @@ def setores(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[SetorSaida]:
-    itens = _chamar(lambda: listar_setores(db, usuario, projeto_id))
+    itens = chamar(lambda: listar_setores(db, usuario, projeto_id))
     return [SetorSaida(id=item.id, nome=item.nome) for item in itens]
 
 
@@ -191,7 +190,7 @@ def criar_setor_rota(
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> SetorSaida:
-    setor = _chamar(lambda: criar_setor(db, consultor, projeto_id, corpo.nome))
+    setor = chamar(lambda: criar_setor(db, consultor, projeto_id, corpo.nome))
     return SetorSaida(id=setor.id, nome=setor.nome)
 
 
@@ -202,7 +201,7 @@ def apagar_setor(
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> None:
-    _chamar(lambda: remover_setor(db, consultor, projeto_id, setor_id))
+    chamar(lambda: remover_setor(db, consultor, projeto_id, setor_id))
 
 
 @router.get("/{projeto_id}/configuracao", response_model=ConfiguracaoSaida)
@@ -211,7 +210,7 @@ def ler_config(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> ConfiguracaoSaida:
-    config = _chamar(lambda: obter_configuracao(db, usuario, projeto_id))
+    config = chamar(lambda: obter_configuracao(db, usuario, projeto_id))
     return ConfiguracaoSaida(
         pesquisas_habilitadas=config.pesquisas_habilitadas,
         ia_modo=config.ia_modo,
@@ -226,7 +225,7 @@ def gravar_config(
     db: Session = Depends(get_db),
 ) -> ConfiguracaoSaida:
     """Liga ou desliga pesquisas. A IA permanece DESATIVADA."""
-    config = _chamar(
+    config = chamar(
         lambda: atualizar_configuracao(
             db,
             consultor,
