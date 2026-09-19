@@ -55,6 +55,9 @@ A IA deve seguir SEMPRE este ciclo, uma fase/módulo por vez:
 5. **RESUMO FINAL** — o que mudou, como rodar/verificar, e qual é a próxima
    tarefa sugerida.
 
+Features novas: seguir também `docs/REGRA_NOVAS_FEATURES.md` (leve, segura,
+sem conflito, alinhada ao negócio, testada e corrigida antes de aceitar).
+
 **Proibições:**
 - Não usar `Base.metadata.create_all` em produção; apenas Alembic.
 - Não recriar/apagar o banco do Neon "por conveniência".
