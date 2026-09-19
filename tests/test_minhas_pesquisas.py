@@ -85,7 +85,12 @@ def test_minhas_pesquisas_e_participantes(client, monkeypatch):
     assert len(itens) == 1
     assert itens[0]["titulo"] == "Clima 68"
     assert itens[0]["status_participacao"] == "PENDENTE"
-    assert itens[0]["token"]
+    assert itens[0].get("token") in (None, "")
+    assert itens[0]["pesquisa_id"] == pid
+
+    form = client.get(f"/eu/pesquisas/{pid}/formulario", headers=func)
+    assert form.status_code == 200
+    assert form.json()[0]["texto"] == "Como está?"
 
     parts = client.get(f"/pesquisas/{pid}/participantes", headers=headers)
     assert parts.status_code == 200

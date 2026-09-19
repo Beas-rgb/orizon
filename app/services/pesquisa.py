@@ -591,9 +591,10 @@ def _sincronizar_participantes(db: Session, pesquisa: Pesquisa) -> None:
 
 
 def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
-    """Pesquisas PUBLICADAS dos projetos do funcionário + status de participação.
+    """Pesquisas PUBLICADAS dos projetos do funcionário + status.
 
-    GET puro: não cria participante nem token. Isso ocorre em publicar / responder.
+    GET puro: não cria participante nem token. Resposta usa
+    `/eu/pesquisas/{id}/formulario` (autenticado).
     """
     if usuario.papel != "FUNCIONARIO":
         return []
@@ -627,9 +628,6 @@ def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
             )
         )
         status = participante.status if participante else "PENDENTE"
-        token = None
-        if status != "RESPONDIDA":
-            _, token = _criar_token_resposta(db, pesquisa)
         prazo = _ciente(pesquisa.disponivel_ate)
         saida.append(
             {
@@ -639,11 +637,9 @@ def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
                 "tipo": pesquisa.tipo,
                 "status_participacao": status,
                 "disponivel_ate": prazo.isoformat() if prazo else None,
-                "token": token,
+                "token": None,
             }
         )
-    if any(item["token"] for item in saida):
-        db.commit()
     return saida
 
 
@@ -712,7 +708,16 @@ def baixar_midia_pelo_token(
 ) -> tuple[bytes, str]:
     """Mesma autorização do formulário de resposta."""
     linha = _token_convite(db, token)
-    pesquisa = _pesquisa_viva(db, linha.pesquisa_id)
+    return baixar_midia_da_pesquisa(db, linha.pesquisa_id, pergunta_id, usuario)
+
+
+def baixar_midia_da_pesquisa(
+    db: Session,
+    pesquisa_id: str,
+    pergunta_id: str,
+    usuario: Usuario,
+) -> tuple[bytes, str]:
+    pesquisa = _exigir_pesquisa_aberta(db, pesquisa_id)
     _participante_da_pesquisa(db, usuario, pesquisa, para_envio=False)
     db.commit()
     return baixar_midia_pergunta(db, usuario, pesquisa.id, pergunta_id)
@@ -1033,6 +1038,30 @@ def _token_pessoal(db: Session, participante: PesquisaParticipante) -> TokenResp
     return linha
 
 
+def _exigir_pesquisa_aberta(db: Session, pesquisa_id: str) -> Pesquisa:
+    """PUBLICADA, não bloqueada, dentro do prazo — senão 404 genérico."""
+    pesquisa = _pesquisa_viva(db, pesquisa_id)
+    if pesquisa.status != "PUBLICADA" or pesquisa.bloqueada:
+        raise ErroAuth(404, "Link inválido ou já usado.")
+    limite = _ciente(pesquisa.disponivel_ate)
+    if limite and limite < agora():
+        raise ErroAuth(404, "Link inválido ou já usado.")
+    return pesquisa
+
+
+def _listar_perguntas_ordenadas(db: Session, pesquisa_id: str) -> list[Pergunta]:
+    return list(
+        db.scalars(
+            select(Pergunta)
+            .where(
+                Pergunta.pesquisa_id == pesquisa_id,
+                Pergunta.deleted_at.is_(None),
+            )
+            .order_by(Pergunta.ordem)
+        ).all()
+    )
+
+
 def perguntas_do_token(
     db: Session,
     token: str,
@@ -1042,17 +1071,19 @@ def perguntas_do_token(
     pesquisa = _pesquisa_viva(db, convite.pesquisa_id)
     _participante_da_pesquisa(db, usuario, pesquisa, para_envio=False)
     db.commit()
-    perguntas = list(
-        db.scalars(
-            select(Pergunta)
-            .where(
-                Pergunta.pesquisa_id == pesquisa.id,
-                Pergunta.deleted_at.is_(None),
-            )
-            .order_by(Pergunta.ordem)
-        ).all()
-    )
-    return pesquisa, perguntas
+    return pesquisa, _listar_perguntas_ordenadas(db, pesquisa.id)
+
+
+def perguntas_da_pesquisa(
+    db: Session,
+    pesquisa_id: str,
+    usuario: Usuario,
+) -> tuple[Pesquisa, list[Pergunta]]:
+    """Formulário pelo ID (Minhas pesquisas). Sem token no banco."""
+    pesquisa = _exigir_pesquisa_aberta(db, pesquisa_id)
+    _participante_da_pesquisa(db, usuario, pesquisa, para_envio=False)
+    db.commit()
+    return pesquisa, _listar_perguntas_ordenadas(db, pesquisa.id)
 
 
 def opcoes_da(db: Session, pergunta_id: str) -> list[OpcaoResposta]:
@@ -1072,11 +1103,32 @@ def registrar_respostas(
     usuario: Usuario,
     ip: str | None = None,
 ) -> tuple[str, float | None]:
+    convite = _token_convite(db, token)
+    pesquisa = _pesquisa_viva(db, convite.pesquisa_id)
+    return _registrar_respostas_em(db, pesquisa, itens, usuario, ip)
+
+
+def registrar_respostas_da_pesquisa(
+    db: Session,
+    pesquisa_id: str,
+    itens: list[dict],
+    usuario: Usuario,
+    ip: str | None = None,
+) -> tuple[str, float | None]:
+    pesquisa = _exigir_pesquisa_aberta(db, pesquisa_id)
+    return _registrar_respostas_em(db, pesquisa, itens, usuario, ip)
+
+
+def _registrar_respostas_em(
+    db: Session,
+    pesquisa: Pesquisa,
+    itens: list[dict],
+    usuario: Usuario,
+    ip: str | None = None,
+) -> tuple[str, float | None]:
     _rate_limit_responder(db, usuario.id, ip)
     # Persiste a contagem mesmo se o envio falhar depois (422) e der rollback.
     db.commit()
-    convite = _token_convite(db, token)
-    pesquisa = _pesquisa_viva(db, convite.pesquisa_id)
     participante = _participante_da_pesquisa(
         db, usuario, pesquisa, para_envio=True
     )
@@ -1248,7 +1300,15 @@ def nota_do_token(
     usuario: Usuario,
 ) -> tuple[str, float | None]:
     convite = _token_convite(db, token)
-    pesquisa = _pesquisa_viva(db, convite.pesquisa_id)
+    return nota_da_pesquisa(db, convite.pesquisa_id, usuario)
+
+
+def nota_da_pesquisa(
+    db: Session,
+    pesquisa_id: str,
+    usuario: Usuario,
+) -> tuple[str, float | None]:
+    pesquisa = _exigir_pesquisa_aberta(db, pesquisa_id)
     _autorizar_funcionario_na_pesquisa(db, usuario, pesquisa)
     participante = db.scalar(
         select(PesquisaParticipante).where(

@@ -81,12 +81,11 @@ def _projeto_clima(client, monkeypatch, email_func: str = "anon@orgao.dev"):
         json={"texto": "Nota do clima?", "tipo": "NOTA_5"},
     )
     assert client.post(f"/pesquisas/{pid}/publicar", headers=headers).status_code == 200
-    token = client.get("/eu/pesquisas", headers=func).json()[0]["token"]
-    return headers, func, pid, token
+    return headers, func, pid
 
 
 def test_participantes_clima_so_agregado(client, monkeypatch):
-    headers, _func, pid, _token = _projeto_clima(client, monkeypatch)
+    headers, _func, pid = _projeto_clima(client, monkeypatch)
     parts = client.get(f"/pesquisas/{pid}/participantes", headers=headers).json()
     assert parts["agregado"] is True
     assert parts["itens"] is None
@@ -94,10 +93,12 @@ def test_participantes_clima_so_agregado(client, monkeypatch):
 
 
 def test_painel_k_anonimato_n1_suprimido(client, monkeypatch, db):
-    headers, func, pid, token = _projeto_clima(client, monkeypatch, "k1@orgao.dev")
-    pergunta_id = client.get(f"/responder/{token}", headers=func).json()[0]["id"]
+    headers, func, pid = _projeto_clima(client, monkeypatch, "k1@orgao.dev")
+    pergunta_id = client.get(
+        f"/eu/pesquisas/{pid}/formulario", headers=func
+    ).json()[0]["id"]
     envio = client.post(
-        f"/responder/{token}",
+        f"/eu/pesquisas/{pid}/responder",
         headers=func,
         json={"respostas": [{"pergunta_id": pergunta_id, "valor_numerico": 2}]},
     )

@@ -212,9 +212,9 @@ export function FuncionarioPainel() {
                           : ""}
                       </p>
                     </div>
-                    {p.status_participacao !== "RESPONDIDA" && p.token ? (
+                    {p.status_participacao !== "RESPONDIDA" ? (
                       <Link
-                        to={`/responder/${encodeURIComponent(p.token)}`}
+                        to={`/responder/pesquisa/${encodeURIComponent(p.pesquisa_id)}`}
                         className="rounded-xl py-2 px-4 text-white text-[12px] font-bold"
                         style={{ background: ACCENT }}
                       >

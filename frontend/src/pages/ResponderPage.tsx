@@ -33,12 +33,24 @@ export function consumirRetornoResponder(): string | null {
 /**
  * Resposta autenticada. Sem login → guarda o link e manda para /entrar.
  * Papel errado → mensagem fixa, sem mostrar perguntas.
+ * Minhas pesquisas: /responder/pesquisa/:id (sem token no URL).
+ * Link da consultora: /responder/:token.
  */
 export function ResponderPage() {
-  const { token: tokenRota } = useParams();
+  const { token: tokenRota, pesquisaId: pesquisaRota } = useParams();
+  const pesquisaId = (pesquisaRota || "").trim();
   const token =
-    (tokenRota || "").trim() ||
-    decodeURIComponent(window.location.hash.replace(/^#/, "")).trim();
+    pesquisaId
+      ? ""
+      : (tokenRota || "").trim() ||
+        decodeURIComponent(window.location.hash.replace(/^#/, "")).trim();
+  const modoPesquisa = Boolean(pesquisaId);
+  const baseApi = modoPesquisa
+    ? `/eu/pesquisas/${encodeURIComponent(pesquisaId)}`
+    : `/responder/${encodeURIComponent(token)}`;
+  const caminhoRetorno = modoPesquisa
+    ? `/responder/pesquisa/${encodeURIComponent(pesquisaId)}`
+    : `/responder/${encodeURIComponent(token)}`;
   const { pronto, usuario } = useAuth();
   const navigate = useNavigate();
 
@@ -54,20 +66,21 @@ export function ResponderPage() {
 
   useEffect(() => {
     if (!pronto) return;
-    if (!token) {
+    if (!modoPesquisa && !token) {
       setErro("Abra o link completo que a consultora enviou.");
       setCarregando(false);
       return;
     }
     if (!usuario) {
-      guardarRetornoResponder(`/responder/${encodeURIComponent(token)}`);
+      guardarRetornoResponder(caminhoRetorno);
       navigate("/entrar", { replace: true });
       return;
     }
     setCarregando(true);
     setErro("");
     setReservado(false);
-    api<Pergunta[]>(`/responder/${encodeURIComponent(token)}`)
+    const caminho = modoPesquisa ? `${baseApi}/formulario` : baseApi;
+    api<Pergunta[]>(caminho)
       .then((lista) => {
         const ordenada = [...lista].sort((a, b) => a.ordem - b.ordem);
         setPerguntas(ordenada);
@@ -75,7 +88,6 @@ export function ResponderPage() {
       })
       .catch((exc) => {
         const msg = exc instanceof Error ? exc.message : "Erro";
-        // API devolve 404 genérico para papel/vínculo errado.
         if (
           usuario.painel !== "funcionario" ||
           /não encontrad|inválido|já usado|Link/i.test(msg)
@@ -87,11 +99,11 @@ export function ResponderPage() {
         }
       })
       .finally(() => setCarregando(false));
-  }, [pronto, usuario, token, navigate]);
+  }, [pronto, usuario, token, pesquisaId, modoPesquisa, baseApi, caminhoRetorno, navigate]);
 
   useEffect(() => {
     const atuais = perguntas.filter((p) => p.tem_midia);
-    if (!atuais.length || !token) return;
+    if (!atuais.length || (!token && !pesquisaId)) return;
     let cancelado = false;
     const urls: string[] = [];
     void (async () => {
@@ -99,9 +111,7 @@ export function ResponderPage() {
       for (const p of atuais) {
         try {
           const resp = await fetch(
-            urlApi(
-              `/responder/${encodeURIComponent(token)}/perguntas/${p.id}/midia`,
-            ),
+            urlApi(`${baseApi}/perguntas/${p.id}/midia`),
             { headers: { Authorization: `Bearer ${tokenAtual()}` } },
           );
           if (!resp.ok) continue;
@@ -119,7 +129,7 @@ export function ResponderPage() {
       cancelado = true;
       urls.forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [perguntas, token]);
+  }, [perguntas, token, pesquisaId, baseApi]);
 
   const atual = perguntas[indice];
   const total = perguntas.length;
@@ -151,7 +161,7 @@ export function ResponderPage() {
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault();
-    if (!token) return;
+    if (!modoPesquisa && !token) return;
     const falta = validarObrigatorias();
     if (falta) {
       setErro(falta);
@@ -196,7 +206,8 @@ export function ResponderPage() {
     }
 
     try {
-      const saida = await api<NotaSaida>(`/responder/${encodeURIComponent(token)}`, {
+      const destino = modoPesquisa ? `${baseApi}/responder` : baseApi;
+      const saida = await api<NotaSaida>(destino, {
         method: "POST",
         json: { respostas: payload },
       });

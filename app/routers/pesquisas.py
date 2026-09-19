@@ -39,6 +39,7 @@ from app.schemas.pesquisa import (
 from app.services.pesquisa import (
     adicionar_pergunta,
     anexar_midia_pergunta,
+    baixar_midia_da_pesquisa,
     baixar_midia_pelo_token,
     baixar_midia_pergunta,
     criar_de_modelo,
@@ -53,12 +54,15 @@ from app.services.pesquisa import (
     listar_participantes_status,
     listar_perguntas_pesquisa,
     listar_pesquisas,
+    nota_da_pesquisa,
     nota_do_token,
     opcoes_da,
     painel,
+    perguntas_da_pesquisa,
     perguntas_do_token,
     publicar,
     registrar_respostas,
+    registrar_respostas_da_pesquisa,
     remover_midia_pergunta,
     reordenar_perguntas,
     salvar_modelo,
@@ -136,6 +140,82 @@ def minhas_pesquisas(
         MinhaPesquisaSaida(**item)
         for item in chamar(lambda: listar_minhas_pesquisas(db, usuario))
     ]
+
+
+@router.get(
+    "/eu/pesquisas/{pesquisa_id}/formulario",
+    response_model=list[PerguntaSaida],
+)
+def formulario_por_pesquisa(
+    pesquisa_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[PerguntaSaida]:
+    """Resposta autenticada sem token no link (Minhas pesquisas)."""
+    _pesquisa, perguntas = chamar(
+        lambda: perguntas_da_pesquisa(db, pesquisa_id, usuario)
+    )
+    return [_pergunta_saida(db, item) for item in perguntas]
+
+
+@router.get("/eu/pesquisas/{pesquisa_id}/perguntas/{pergunta_id}/midia")
+def midia_por_pesquisa(
+    pesquisa_id: str,
+    pergunta_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> Response:
+    conteudo, mime = chamar(
+        lambda: baixar_midia_da_pesquisa(db, pesquisa_id, pergunta_id, usuario)
+    )
+    return Response(content=conteudo, media_type=mime)
+
+
+@router.post("/eu/pesquisas/{pesquisa_id}/responder", response_model=NotaSaida)
+def responder_por_pesquisa(
+    pesquisa_id: str,
+    corpo: EnvioRespostas,
+    request: Request,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> NotaSaida:
+    ip = request.client.host if request.client else None
+    tipo, nota = chamar(
+        lambda: registrar_respostas_da_pesquisa(
+            db,
+            pesquisa_id,
+            [item.model_dump() for item in corpo.respostas],
+            usuario,
+            ip,
+        )
+    )
+    if tipo != "DESEMPENHO":
+        return NotaSaida(
+            tipo=tipo,
+            mensagem="Resposta registrada. Sua identidade não é mostrada.",
+            nota=None,
+        )
+    return NotaSaida(
+        tipo="DESEMPENHO",
+        mensagem="Esta é a sua nota. O órgão vê só a média.",
+        nota=nota,
+    )
+
+
+@router.get("/eu/pesquisas/{pesquisa_id}/nota", response_model=NotaSaida)
+def nota_por_pesquisa(
+    pesquisa_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> NotaSaida:
+    tipo, valor = chamar(lambda: nota_da_pesquisa(db, pesquisa_id, usuario))
+    if tipo != "DESEMPENHO":
+        return NotaSaida(
+            tipo=tipo,
+            mensagem="Resposta registrada. Clima não devolve nota individual.",
+            nota=None,
+        )
+    return NotaSaida(tipo=tipo, mensagem="Sua nota.", nota=valor)
 
 
 @router.get(

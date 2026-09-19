@@ -52,6 +52,7 @@ export default function App() {
       <Route path="/cadastro" element={<CadastroPage />} />
       <Route path="/recuperar" element={<RecuperarPage />} />
       <Route path="/primeiro-acesso" element={<PrimeiroAcessoPage />} />
+      <Route path="/responder/pesquisa/:pesquisaId" element={<ResponderPage />} />
       <Route path="/responder/:token" element={<ResponderPage />} />
       <Route path="/responder" element={<ResponderPage />} />
       <Route
