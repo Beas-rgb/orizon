@@ -1,0 +1,85 @@
+"""Serviços de pesquisa — fachada para routers e testes."""
+
+from app.services.pesquisa.comum import (
+    K_ANONIMATO,
+    RESPONDER_JANELA_MINUTOS,
+    RESPONDER_MAX_TENTATIVAS,
+    TIPOS,
+    TIPOS_ANONIMOS,
+    TIPOS_PERGUNTA,
+    opcoes_da,
+)
+from app.services.pesquisa.crud import (
+    adicionar_pergunta,
+    criar_pesquisa,
+    editar_pergunta,
+    editar_pesquisa,
+    encerrar,
+    excluir_pergunta,
+    listar_minhas_pesquisas,
+    listar_participantes_status,
+    listar_perguntas_pesquisa,
+    listar_pesquisas,
+    publicar,
+    reordenar_perguntas,
+)
+from app.services.pesquisa.resposta import (
+    gerar_tokens,
+    nota_da_pesquisa,
+    nota_do_token,
+    perguntas_da_pesquisa,
+    perguntas_do_token,
+    registrar_respostas,
+    registrar_respostas_da_pesquisa,
+)
+from app.services.pesquisa.midia import (
+    anexar_midia_pergunta,
+    baixar_midia_da_pesquisa,
+    baixar_midia_pelo_token,
+    baixar_midia_pergunta,
+    remover_midia_pergunta,
+)
+from app.services.pesquisa.modelos import (
+    criar_de_modelo,
+    listar_modelos,
+    salvar_modelo,
+)
+from app.services.pesquisa.painel import painel
+
+__all__ = [
+    "K_ANONIMATO",
+    "RESPONDER_JANELA_MINUTOS",
+    "RESPONDER_MAX_TENTATIVAS",
+    "TIPOS",
+    "TIPOS_ANONIMOS",
+    "TIPOS_PERGUNTA",
+    "opcoes_da",
+    "adicionar_pergunta",
+    "anexar_midia_pergunta",
+    "baixar_midia_da_pesquisa",
+    "baixar_midia_pelo_token",
+    "baixar_midia_pergunta",
+    "criar_de_modelo",
+    "criar_pesquisa",
+    "editar_pergunta",
+    "editar_pesquisa",
+    "encerrar",
+    "excluir_pergunta",
+    "gerar_tokens",
+    "listar_minhas_pesquisas",
+    "listar_modelos",
+    "listar_participantes_status",
+    "listar_perguntas_pesquisa",
+    "listar_pesquisas",
+    "nota_da_pesquisa",
+    "nota_do_token",
+    "painel",
+    "perguntas_da_pesquisa",
+    "perguntas_do_token",
+    "publicar",
+    "registrar_respostas",
+    "registrar_respostas_da_pesquisa",
+    "remover_midia_pergunta",
+    "reordenar_perguntas",
+    "salvar_modelo",
+]
