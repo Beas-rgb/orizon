@@ -105,7 +105,9 @@ def test_clima_nao_revela_quem_e_orgao_ve_so_media(client, monkeypatch) -> None:
     painel = client.get(f"/pesquisas/{pid}/painel", headers=headers)
     assert painel.status_code == 200
     assert painel.json()[0]["respostas"] == 1
-    assert painel.json()[0]["media"] == 4
+    # k-anonimato: N < 5 em CLIMA não devolve média.
+    assert painel.json()[0]["suprimido"] is True
+    assert painel.json()[0]["media"] is None
     assert "token" not in painel.text
 
 

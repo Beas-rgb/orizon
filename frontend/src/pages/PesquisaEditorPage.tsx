@@ -32,6 +32,13 @@ type Participante = {
   status: string;
 };
 
+type ParticipantesResp = {
+  agregado: boolean;
+  total?: number | null;
+  respondidas?: number | null;
+  itens?: Participante[] | null;
+};
+
 const field =
   "mt-1 w-full rounded-xl px-3 py-2.5 text-[13px] outline-none bg-white/70 border border-white/80";
 
@@ -44,6 +51,10 @@ export function PesquisaEditorPage() {
   const [pesquisa, setPesquisa] = useState<Pesquisa | null>(null);
   const [perguntas, setPerguntas] = useState<Pergunta[]>([]);
   const [participantes, setParticipantes] = useState<Participante[]>([]);
+  const [resumoParticipantes, setResumoParticipantes] = useState<{
+    total: number;
+    respondidas: number;
+  } | null>(null);
   const [aba, setAba] = useState<"perguntas" | "participantes" | "preview">("perguntas");
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
@@ -60,11 +71,19 @@ export function PesquisaEditorPage() {
       setPesquisa(lista.find((p) => p.id === pesquisaId) || null);
       const perguntasLista = await api<Pergunta[]>(`/pesquisas/${pesquisaId}/perguntas`);
       setPerguntas([...perguntasLista].sort((a, b) => a.ordem - b.ordem));
-      setParticipantes(
-        await api<Participante[]>(`/pesquisas/${pesquisaId}/participantes`).catch(
-          () => [],
-        ),
-      );
+      const parts = await api<ParticipantesResp>(
+        `/pesquisas/${pesquisaId}/participantes`,
+      ).catch(() => null);
+      if (parts?.agregado) {
+        setResumoParticipantes({
+          total: parts.total ?? 0,
+          respondidas: parts.respondidas ?? 0,
+        });
+        setParticipantes([]);
+      } else {
+        setResumoParticipantes(null);
+        setParticipantes(parts?.itens || []);
+      }
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Erro");
     }
@@ -248,9 +267,19 @@ export function PesquisaEditorPage() {
       });
       setPesquisa(pub);
       setAviso("Publicada. Gere o link para enviar.");
-      setParticipantes(
-        await api<Participante[]>(`/pesquisas/${pesquisaId}/participantes`),
+      const parts = await api<ParticipantesResp>(
+        `/pesquisas/${pesquisaId}/participantes`,
       );
+      if (parts.agregado) {
+        setResumoParticipantes({
+          total: parts.total ?? 0,
+          respondidas: parts.respondidas ?? 0,
+        });
+        setParticipantes([]);
+      } else {
+        setResumoParticipantes(null);
+        setParticipantes(parts.itens || []);
+      }
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Erro");
     }
@@ -522,29 +551,43 @@ export function PesquisaEditorPage() {
 
       {aba === "participantes" && (
         <div className="rounded-3xl p-5" style={glassStyle}>
-          <p className="text-[12px] text-gray-500 mb-3">
-            Status de cada funcionário — sem conteúdo das respostas.
-          </p>
-          <ul className="flex flex-col gap-2">
-            {participantes.map((p) => (
-              <li
-                key={p.usuario_id}
-                className="p-3 rounded-2xl flex justify-between gap-2"
-                style={{ background: "rgba(255,255,255,0.55)" }}
-              >
-                <div>
-                  <p className="text-[13px] font-semibold">{p.nome}</p>
-                  <p className="text-[11px] text-gray-500">{p.email}</p>
-                </div>
-                <span className="text-[12px] font-bold text-[#1D5FAF]">{p.status}</span>
-              </li>
-            ))}
-            {participantes.length === 0 ? (
-              <p className="text-gray-500 text-[13px]">
-                Nenhum funcionário no projeto ainda. Convide na aba Equipe.
+          {resumoParticipantes ? (
+            <>
+              <p className="text-[12px] text-gray-500 mb-3">
+                Pesquisa de clima: só totais — sem nome, e-mail ou status individual.
               </p>
-            ) : null}
-          </ul>
+              <p className="text-[14px] font-semibold text-gray-800">
+                {resumoParticipantes.respondidas} de {resumoParticipantes.total}{" "}
+                respostas
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-[12px] text-gray-500 mb-3">
+                Status de cada funcionário — sem conteúdo das respostas.
+              </p>
+              <ul className="flex flex-col gap-2">
+                {participantes.map((p) => (
+                  <li
+                    key={p.usuario_id}
+                    className="p-3 rounded-2xl flex justify-between gap-2"
+                    style={{ background: "rgba(255,255,255,0.55)" }}
+                  >
+                    <div>
+                      <p className="text-[13px] font-semibold">{p.nome}</p>
+                      <p className="text-[11px] text-gray-500">{p.email}</p>
+                    </div>
+                    <span className="text-[12px] font-bold text-[#1D5FAF]">{p.status}</span>
+                  </li>
+                ))}
+                {participantes.length === 0 ? (
+                  <p className="text-gray-500 text-[13px]">
+                    Nenhum funcionário no projeto ainda. Convide na aba Equipe.
+                  </p>
+                ) : null}
+              </ul>
+            </>
+          )}
         </div>
       )}
 

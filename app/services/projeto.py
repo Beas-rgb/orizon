@@ -10,6 +10,7 @@ from datetime import UTC, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.autorizacao import participa as _participa
 from app.core.tokens import hash_token, novo_id, novo_token_opaco
 from app.integrations.cnpj import (
     CnpjIndisponivel,
@@ -69,25 +70,9 @@ def listar_rotulos(db: Session) -> list[RotuloProjeto]:
     )
 
 
-def _participa(db: Session, usuario: Usuario, projeto_id: str) -> bool:
-    """Só quem tem vínculo no projeto vivo. Soft delete corta o acesso."""
-    projeto = db.get(Projeto, projeto_id)
-    if projeto is None or projeto.deleted_at is not None:
-        return False
-    if usuario.papel == "CONSULTOR" and projeto.consultor_id == usuario.id:
-        return True
-    vinculo = db.scalar(
-        select(ProjetoUsuario.id).where(
-            ProjetoUsuario.projeto_id == projeto_id,
-            ProjetoUsuario.usuario_id == usuario.id,
-        )
-    )
-    return vinculo is not None
-
-
 def listar_projetos(db: Session, usuario: Usuario) -> list["ProjetoSaidaMontada"]:
     if usuario.papel == "TI":
-        raise ErroAuth(403, "Sem acesso a projetos.")
+        raise ErroAuth(404, "Projeto não encontrado.")
     garantir_rotulos(db)
     if usuario.papel == "CONSULTOR":
         projetos = db.scalars(

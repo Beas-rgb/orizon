@@ -34,7 +34,13 @@ def _entrar(client, destino: str, senha: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {acesso.json()['access_token']}"}
 
 
-def _cenario(client, monkeypatch, *, com_checkbox: bool = False):
+def _cenario(
+    client,
+    monkeypatch,
+    *,
+    com_checkbox: bool = False,
+    tipo: str = "CLIMA",
+):
     monkeypatch.setattr("app.services.projeto.buscar", _cnpj_falso)
     headers = abrir_consultora(client)
     rotulos = client.get("/projetos/rotulos", headers=headers).json()
@@ -71,7 +77,7 @@ def _cenario(client, monkeypatch, *, com_checkbox: bool = False):
     pesquisa = client.post(
         f"/projetos/{projeto_id}/pesquisas",
         headers=headers,
-        json={"titulo": "Clima 2026", "tipo": "CLIMA"},
+        json={"titulo": "Pesquisa 2026", "tipo": tipo},
     )
     pid = pesquisa.json()["id"]
     obrigatoria = client.post(
@@ -128,8 +134,9 @@ def test_t8_faltando_obrigatoria_422(client, monkeypatch) -> None:
 
 
 def test_t9_checkbox_tres_opcoes_um_participante(client, monkeypatch, db) -> None:
+    # PERSONALIZADA: sem k-anonimato — valida agregação do checkbox.
     headers, pid, token, func, obrigatoria, checkbox = _cenario(
-        client, monkeypatch, com_checkbox=True
+        client, monkeypatch, com_checkbox=True, tipo="PERSONALIZADA"
     )
     assert checkbox is not None
     opcoes = [item["id"] for item in checkbox["opcoes"]]

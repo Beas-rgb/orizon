@@ -1,8 +1,14 @@
-"""Fase 5: Minhas pesquisas (6.8) e participantes (status)."""
+"""P0.5: mídia de rascunho só para consultora; órgão/funcionário → 404."""
 
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
-from tests.contas import SENHA_FUNC, abrir_consultora
+from tests.contas import SENHA_FUNC, SENHA_ORGAO, abrir_consultora
+
+PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f"
+    b"\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
 
 
 def _cnpj_falso(_cnpj: str) -> DadosCnpj:
@@ -32,72 +38,59 @@ def _entrar(client, destino: str, senha: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {acesso.json()['access_token']}"}
 
 
-def test_minhas_pesquisas_e_participantes(client, monkeypatch):
+def test_midia_rascunho_orgao_e_funcionario_404(client, monkeypatch):
     monkeypatch.setattr("app.services.projeto.buscar", _cnpj_falso)
     headers = abrir_consultora(client)
     rotulos = client.get("/projetos/rotulos", headers=headers).json()
     clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
-    projeto = client.post(
+    projeto_id = client.post(
         "/projetos",
         headers=headers,
         json={
             "rotulo_id": clima["id"],
             "cnpj": "19131243000197",
-            "email_orgao": "rh68@prefeitura.dev",
+            "email_orgao": "rh-midia@prefeitura.dev",
             "vinculo_tipo": "EDITAL",
-            "vinculo_titulo": "Edital 68",
+            "vinculo_titulo": "Edital midia",
         },
-    )
-    projeto_id = projeto.json()["id"]
+    ).json()["id"]
     client.patch(
         f"/projetos/{projeto_id}/configuracao",
         headers=headers,
         json={"pesquisas_habilitadas": True},
     )
+    orgao = _entrar(client, "rh-midia@prefeitura.dev", SENHA_ORGAO)
     client.post(
         "/auth/convites",
         headers=headers,
         json={
             "projeto_id": projeto_id,
-            "email": "func68@orgao.dev",
+            "email": "func-midia@orgao.dev",
             "papel": "FUNCIONARIO",
-            "nome": "Func 68",
+            "nome": "Func Midia",
         },
     )
-    func = _entrar(client, "func68@orgao.dev", SENHA_FUNC)
+    func = _entrar(client, "func-midia@orgao.dev", SENHA_FUNC)
 
     pesquisa = client.post(
         f"/projetos/{projeto_id}/pesquisas",
         headers=headers,
-        json={"titulo": "Clima 68", "tipo": "CLIMA"},
+        json={"titulo": "Rascunho midia", "tipo": "CLIMA"},
     )
     pid = pesquisa.json()["id"]
-    client.post(
+    pergunta = client.post(
         f"/pesquisas/{pid}/perguntas",
         headers=headers,
-        json={"texto": "Como está?", "tipo": "NOTA_5"},
+        json={"texto": "Com foto?", "tipo": "NOTA_5"},
+    ).json()
+    upload = client.post(
+        f"/pesquisas/{pid}/perguntas/{pergunta['id']}/midia",
+        headers=headers,
+        files={"arquivo": ("a.png", PNG, "image/png")},
     )
-    assert client.post(f"/pesquisas/{pid}/publicar", headers=headers).status_code == 200
+    assert upload.status_code == 200
 
-    minhas = client.get("/eu/pesquisas", headers=func)
-    assert minhas.status_code == 200
-    itens = minhas.json()
-    assert len(itens) == 1
-    assert itens[0]["titulo"] == "Clima 68"
-    assert itens[0]["status_participacao"] == "PENDENTE"
-    assert itens[0]["token"]
-
-    parts = client.get(f"/pesquisas/{pid}/participantes", headers=headers)
-    assert parts.status_code == 200
-    corpo = parts.json()
-    assert corpo["agregado"] is True
-    assert corpo["total"] == 1
-    assert corpo["respondidas"] == 0
-    assert corpo["itens"] is None
-    assert "email" not in str(corpo).lower() or "func68" not in str(corpo)
-
-    # Funcionário não vê participantes
-    assert client.get(f"/pesquisas/{pid}/participantes", headers=func).status_code == 404
-
-    # Consultora não tem minhas pesquisas
-    assert client.get("/eu/pesquisas", headers=headers).json() == []
+    caminho = f"/pesquisas/{pid}/perguntas/{pergunta['id']}/midia"
+    assert client.get(caminho, headers=headers).status_code == 200
+    assert client.get(caminho, headers=orgao).status_code == 404
+    assert client.get(caminho, headers=func).status_code == 404

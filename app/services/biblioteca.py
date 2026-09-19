@@ -7,6 +7,7 @@ e só ela baixa. Conhecer o ID não libera o arquivo de outro cliente.
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from app.core.autorizacao import papel_no_projeto
 from app.core.tokens import novo_id
 from app.integrations.arquivos import ArquivoInvalido, guardar, ler
 from app.models.auditoria import LogAuditoria
@@ -31,20 +32,7 @@ def _auditar(db: Session, acao: str, usuario_id: str) -> None:
 
 
 def _papel_no_projeto(db: Session, usuario: Usuario, projeto_id: str) -> str | None:
-    projeto = db.get(Projeto, projeto_id)
-    if projeto is None or projeto.deleted_at is not None:
-        return None
-    if usuario.id == projeto.consultor_id:
-        return "CONSULTOR"
-    vinculo = db.scalar(
-        select(ProjetoUsuario).where(
-            ProjetoUsuario.projeto_id == projeto_id,
-            ProjetoUsuario.usuario_id == usuario.id,
-        )
-    )
-    if vinculo is None:
-        return None
-    return vinculo.papel
+    return papel_no_projeto(db, usuario, projeto_id)
 
 
 def pode_ver(db: Session, usuario: Usuario, doc: Documento) -> bool:

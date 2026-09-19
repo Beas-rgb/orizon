@@ -16,6 +16,7 @@ from app.schemas.pesquisa import (
     ModeloSalvar,
     NotaSaida,
     PainelPergunta,
+    ParticipantesSaida,
     ParticipanteStatusSaida,
     PerguntaAtualizar,
     PerguntaCriar,
@@ -138,20 +139,26 @@ def minhas_pesquisas(
 
 @router.get(
     "/pesquisas/{pesquisa_id}/participantes",
-    response_model=list[ParticipanteStatusSaida],
+    response_model=ParticipantesSaida,
 )
 def participantes(
     pesquisa_id: str,
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
-) -> list[ParticipanteStatusSaida]:
-    """Status dos funcionários — sem conteúdo de resposta."""
-    return [
-        ParticipanteStatusSaida(**item)
-        for item in _chamar(
-            lambda: listar_participantes_status(db, consultor, pesquisa_id)
-        )
-    ]
+) -> ParticipantesSaida:
+    """CLIMA: só totais. Demais tipos: status nominal — sem conteúdo de resposta."""
+    dados = _chamar(
+        lambda: listar_participantes_status(db, consultor, pesquisa_id)
+    )
+    itens = None
+    if dados.get("itens") is not None:
+        itens = [ParticipanteStatusSaida(**item) for item in dados["itens"]]
+    return ParticipantesSaida(
+        agregado=bool(dados.get("agregado")),
+        total=dados.get("total"),
+        respondidas=dados.get("respondidas"),
+        itens=itens,
+    )
 
 
 @router.get("/pesquisas/{pesquisa_id}/perguntas", response_model=list[PerguntaSaida])

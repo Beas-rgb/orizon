@@ -98,6 +98,8 @@ class PainelPergunta(BaseModel):
     respostas: int
     media: float | None = None
     contagem_opcoes: list[dict[str, str | int]] | None = None
+    # k-anonimato: True quando N < K (média/distribuição omitidas).
+    suprimido: bool = False
 
 
 class MinhaPesquisaSaida(BaseModel):
@@ -119,3 +121,12 @@ class ParticipanteStatusSaida(BaseModel):
     nome: str
     email: str
     status: str
+
+
+class ParticipantesSaida(BaseModel):
+    """CLIMA: só totais. Demais tipos: lista nominal (sem respostas)."""
+
+    agregado: bool = False
+    total: int | None = None
+    respondidas: int | None = None
+    itens: list[ParticipanteStatusSaida] | None = None

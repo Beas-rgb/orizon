@@ -8,6 +8,7 @@ from datetime import timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.autorizacao import papel_no_projeto
 from app.core.tokens import novo_id
 from app.integrations.arquivos import (
     ArquivoInvalido,
@@ -45,6 +46,9 @@ TIPOS_PERGUNTA = {
 }
 RESPONDER_MAX_TENTATIVAS = 10
 RESPONDER_JANELA_MINUTOS = 5
+# Painel omite média/distribuição quando há menos respondentes distintos.
+K_ANONIMATO = 5
+TIPOS_ANONIMOS = {"CLIMA"}
 
 
 def _ciente(valor):
@@ -57,7 +61,7 @@ def _ciente(valor):
     return valor
 
 
-def _auditar(db: Session, acao: str, usuario_id: str) -> None:
+def _auditar(db: Session, acao: str, usuario_id: str | None) -> None:
     db.add(
         LogAuditoria(
             id=novo_id(),
@@ -69,18 +73,7 @@ def _auditar(db: Session, acao: str, usuario_id: str) -> None:
 
 
 def _papel(db: Session, usuario: Usuario, projeto_id: str) -> str | None:
-    projeto = db.get(Projeto, projeto_id)
-    if projeto is None or projeto.deleted_at is not None:
-        return None
-    if usuario.id == projeto.consultor_id:
-        return "CONSULTOR"
-    vinculo = db.scalar(
-        select(ProjetoUsuario).where(
-            ProjetoUsuario.projeto_id == projeto_id,
-            ProjetoUsuario.usuario_id == usuario.id,
-        )
-    )
-    return vinculo.papel if vinculo else None
+    return papel_no_projeto(db, usuario, projeto_id)
 
 
 def _pesquisa_viva(db: Session, pesquisa_id: str) -> Pesquisa:
@@ -468,11 +461,11 @@ def baixar_midia_pergunta(
     pesquisa_id: str,
     pergunta_id: str,
 ) -> tuple[bytes, str]:
-    """Consultora/órgão do projeto ou funcionário vinculado. Sem vazar key."""
-    pesquisa = _pesquisa_viva(db, pesquisa_id)
-    papel = _papel(db, usuario, pesquisa.projeto_id)
-    if papel not in {"CONSULTOR", "ORGAO", "FUNCIONARIO"}:
-        raise ErroAuth(404, "Pergunta não encontrada.")
+    """Consultora (qualquer status). Órgão/funcionário só PUBLICADA/ENCERRADA."""
+    from app.core.autorizacao import exigir_midia_pesquisa, exigir_pesquisa_viva
+
+    pesquisa = exigir_pesquisa_viva(db, pesquisa_id)
+    exigir_midia_pesquisa(db, usuario, pesquisa)
     pergunta = db.get(Pergunta, pergunta_id)
     if (
         pergunta is None
@@ -683,8 +676,8 @@ def listar_participantes_status(
     db: Session,
     consultor: Usuario,
     pesquisa_id: str,
-) -> list[dict]:
-    """Funcionários do projeto e status na pesquisa — sem respostas."""
+) -> dict:
+    """CLIMA: só totais. Demais tipos: funcionários + status (sem respostas)."""
     pesquisa = _pesquisa_viva(db, pesquisa_id)
     if _papel(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
@@ -694,11 +687,14 @@ def listar_participantes_status(
             ProjetoUsuario.papel == "FUNCIONARIO",
         )
     ).all()
-    saida: list[dict] = []
+    total = 0
+    respondidas = 0
+    itens: list[dict] = []
     for vinculo in vinculos:
         pessoa = db.get(Usuario, vinculo.usuario_id)
         if pessoa is None or pessoa.deleted_at is not None:
             continue
+        total += 1
         participante = db.scalar(
             select(PesquisaParticipante).where(
                 PesquisaParticipante.pesquisa_id == pesquisa.id,
@@ -706,16 +702,31 @@ def listar_participantes_status(
                 PesquisaParticipante.deleted_at.is_(None),
             )
         )
-        saida.append(
+        status = participante.status if participante else "PENDENTE"
+        if status == "RESPONDIDA":
+            respondidas += 1
+        itens.append(
             {
                 "usuario_id": pessoa.id,
                 "nome": pessoa.nome,
                 "email": pessoa.email,
-                "status": participante.status if participante else "PENDENTE",
+                "status": status,
             }
         )
-    saida.sort(key=lambda item: (item["status"], item["nome"].lower()))
-    return saida
+    if pesquisa.tipo in TIPOS_ANONIMOS:
+        return {
+            "agregado": True,
+            "total": total,
+            "respondidas": respondidas,
+            "itens": None,
+        }
+    itens.sort(key=lambda item: (item["status"], item["nome"].lower()))
+    return {
+        "agregado": False,
+        "total": total,
+        "respondidas": respondidas,
+        "itens": itens,
+    }
 
 
 def baixar_midia_pelo_token(
@@ -1127,6 +1138,28 @@ def registrar_respostas(
         raise ErroAuth(422, "Envie as respostas.")
     _validar_obrigatorias(perguntas, itens)
     agora_ = agora()
+    # CLIMA: respostas em token anônimo (sem FK para participante/usuário).
+    if pesquisa.tipo in TIPOS_ANONIMOS:
+        token_resposta_id = novo_id()
+        db.add(
+            TokenResposta(
+                id=token_resposta_id,
+                pesquisa_id=pesquisa.id,
+                setor_id=None,
+                token=str(uuid.uuid4()),
+                usado=True,
+                usado_em=agora_,
+                expira_em=pesquisa.disponivel_ate,
+                criado_em=agora_,
+            )
+        )
+        db.flush()
+        participante.token_id = None
+    else:
+        token_resposta_id = linha.id
+        linha.usado = True
+        linha.usado_em = agora_
+
     for item in itens:
         pergunta = perguntas.get(item["pergunta_id"])
         if pergunta is None:
@@ -1137,7 +1170,7 @@ def registrar_respostas(
                 db.add(
                     Resposta(
                         id=novo_id(),
-                        token_id=linha.id,
+                        token_id=token_resposta_id,
                         pergunta_id=pergunta.id,
                         valor_texto=None,
                         valor_numerico=None,
@@ -1149,7 +1182,7 @@ def registrar_respostas(
             db.add(
                 Resposta(
                     id=novo_id(),
-                    token_id=linha.id,
+                    token_id=token_resposta_id,
                     pergunta_id=pergunta.id,
                     valor_texto=texto,
                     valor_numerico=numerico,
@@ -1157,8 +1190,6 @@ def registrar_respostas(
                     respondido_em=agora_,
                 )
             )
-    linha.usado = True
-    linha.usado_em = agora_
     participante.status = "RESPONDIDA"
     participante.respondido_em = agora_
     participante.atualizado_em = agora_
@@ -1179,7 +1210,11 @@ def registrar_respostas(
                 "EMAIL",
                 "RESPOSTA",
             )
-    _auditar(db, "PESQUISA_RESPONDIDA", usuario.id)
+    # CLIMA: auditoria sem usuario_id (não amarra quem respondeu).
+    if pesquisa.tipo in TIPOS_ANONIMOS:
+        _auditar(db, "PESQUISA_RESPONDIDA", None)
+    else:
+        _auditar(db, "PESQUISA_RESPONDIDA", usuario.id)
     db.commit()
     if pesquisa.tipo == "DESEMPENHO":
         return pesquisa.tipo, _nota_do_token(db, linha.id)
@@ -1300,42 +1335,49 @@ def painel(db: Session, usuario: Usuario, pesquisa_id: str) -> list[dict]:
     ).all()
     saida = []
     for pergunta in perguntas:
-        # Participantes únicos (token pessoal), não linhas de checkbox.
-        total = db.scalar(
-            select(func.count(func.distinct(Resposta.token_id))).where(
-                Resposta.pergunta_id == pergunta.id
+        # Participantes únicos (token de submissão), não linhas de checkbox.
+        total = int(
+            db.scalar(
+                select(func.count(func.distinct(Resposta.token_id))).where(
+                    Resposta.pergunta_id == pergunta.id
+                )
             )
+            or 0
         )
-        media = db.scalar(
-            select(func.avg(Resposta.valor_numerico)).where(
-                Resposta.pergunta_id == pergunta.id,
-                Resposta.valor_numerico.is_not(None),
-            )
-        )
+        suprimido = pesquisa.tipo in TIPOS_ANONIMOS and total < K_ANONIMATO
+        media = None
         contagem_opcoes = None
-        if pergunta.tipo in {"CHECKBOX", "MULTIPLA_ESCOLHA", "SIM_NAO"}:
-            contagem_opcoes = []
-            for opcao in opcoes_da(db, pergunta.id):
-                qtd = db.scalar(
-                    select(func.count(Resposta.id)).where(
-                        Resposta.opcao_id == opcao.id
+        if not suprimido:
+            media = db.scalar(
+                select(func.avg(Resposta.valor_numerico)).where(
+                    Resposta.pergunta_id == pergunta.id,
+                    Resposta.valor_numerico.is_not(None),
+                )
+            )
+            if pergunta.tipo in {"CHECKBOX", "MULTIPLA_ESCOLHA", "SIM_NAO"}:
+                contagem_opcoes = []
+                for opcao in opcoes_da(db, pergunta.id):
+                    qtd = db.scalar(
+                        select(func.count(Resposta.id)).where(
+                            Resposta.opcao_id == opcao.id
+                        )
                     )
-                )
-                contagem_opcoes.append(
-                    {
-                        "opcao_id": opcao.id,
-                        "texto": opcao.texto,
-                        "total": int(qtd or 0),
-                    }
-                )
+                    contagem_opcoes.append(
+                        {
+                            "opcao_id": opcao.id,
+                            "texto": opcao.texto,
+                            "total": int(qtd or 0),
+                        }
+                    )
         saida.append(
             {
                 "pergunta_id": pergunta.id,
                 "texto": pergunta.texto,
                 "tipo": pergunta.tipo,
-                "respostas": int(total or 0),
+                "respostas": total,
                 "media": float(media) if media is not None else None,
                 "contagem_opcoes": contagem_opcoes,
+                "suprimido": suprimido,
             }
         )
     return saida

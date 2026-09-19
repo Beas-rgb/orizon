@@ -244,7 +244,12 @@ def garantir_admin(db: Session) -> None:
 
 
 def bootstrap(db: Session, nome: str, email: str, senha: str) -> dict[str, str]:
-    """Só a primeira conta, e só se a tabela estiver vazia."""
+    """Só a primeira conta, e só se a tabela estiver vazia.
+
+    Em produção a rota some (404): TI nasce via ADMIN_* / garantir_admin.
+    """
+    if settings.app_env == "production":
+        raise ErroAuth(404, "Não encontrado.")
     existe = db.scalar(select(Usuario.id).limit(1))
     if existe is not None:
         raise ErroAuth(403, "Cadastro inicial já foi feito.")
