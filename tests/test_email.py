@@ -68,6 +68,11 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
         visto["assunto"] = corpo["subject"]
         visto["texto"] = corpo["content"][0]["value"]
         visto["html"] = corpo["content"][1]["value"]
+        visto["categories"] = corpo.get("categories")
+        visto["custom_args"] = corpo["personalizations"][0].get("custom_args")
+        visto["click_tracking"] = corpo["tracking_settings"]["click_tracking"][
+            "enable"
+        ]
         return RespostaFalsa()
 
     monkeypatch.setattr(settings, "sendgrid_api_key", "SG.teste")
@@ -79,6 +84,7 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
         "destinatario@exemplo.dev",
         "Você é incrível!",
         "Parabéns pelo envio de teste.\nhttps://orizon-api.onrender.com/app/primeiro-acesso?t=abc",
+        categoria="CONVITE",
     )
 
     assert visto["url"] == "https://api.sendgrid.com/v3/mail/send"
@@ -87,6 +93,9 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
     assert visto["remetente"] == "noreply@orizon.dev"
     assert visto["nome"] == "Horizon"
     assert visto["assunto"] == "Você é incrível!"
+    assert visto["categories"] == ["CONVITE"]
+    assert visto["custom_args"] is None
+    assert visto["click_tracking"] is False
     assert resultado == ResultadoEmail("sendgrid", "sg-message-123")
     assert "Parabéns pelo envio de teste." in str(visto["texto"])
     link_html = (
@@ -95,6 +104,14 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
     )
     assert link_html in str(visto["html"])
 
+
+def test_destino_recebe_email_real() -> None:
+    from app.integrations.email import destino_recebe_email_real
+
+    assert destino_recebe_email_real("joao951biel@gmail.com") is True
+    assert destino_recebe_email_real("joao.gabriel@horizon.local") is False
+    assert destino_recebe_email_real("a@localhost") is False
+    assert destino_recebe_email_real("invalido") is False
 
 def test_envia_pelo_sdk_mailtrap(monkeypatch) -> None:
     visto: dict[str, object] = {}

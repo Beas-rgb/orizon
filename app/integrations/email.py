@@ -67,6 +67,21 @@ def _corpo_para_html(corpo: str) -> str:
     )
 
 
+def destino_recebe_email_real(destino: str) -> bool:
+    """False para endereços de laboratório (.local, localhost, etc.)."""
+    endereco = (destino or "").strip().lower()
+    if "@" not in endereco or endereco.startswith("@") or endereco.endswith("@"):
+        return False
+    dominio = endereco.rsplit("@", 1)[-1]
+    if not dominio or "." not in dominio:
+        return False
+    if dominio in {"localhost", "example.com", "example.org", "example.net"}:
+        return False
+    if dominio.endswith(".local") or dominio.endswith(".test"):
+        return False
+    return True
+
+
 class CaixaEmail:
     """Testes substituem esta caixa e leem o que sairia no e-mail."""
 
@@ -131,19 +146,22 @@ def _enviar_sendgrid(
             "Remetente SendGrid não configurado (SENDGRID_FROM_EMAIL)"
         )
     nome = settings.sendgrid_from_name or "Horizon"
+    # Payload enxuto (como na 1ª integração estável). Sem custom_args.
+    # Tracking desligado: e-mail transacional; Gmail/scanners não “clicam” o link.
     payload = {
-        "personalizations": [
-            {
-                "to": [{"email": destino}],
-                "custom_args": {"categoria": categoria[:64]},
-            }
-        ],
+        "personalizations": [{"to": [{"email": destino}]}],
         "from": {"email": remetente, "name": nome},
+        "reply_to": {"email": remetente, "name": nome},
         "subject": assunto,
         "content": [
             {"type": "text/plain", "value": corpo},
             {"type": "text/html", "value": _corpo_para_html(corpo)},
         ],
+        "categories": [categoria[:64]],
+        "tracking_settings": {
+            "click_tracking": {"enable": False, "enable_text": False},
+            "open_tracking": {"enable": False},
+        },
     }
     pedido = urllib.request.Request(
         "https://api.sendgrid.com/v3/mail/send",

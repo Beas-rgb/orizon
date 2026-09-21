@@ -54,7 +54,14 @@ class TesteEmailSaida(BaseModel):
     status: str
     provedor: str | None = None
     erro: str | None = None
+    destino: str | None = None
     mensagem: str
+
+
+class TesteEmailEntrada(BaseModel):
+    """Destino opcional: a conta TI .local não recebe e-mail real."""
+
+    destino: str | None = Field(default=None, max_length=255)
 
 
 @router.post("/auth/cadastro-consultora", response_model=MensagemSaida)
@@ -117,11 +124,15 @@ def analise(
 
 @router.post("/dev/diagnostico/email/teste", response_model=TesteEmailSaida)
 def teste_email(
+    corpo: TesteEmailEntrada | None = None,
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> TesteEmailSaida:
-    """Envia um teste ao e-mail do próprio TI; nunca recebe destino arbitrário."""
-    return TesteEmailSaida(**chamar(lambda: testar_email_ti(db, usuario)))
+    """Envia teste. Destino opcional (Gmail real); nunca abre para outros papéis."""
+    destino = corpo.destino if corpo else None
+    return TesteEmailSaida(
+        **chamar(lambda: testar_email_ti(db, usuario, destino=destino))
+    )
 
 
 @router.post("/dev/pedidos/{pedido_id}/autorizar", response_model=MensagemSaida)

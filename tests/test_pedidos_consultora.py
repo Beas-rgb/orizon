@@ -79,11 +79,16 @@ def test_diagnostico_so_para_o_dev(client) -> None:
 
 def test_teste_email_so_para_ti_e_com_limite(client) -> None:
     dev = abrir_dev(client)
-    teste = client.post("/dev/diagnostico/email/teste", headers=dev)
+    teste = client.post(
+        "/dev/diagnostico/email/teste",
+        headers=dev,
+        json={"destino": "caixa-real@exemplo.dev"},
+    )
     assert teste.status_code == 200
     assert teste.json()["status"] == "ENVIADO"
     assert teste.json()["provedor"] == "local"
-    assert caixa_email.mensagens[-1]["destino"] == "joao@horizon.dev"
+    assert teste.json()["destino"] == "caixa-real@exemplo.dev"
+    assert caixa_email.mensagens[-1]["destino"] == "caixa-real@exemplo.dev"
 
     repetido = client.post("/dev/diagnostico/email/teste", headers=dev)
     assert repetido.status_code == 429
@@ -92,6 +97,24 @@ def test_teste_email_so_para_ti_e_com_limite(client) -> None:
     negado = client.post("/dev/diagnostico/email/teste", headers=consultora)
     assert negado.status_code == 404
 
+
+def test_teste_email_rejeita_destino_local(client, db) -> None:
+    from app.models.notificacao import EntregaMensagem
+
+    # Libera o rate limit do teste anterior neste mesmo usuário TI.
+    db.query(EntregaMensagem).filter(
+        EntregaMensagem.referencia == "TESTE_EMAIL"
+    ).delete()
+    db.commit()
+
+    dev = abrir_dev(client)
+    falha = client.post(
+        "/dev/diagnostico/email/teste",
+        headers=dev,
+        json={"destino": "fake@horizon.local"},
+    )
+    assert falha.status_code == 422
+    assert "real" in falha.json()["detail"].lower()
 
 def test_autorizar_reativa_consultora_soft_deleted(client, db) -> None:
     """E-mail soft-deletado ainda ocupa o unique: autorizar deve reativar."""

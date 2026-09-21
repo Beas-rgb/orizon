@@ -377,6 +377,28 @@ def diagnostico(db: Session, usuario: Usuario) -> dict[str, object]:
     ).all()
     aceitas = sum(item.status in {"ACEITO", "ENVIADO"} for item in entregas)
     falhas = sum(item.status == "FALHA" for item in entregas)
+    remetente = (
+        settings.sendgrid_from_email
+        if email == "sendgrid"
+        else settings.mailtrap_from_email
+        if email == "mailtrap"
+        else settings.smtp_from or settings.smtp_user
+    )
+    remetente_limpo = (remetente or "").strip().lower()
+    avisos: list[str] = []
+    from app.integrations.email import destino_recebe_email_real
+
+    if not destino_recebe_email_real(usuario.email):
+        avisos.append(
+            "A conta TI usa e-mail de laboratório (.local). "
+            "O botão de teste precisa de um destino real (ex.: seu Gmail)."
+        )
+    if email == "sendgrid" and remetente_limpo.endswith("@gmail.com"):
+        avisos.append(
+            "Remetente é Gmail via SendGrid (sem Domain Authentication). "
+            "O Gmail do destinatário pode filtrar ou mandar para spam. "
+            "Confirme SENDGRID_FROM_EMAIL=orizonteste89@gmail.com no Render."
+        )
     return {
         "api": "ok",
         "banco": banco,
@@ -384,13 +406,9 @@ def diagnostico(db: Session, usuario: Usuario) -> dict[str, object]:
         "email": email,
         "email_detalhe": {
             "provedor": email,
-            "remetente_configurado": bool(
-                settings.sendgrid_from_email
-                if email == "sendgrid"
-                else settings.mailtrap_from_email
-                if email == "mailtrap"
-                else settings.smtp_from or settings.smtp_user
-            ),
+            "remetente_configurado": bool(remetente_limpo),
+            "remetente_eh_gmail": remetente_limpo.endswith("@gmail.com"),
+            "conta_ti_recebe_email": destino_recebe_email_real(usuario.email),
             "fallback_configurado": bool(
                 email == "sendgrid"
                 and (
@@ -408,6 +426,7 @@ def diagnostico(db: Session, usuario: Usuario) -> dict[str, object]:
             "ultimo_status": entregas[0].status if entregas else None,
             "ultimo_provedor": entregas[0].provedor if entregas else None,
             "ultimo_erro": entregas[0].erro if entregas else None,
+            "avisos": avisos,
         },
         "contas": contas,
         "pedidos_pendentes": db.scalar(
@@ -430,10 +449,23 @@ def diagnostico(db: Session, usuario: Usuario) -> dict[str, object]:
     }
 
 
-def testar_email_ti(db: Session, usuario: Usuario) -> dict[str, str | None]:
-    """Envia teste ao próprio TI; no máximo um por minuto."""
+def testar_email_ti(
+    db: Session,
+    usuario: Usuario,
+    destino: str | None = None,
+) -> dict[str, str | None]:
+    """Envia teste; destino opcional (só TI). Máximo um por minuto."""
     if usuario.papel != "TI":
         raise ErroAuth(404, "Diagnóstico não encontrado.")
+    from app.integrations.email import destino_recebe_email_real
+
+    alvo = email_acesso(destino) if destino else email_acesso(usuario.email)
+    if not destino_recebe_email_real(alvo):
+        raise ErroAuth(
+            422,
+            "Informe um e-mail real para o teste "
+            "(a conta TI .local não recebe mensagem).",
+        )
     ultimo = db.scalar(
         select(EntregaMensagem)
         .where(
@@ -450,12 +482,13 @@ def testar_email_ti(db: Session, usuario: Usuario) -> dict[str, str | None]:
 
     entrega = entregar_email(
         db,
-        usuario.email,
+        alvo,
         "Teste de entrega do Horizon",
         (
             f"Olá, {usuario.nome}.\n\n"
             "Este é um teste do canal de e-mail do Horizon.\n"
-            "Se recebeu esta mensagem, o provedor concluiu a entrega."
+            "Se recebeu esta mensagem, o provedor concluiu a entrega.\n"
+            f"Destino do teste: {alvo}\n"
         ),
         "TESTE_EMAIL",
         None,
@@ -467,8 +500,9 @@ def testar_email_ti(db: Session, usuario: Usuario) -> dict[str, str | None]:
         "status": entrega.status,
         "provedor": entrega.provedor,
         "erro": entrega.erro,
+        "destino": alvo,
         "mensagem": (
-            "Provedor aceitou o teste. Confira sua caixa e o spam."
+            "Provedor aceitou o teste. Confira a caixa e o spam do destino."
             if entrega_aceita(entrega)
             else "O provedor rejeitou o teste."
         ),

@@ -242,6 +242,8 @@ type Consultora = { id: string; nome: string; email: string; ativo: boolean };
 type DiagnosticoEmail = {
   provedor: string;
   remetente_configurado: boolean;
+  remetente_eh_gmail?: boolean;
+  conta_ti_recebe_email?: boolean;
   fallback_configurado: boolean;
   ultimas_20: number;
   aceitas: number;
@@ -249,6 +251,7 @@ type DiagnosticoEmail = {
   ultimo_status?: string | null;
   ultimo_provedor?: string | null;
   ultimo_erro?: string | null;
+  avisos?: string[];
 };
 
 export function DevPainel() {
@@ -265,6 +268,7 @@ export function DevPainel() {
   const [linkAcesso, setLinkAcesso] = useState("");
   const [avisoEmail, setAvisoEmail] = useState("");
   const [testandoEmail, setTestandoEmail] = useState(false);
+  const [destinoTeste, setDestinoTeste] = useState("");
 
   useEffect(() => {
     api<{ status: string }>("/health").then(setSaude).catch(() => setSaude({ status: "falha" }));
@@ -335,18 +339,24 @@ export function DevPainel() {
   async function testarEnvioEmail() {
     setErro("");
     setMsg("");
+    setAvisoEmail("");
     setTestandoEmail(true);
     try {
+      const destino = destinoTeste.trim();
       const resposta = await api<{
         mensagem: string;
         status: string;
         provedor?: string | null;
         erro?: string | null;
-      }>("/dev/diagnostico/email/teste", { method: "POST" });
+        destino?: string | null;
+      }>("/dev/diagnostico/email/teste", {
+        method: "POST",
+        json: destino ? { destino } : {},
+      });
       setMsg(
         `${resposta.mensagem} Estado: ${resposta.status}${
           resposta.provedor ? ` via ${resposta.provedor}` : ""
-        }.`,
+        }${resposta.destino ? ` → ${resposta.destino}` : ""}.`,
       );
       if (resposta.erro) setAvisoEmail(resposta.erro);
       const diagnostico = await api<{ email_detalhe?: DiagnosticoEmail }>(
@@ -431,6 +441,21 @@ export function DevPainel() {
               SPF/DKIM no SendGrid.
             </p>
           ) : null}
+          {(diagnosticoEmail.avisos || []).map((aviso) => (
+            <p key={aviso} className="mt-2 text-[#A07020]">
+              {aviso}
+            </p>
+          ))}
+          <label className="mt-3 block text-[11px] text-gray-500">
+            Destino do teste (Gmail real — a conta TI .local não recebe)
+            <input
+              type="email"
+              value={destinoTeste}
+              onChange={(ev) => setDestinoTeste(ev.target.value)}
+              placeholder="joao951biel@gmail.com"
+              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-[13px] text-gray-800"
+            />
+          </label>
           <button
             type="button"
             disabled={testandoEmail}
@@ -438,7 +463,7 @@ export function DevPainel() {
             className="mt-3 rounded-xl px-4 py-2 text-white font-bold disabled:opacity-60"
             style={{ background: ACCENT }}
           >
-            {testandoEmail ? "Enviando teste…" : "Enviar teste para meu e-mail"}
+            {testandoEmail ? "Enviando teste…" : "Enviar teste de e-mail"}
           </button>
         </div>
       ) : null}
