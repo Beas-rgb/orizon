@@ -428,3 +428,48 @@ def diagnostico(db: Session, usuario: Usuario) -> dict[str, object]:
             for item in recentes
         ],
     }
+
+
+def testar_email_ti(db: Session, usuario: Usuario) -> dict[str, str | None]:
+    """Envia teste ao próprio TI; no máximo um por minuto."""
+    if usuario.papel != "TI":
+        raise ErroAuth(404, "Diagnóstico não encontrado.")
+    ultimo = db.scalar(
+        select(EntregaMensagem)
+        .where(
+            EntregaMensagem.referencia == "TESTE_EMAIL",
+            EntregaMensagem.usuario_id == usuario.id,
+        )
+        .order_by(EntregaMensagem.criado_em.desc())
+        .limit(1)
+    )
+    if ultimo and _ciente(ultimo.criado_em) > _agora() - timedelta(minutes=1):
+        raise ErroAuth(429, "Aguarde 1 minuto antes de enviar outro teste.")
+
+    from app.services.notificacao import entrega_aceita, entregar_email
+
+    entrega = entregar_email(
+        db,
+        usuario.email,
+        "Teste de entrega do Horizon",
+        (
+            f"Olá, {usuario.nome}.\n\n"
+            "Este é um teste do canal de e-mail do Horizon.\n"
+            "Se recebeu esta mensagem, o provedor concluiu a entrega."
+        ),
+        "TESTE_EMAIL",
+        None,
+        usuario.id,
+    )
+    _auditar(db, "EMAIL_TESTE_SOLICITADO", usuario.id)
+    db.commit()
+    return {
+        "status": entrega.status,
+        "provedor": entrega.provedor,
+        "erro": entrega.erro,
+        "mensagem": (
+            "Provedor aceitou o teste. Confira sua caixa e o spam."
+            if entrega_aceita(entrega)
+            else "O provedor rejeitou o teste."
+        ),
+    }

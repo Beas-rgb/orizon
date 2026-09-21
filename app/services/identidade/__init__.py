@@ -40,6 +40,7 @@ from .pedidos import (
     listar_pedidos,
     pedir_conta_consultora,
     reenviar_primeiro_acesso_consultora,
+    testar_email_ti,
 )
 
 __all__ = [
@@ -71,4 +72,5 @@ __all__ = [
     "sair",
     "segundos_bloqueio",
     "settings",
+    "testar_email_ti",
 ]

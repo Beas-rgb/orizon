@@ -17,6 +17,7 @@ from app.services.identidade import (
     listar_pedidos,
     pedir_conta_consultora,
     reenviar_primeiro_acesso_consultora,
+    testar_email_ti,
 )
 
 router = APIRouter(tags=["dev"])
@@ -47,6 +48,13 @@ class MensagemSaida(BaseModel):
     email: str | None = None
     link_primeiro_acesso: str | None = None
     aviso_email: str | None = None
+
+
+class TesteEmailSaida(BaseModel):
+    status: str
+    provedor: str | None = None
+    erro: str | None = None
+    mensagem: str
 
 
 @router.post("/auth/cadastro-consultora", response_model=MensagemSaida)
@@ -105,6 +113,15 @@ def analise(
 ) -> dict[str, object]:
     """Estabilidade da API. Só o TI. Sem senha, host nem URL de banco."""
     return chamar(lambda: diagnostico(db, usuario))
+
+
+@router.post("/dev/diagnostico/email/teste", response_model=TesteEmailSaida)
+def teste_email(
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> TesteEmailSaida:
+    """Envia um teste ao e-mail do próprio TI; nunca recebe destino arbitrário."""
+    return TesteEmailSaida(**chamar(lambda: testar_email_ti(db, usuario)))
 
 
 @router.post("/dev/pedidos/{pedido_id}/autorizar", response_model=MensagemSaida)

@@ -77,6 +77,22 @@ def test_diagnostico_so_para_o_dev(client) -> None:
     assert "token" not in analise.text.lower()
 
 
+def test_teste_email_so_para_ti_e_com_limite(client) -> None:
+    dev = abrir_dev(client)
+    teste = client.post("/dev/diagnostico/email/teste", headers=dev)
+    assert teste.status_code == 200
+    assert teste.json()["status"] == "ENVIADO"
+    assert teste.json()["provedor"] == "local"
+    assert caixa_email.mensagens[-1]["destino"] == "joao@horizon.dev"
+
+    repetido = client.post("/dev/diagnostico/email/teste", headers=dev)
+    assert repetido.status_code == 429
+
+    consultora = abrir_consultora(client)
+    negado = client.post("/dev/diagnostico/email/teste", headers=consultora)
+    assert negado.status_code == 404
+
+
 def test_autorizar_reativa_consultora_soft_deleted(client, db) -> None:
     """E-mail soft-deletado ainda ocupa o unique: autorizar deve reativar."""
     from app.models.base import agora

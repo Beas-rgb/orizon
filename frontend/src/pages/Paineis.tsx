@@ -264,6 +264,7 @@ export function DevPainel() {
   const [msg, setMsg] = useState("");
   const [linkAcesso, setLinkAcesso] = useState("");
   const [avisoEmail, setAvisoEmail] = useState("");
+  const [testandoEmail, setTestandoEmail] = useState(false);
 
   useEffect(() => {
     api<{ status: string }>("/health").then(setSaude).catch(() => setSaude({ status: "falha" }));
@@ -328,6 +329,34 @@ export function DevPainel() {
       }
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Erro");
+    }
+  }
+
+  async function testarEnvioEmail() {
+    setErro("");
+    setMsg("");
+    setTestandoEmail(true);
+    try {
+      const resposta = await api<{
+        mensagem: string;
+        status: string;
+        provedor?: string | null;
+        erro?: string | null;
+      }>("/dev/diagnostico/email/teste", { method: "POST" });
+      setMsg(
+        `${resposta.mensagem} Estado: ${resposta.status}${
+          resposta.provedor ? ` via ${resposta.provedor}` : ""
+        }.`,
+      );
+      if (resposta.erro) setAvisoEmail(resposta.erro);
+      const diagnostico = await api<{ email_detalhe?: DiagnosticoEmail }>(
+        "/dev/diagnostico",
+      );
+      setDiagnosticoEmail(diagnostico.email_detalhe || null);
+    } catch (exc) {
+      setErro(exc instanceof Error ? exc.message : "Falha ao testar e-mail");
+    } finally {
+      setTestandoEmail(false);
     }
   }
 
@@ -402,6 +431,15 @@ export function DevPainel() {
               SPF/DKIM no SendGrid.
             </p>
           ) : null}
+          <button
+            type="button"
+            disabled={testandoEmail}
+            onClick={() => void testarEnvioEmail()}
+            className="mt-3 rounded-xl px-4 py-2 text-white font-bold disabled:opacity-60"
+            style={{ background: ACCENT }}
+          >
+            {testandoEmail ? "Enviando teste…" : "Enviar teste para meu e-mail"}
+          </button>
         </div>
       ) : null}
 
