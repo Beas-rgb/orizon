@@ -239,6 +239,17 @@ export function FuncionarioPainel() {
 
 type Pedido = { id: string; nome: string; email: string; status: string };
 type Consultora = { id: string; nome: string; email: string; ativo: boolean };
+type DiagnosticoEmail = {
+  provedor: string;
+  remetente_configurado: boolean;
+  fallback_configurado: boolean;
+  ultimas_20: number;
+  aceitas: number;
+  falhas: number;
+  ultimo_status?: string | null;
+  ultimo_provedor?: string | null;
+  ultimo_erro?: string | null;
+};
 
 export function DevPainel() {
   const [saude, setSaude] = useState<{ status: string } | null>(null);
@@ -246,6 +257,9 @@ export function DevPainel() {
   const [email, setEmail] = useState<{ modo: string } | null>(null);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [consultores, setConsultores] = useState<Consultora[]>([]);
+  const [diagnosticoEmail, setDiagnosticoEmail] = useState<DiagnosticoEmail | null>(
+    null,
+  );
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [linkAcesso, setLinkAcesso] = useState("");
@@ -265,6 +279,9 @@ export function DevPainel() {
     api<Consultora[]>("/dev/consultores")
       .then(setConsultores)
       .catch(() => setConsultores([]));
+    api<{ email_detalhe?: DiagnosticoEmail }>("/dev/diagnostico")
+      .then((dados) => setDiagnosticoEmail(dados.email_detalhe || null))
+      .catch(() => setDiagnosticoEmail(null));
   }, []);
 
   async function autorizar(id: string) {
@@ -355,6 +372,39 @@ export function DevPainel() {
         </div>
       ) : null}
 
+      {diagnosticoEmail ? (
+        <div className="rounded-3xl p-4 mb-5 text-[12px]" style={glassStyle}>
+          <p className="font-bold text-gray-800 mb-2">Diagnóstico de entrega</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-gray-600">
+            <span>Provedor: {diagnosticoEmail.provedor}</span>
+            <span>
+              Remetente:{" "}
+              {diagnosticoEmail.remetente_configurado ? "configurado" : "ausente"}
+            </span>
+            <span>Aceitas: {diagnosticoEmail.aceitas}</span>
+            <span>Falhas: {diagnosticoEmail.falhas}</span>
+          </div>
+          {diagnosticoEmail.ultimo_status ? (
+            <p className="mt-2 text-gray-600">
+              Último envio: <strong>{diagnosticoEmail.ultimo_status}</strong>
+              {diagnosticoEmail.ultimo_provedor
+                ? ` via ${diagnosticoEmail.ultimo_provedor}`
+                : ""}
+            </p>
+          ) : null}
+          {diagnosticoEmail.ultimo_erro ? (
+            <p className="mt-2 text-[#A02828]">{diagnosticoEmail.ultimo_erro}</p>
+          ) : null}
+          {diagnosticoEmail.ultimo_status === "ACEITO" ? (
+            <p className="mt-2 text-[#A07020]">
+              “Aceito” confirma a fila do provedor, não a chegada na caixa. Se não
+              aparecer no Gmail, confira Suppressions/Activity e autenticação
+              SPF/DKIM no SendGrid.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-5">
         {[
           ["API", saude?.status || "…"],
@@ -394,7 +444,8 @@ export function DevPainel() {
                 sendgrid.com
               </a>{" "}
               → Settings → Sender Authentication →{" "}
-              <strong>Single Sender Verification</strong> (seu Gmail).
+              <strong>Domain Authentication</strong> (SPF/DKIM). Single Sender
+              com Gmail serve apenas para teste e pode cair no spam.
             </li>
             <li>
               Crie uma API Key (Mail Send) e no Render defina:
@@ -407,8 +458,8 @@ export function DevPainel() {
               <code className="text-[11px]">SENDGRID_FROM_NAME</code> = Horizon
             </li>
             <li>
-              Apague ou esvazie <code>MAILTRAP_API_TOKEN</code> e as vars{" "}
-              <code>SMTP_*</code> para não misturar canais.
+              Opcional: configure também <code>MAILTRAP_API_TOKEN</code> e{" "}
+              <code>MAILTRAP_FROM_EMAIL</code> como fallback.
             </li>
             <li>Salve e aguarde o redeploy.</li>
             <li>

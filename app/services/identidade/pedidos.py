@@ -9,12 +9,17 @@ from sqlalchemy.orm import Session
 from app.core.tokens import hash_token, novo_id, novo_token_opaco
 from app.models.auditoria import LogAuditoria
 from app.models.convite import Convite
+from app.models.notificacao import EntregaMensagem
 from app.models.pedido_consultora import PedidoConsultora
 from app.models.pesquisa import Pesquisa
 from app.models.projeto import Projeto
 from app.models.usuario import Usuario
 
-from .convites import _expor_link_primeiro_acesso, _link_com_token
+from .convites import (
+    _corpo_primeiro_acesso,
+    _expor_link_primeiro_acesso,
+    _link_com_token,
+)
 from .erros import (
     ErroAuth,
     _agora,
@@ -184,24 +189,24 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
     )
     db.add(convite)
     db.flush()
-    from app.services.notificacao import entregar_email
+    from app.services.notificacao import entrega_aceita, entregar_email
 
     entrega = entregar_email(
         db,
         pedido.email,
-        "Horizon — primeiro acesso",
-        (
-            "Sua conta de consultora foi autorizada.\n"
-            "Abra o link e crie sua senha. Ela não é enviada neste e-mail.\n"
-            "Válido por 48 horas:\n\n"
-            f"{link}\n\n"
-            f"{token}\n"
+        "Sua conta Horizon foi autorizada",
+        _corpo_primeiro_acesso(
+            pedido.nome,
+            link,
+            token,
+            contexto="Sua conta de consultora foi autorizada no Horizon.",
         ),
         "CONVITE",
         None,
         operador.id,
     )
-    convite.entrega = "ENVIADO" if entrega.status == "ENVIADO" else "FALHA"
+    envio_ok = entrega_aceita(entrega)
+    convite.entrega = "ENVIADO" if envio_ok else "FALHA"
     convite.atualizado_em = agora
     pedido.status = "AUTORIZADO"
     pedido.autorizado_em = agora
@@ -214,10 +219,10 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
         "email": pedido.email,
     }
     if _expor_link_primeiro_acesso(
-        entrega_ok=entrega.status == "ENVIADO",
+        entrega_ok=envio_ok,
         para_ti=True,
     ):
-        if entrega.status != "ENVIADO":
+        if not envio_ok:
             saida["mensagem"] = (
                 "Conta autorizada, mas o e-mail falhou. Use o link abaixo "
                 "(válido 48h). Senha nunca vai no e-mail."
@@ -230,7 +235,7 @@ def autorizar_pedido(db: Session, operador: Usuario, pedido_id: str) -> dict[str
                 "Senha nunca vai no e-mail."
             )
         saida["link_primeiro_acesso"] = link
-    elif entrega.status != "ENVIADO":
+    elif not envio_ok:
         saida["mensagem"] = (
             "Conta autorizada, mas o e-mail falhou. "
             "Peça reenvio do primeiro acesso."
@@ -283,24 +288,24 @@ def reenviar_primeiro_acesso_consultora(
     )
     db.add(convite)
     db.flush()
-    from app.services.notificacao import entregar_email
+    from app.services.notificacao import entrega_aceita, entregar_email
 
     entrega = entregar_email(
         db,
         usuario.email,
-        "Horizon — primeiro acesso",
-        (
-            "Reenvio do primeiro acesso da consultora.\n"
-            "Abra o link e crie sua senha. Ela não é enviada neste e-mail.\n"
-            "Válido por 48 horas:\n\n"
-            f"{link}\n\n"
-            f"{token}\n"
+        "Novo link para criar sua senha no Horizon",
+        _corpo_primeiro_acesso(
+            usuario.nome,
+            link,
+            token,
+            contexto="Foi solicitado um novo link de primeiro acesso.",
         ),
         "CONVITE",
         None,
         operador.id,
     )
-    convite.entrega = "ENVIADO" if entrega.status == "ENVIADO" else "FALHA"
+    envio_ok = entrega_aceita(entrega)
+    convite.entrega = "ENVIADO" if envio_ok else "FALHA"
     convite.atualizado_em = agora
     _auditar(db, "CONVITE_CRIADO", operador.id)
     db.commit()
@@ -309,10 +314,10 @@ def reenviar_primeiro_acesso_consultora(
         "email": usuario.email,
     }
     if _expor_link_primeiro_acesso(
-        entrega_ok=entrega.status == "ENVIADO",
+        entrega_ok=envio_ok,
         para_ti=True,
     ):
-        if entrega.status != "ENVIADO":
+        if not envio_ok:
             saida["mensagem"] = (
                 "E-mail falhou. Novo link gerado (válido 48h) — use o link abaixo. "
                 "Senha nunca vai no e-mail."
@@ -324,7 +329,7 @@ def reenviar_primeiro_acesso_consultora(
                 "a consultora define no primeiro acesso."
             )
         saida["link_primeiro_acesso"] = link
-    elif entrega.status != "ENVIADO":
+    elif not envio_ok:
         saida["mensagem"] = (
             "E-mail falhou. Peça outro reenvio do primeiro acesso."
         )
@@ -357,14 +362,53 @@ def diagnostico(db: Session, usuario: Usuario) -> dict[str, object]:
     recentes = db.scalars(
         select(LogAuditoria).order_by(LogAuditoria.criado_em.desc()).limit(12)
     ).all()
+    from app.core.config import settings
     from app.integrations.email import modo_envio
 
     email = modo_envio()
+    entregas = db.scalars(
+        select(EntregaMensagem)
+        .where(
+            EntregaMensagem.canal == "EMAIL",
+            EntregaMensagem.referencia.in_(("CONVITE", "RECUPERACAO")),
+        )
+        .order_by(EntregaMensagem.criado_em.desc())
+        .limit(20)
+    ).all()
+    aceitas = sum(item.status in {"ACEITO", "ENVIADO"} for item in entregas)
+    falhas = sum(item.status == "FALHA" for item in entregas)
     return {
         "api": "ok",
         "banco": banco,
         "banco_ms": banco_ms,
         "email": email,
+        "email_detalhe": {
+            "provedor": email,
+            "remetente_configurado": bool(
+                settings.sendgrid_from_email
+                if email == "sendgrid"
+                else settings.mailtrap_from_email
+                if email == "mailtrap"
+                else settings.smtp_from or settings.smtp_user
+            ),
+            "fallback_configurado": bool(
+                email == "sendgrid"
+                and (
+                    settings.mailtrap_api_token
+                    or (
+                        settings.smtp_host
+                        and settings.smtp_user
+                        and settings.smtp_password
+                    )
+                )
+            ),
+            "ultimas_20": len(entregas),
+            "aceitas": aceitas,
+            "falhas": falhas,
+            "ultimo_status": entregas[0].status if entregas else None,
+            "ultimo_provedor": entregas[0].provedor if entregas else None,
+            "ultimo_erro": entregas[0].erro if entregas else None,
+        },
         "contas": contas,
         "pedidos_pendentes": db.scalar(
             select(func.count())

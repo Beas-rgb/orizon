@@ -12,6 +12,7 @@ import json
 import re
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
 
 from app.core.config import settings
@@ -21,6 +22,14 @@ OUTBOX = Path("data/outbox")
 
 class EmailNaoEnviado(Exception):
     pass
+
+
+@dataclass(frozen=True)
+class ResultadoEmail:
+    """Aceite técnico do provedor; não significa entrega na caixa de entrada."""
+
+    provedor: str
+    mensagem_id: str | None = None
 
 
 def modo_envio() -> str:
@@ -70,7 +79,7 @@ class CaixaEmail:
         assunto: str,
         corpo: str,
         categoria: str = "Horizon",
-    ) -> None:
+    ) -> ResultadoEmail:
         self.mensagens.append(
             {"destino": destino, "assunto": assunto, "corpo": corpo}
         )
@@ -78,15 +87,25 @@ class CaixaEmail:
         # Assim o TI recupera o token se o e-mail real não chegar.
         if settings.app_env == "development" or not _tem_provedor_remoto():
             self._gravar_outbox(destino, assunto, corpo)
+        erros: list[str] = []
         if settings.sendgrid_api_key:
-            _enviar_sendgrid(destino, assunto, corpo)
-            return
+            try:
+                return _enviar_sendgrid(destino, assunto, corpo, categoria)
+            except EmailNaoEnviado as exc:
+                erros.append(f"SendGrid: {exc}")
         if settings.mailtrap_api_token:
-            _enviar_mailtrap(destino, assunto, corpo, categoria)
-            return
+            try:
+                return _enviar_mailtrap(destino, assunto, corpo, categoria)
+            except EmailNaoEnviado as exc:
+                erros.append(f"Mailtrap: {exc}")
         if settings.smtp_host:
-            _enviar_smtp(destino, assunto, corpo)
-            return
+            try:
+                return _enviar_smtp(destino, assunto, corpo)
+            except Exception as exc:
+                erros.append(f"SMTP: {exc}")
+        if erros:
+            raise EmailNaoEnviado(" | ".join(erros))
+        return ResultadoEmail(provedor="local")
 
     def _gravar_outbox(self, destino: str, assunto: str, corpo: str) -> None:
         OUTBOX.mkdir(parents=True, exist_ok=True)
@@ -100,7 +119,12 @@ class CaixaEmail:
 caixa_email = CaixaEmail()
 
 
-def _enviar_sendgrid(destino: str, assunto: str, corpo: str) -> None:
+def _enviar_sendgrid(
+    destino: str,
+    assunto: str,
+    corpo: str,
+    categoria: str,
+) -> ResultadoEmail:
     remetente = settings.sendgrid_from_email or settings.smtp_from
     if not remetente:
         raise EmailNaoEnviado(
@@ -108,7 +132,12 @@ def _enviar_sendgrid(destino: str, assunto: str, corpo: str) -> None:
         )
     nome = settings.sendgrid_from_name or "Horizon"
     payload = {
-        "personalizations": [{"to": [{"email": destino}]}],
+        "personalizations": [
+            {
+                "to": [{"email": destino}],
+                "custom_args": {"categoria": categoria[:64]},
+            }
+        ],
         "from": {"email": remetente, "name": nome},
         "subject": assunto,
         "content": [
@@ -130,6 +159,11 @@ def _enviar_sendgrid(destino: str, assunto: str, corpo: str) -> None:
             # 202 Accepted = enviado para a fila do SendGrid.
             if resposta.status not in (200, 202):
                 raise EmailNaoEnviado(f"SendGrid status {resposta.status}")
+            headers = getattr(resposta, "headers", {})
+            return ResultadoEmail(
+                provedor="sendgrid",
+                mensagem_id=headers.get("X-Message-Id"),
+            )
     except urllib.error.HTTPError as exc:
         detalhe = exc.read().decode("utf-8", errors="replace")[:200]
         raise EmailNaoEnviado(f"SendGrid HTTP {exc.code}: {detalhe}") from None
@@ -139,7 +173,7 @@ def _enviar_sendgrid(destino: str, assunto: str, corpo: str) -> None:
 
 def _enviar_mailtrap(
     destino: str, assunto: str, corpo: str, categoria: str
-) -> None:
+) -> ResultadoEmail:
     import socket
 
     import mailtrap as mt
@@ -161,14 +195,24 @@ def _enviar_mailtrap(
     antigo = socket.getdefaulttimeout()
     socket.setdefaulttimeout(20)
     try:
-        client.send(mail)
-    except TimeoutError as exc:
-        raise EmailNaoEnviado("Mailtrap: tempo esgotado") from exc
+        resposta = client.send(mail)
+        mensagem_id = None
+        if isinstance(resposta, dict):
+            ids = resposta.get("message_ids")
+            if isinstance(ids, list) and ids:
+                mensagem_id = str(ids[0])
+        return ResultadoEmail(provedor="mailtrap", mensagem_id=mensagem_id)
+    except Exception as exc:
+        raise EmailNaoEnviado(f"Mailtrap: {exc}") from exc
     finally:
         socket.setdefaulttimeout(antigo)
 
 
-def _enviar_smtp(destino: str, assunto: str, corpo: str) -> None:
+def _enviar_smtp(
+    destino: str,
+    assunto: str,
+    corpo: str,
+) -> ResultadoEmail:
     import smtplib
     from email.message import EmailMessage
 
@@ -182,3 +226,4 @@ def _enviar_smtp(destino: str, assunto: str, corpo: str) -> None:
         if settings.smtp_user:
             smtp.login(settings.smtp_user, settings.smtp_password)
         smtp.send_message(msg)
+    return ResultadoEmail(provedor="smtp")

@@ -72,6 +72,9 @@ def test_diagnostico_so_para_o_dev(client) -> None:
     assert corpo["banco"] == "ok"
     assert "DATABASE_URL" not in analise.text
     assert corpo["contas"]["CONSULTOR"] == 1
+    assert corpo["email_detalhe"]["provedor"] == "local"
+    assert "api_key" not in analise.text.lower()
+    assert "token" not in analise.text.lower()
 
 
 def test_autorizar_reativa_consultora_soft_deleted(client, db) -> None:

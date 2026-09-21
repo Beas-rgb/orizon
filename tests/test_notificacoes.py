@@ -1,4 +1,4 @@
-from app.integrations.email import caixa_email
+from app.integrations.email import ResultadoEmail, caixa_email
 from app.models.usuario import Usuario
 from app.services.notificacao import reservar_telefone
 from tests.contas import abrir_consultora
@@ -58,6 +58,36 @@ def test_convite_grava_entrega_sem_token(client, monkeypatch, db) -> None:
     orgao = {"Authorization": f"Bearer {acesso.json()['access_token']}"}
     negado = client.get(f"/projetos/{projeto_id}/entregas", headers=orgao)
     assert negado.status_code == 404
+
+
+def test_provedor_remoto_fica_aceito_nao_entregue(client, monkeypatch) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    monkeypatch.setattr(
+        "app.services.notificacao.caixa_email.enviar",
+        lambda *a, **k: ResultadoEmail("sendgrid", "sg-aceito-1"),
+    )
+    convite = client.post(
+        "/auth/convites",
+        headers=headers,
+        json={
+            "nome": "Servidor remoto",
+            "email": "remoto@prefeitura.dev",
+            "papel": "FUNCIONARIO",
+            "projeto_id": projeto_id,
+        },
+    )
+    assert convite.status_code == 200
+
+    entregas = client.get(
+        f"/projetos/{projeto_id}/entregas",
+        headers=headers,
+    )
+
+    assert entregas.status_code == 200
+    item = entregas.json()[0]
+    assert item["status"] == "ACEITO"
+    assert item["provedor"] == "sendgrid"
+    assert item["erro"] is None
 
 
 def test_resposta_avisa_consultora_sem_nome(client, monkeypatch) -> None:

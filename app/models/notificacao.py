@@ -48,6 +48,11 @@ class EntregaMensagem(Base):
     projeto_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     usuario_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     erro: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    provedor: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    provedor_mensagem_id: Mapped[str | None] = mapped_column(
+        String(160),
+        nullable=True,
+    )
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     enviado_em: Mapped[datetime | None] = mapped_column(

@@ -289,7 +289,7 @@ def recuperar_senha(db: Session, email: str) -> None:
             criado_em=_agora(),
         )
     )
-    from app.services.notificacao import entregar_email
+    from app.services.notificacao import entrega_aceita, entregar_email
 
     entrega = entregar_email(
         db,
@@ -306,7 +306,7 @@ def recuperar_senha(db: Session, email: str) -> None:
         None,
         usuario.id,
     )
-    if entrega.status != "ENVIADO":
+    if not entrega_aceita(entrega):
         _auditar(db, "RECUPERACAO_FALHA_ENTREGA", usuario.id)
         db.commit()
         return

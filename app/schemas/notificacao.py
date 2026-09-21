@@ -20,4 +20,6 @@ class EntregaSaida(BaseModel):
     assunto: str
     status: str
     referencia: str
+    provedor: str | None = None
+    erro: str | None = None
     criado_em: datetime

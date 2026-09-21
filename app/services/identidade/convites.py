@@ -45,6 +45,28 @@ def _link_com_token(pagina: str, token: str) -> str:
     return f"{base}/{caminho}?t={quote(token, safe='')}"
 
 
+def _corpo_primeiro_acesso(
+    nome: str,
+    link: str,
+    token: str,
+    *,
+    contexto: str,
+) -> str:
+    """Mensagem clara, com um CTA e código manual no fim."""
+    return (
+        f"Olá, {nome.strip()}.\n\n"
+        f"{contexto}\n"
+        "Para proteger sua conta, a senha será criada por você.\n\n"
+        "ABRIR PRIMEIRO ACESSO:\n"
+        f"{link}\n\n"
+        "Este acesso é pessoal e expira em 48 horas. "
+        "Não encaminhe esta mensagem.\n"
+        "Se você não esperava este convite, ignore o e-mail.\n\n"
+        "Se o botão/link não abrir, cole este código na tela de primeiro acesso:\n"
+        f"{token}"
+    )
+
+
 def _expor_link_primeiro_acesso(
     *,
     entrega_ok: bool,
@@ -171,24 +193,23 @@ def criar_convite(
     )
     db.add(convite)
     db.flush()
-    from app.services.notificacao import entregar_email
+    from app.services.notificacao import entrega_aceita, entregar_email
 
     entrega = entregar_email(
         db,
         endereco,
-        "Horizon — primeiro acesso",
-        (
-            "A consultora convidou você para o Horizon.\n"
-            "Abra o link, defina sua senha. Ela não é enviada neste e-mail.\n"
-            "Válido por 48 horas:\n\n"
-            f"{link}\n\n"
-            f"{token}\n"
+        "Seu primeiro acesso ao Horizon",
+        _corpo_primeiro_acesso(
+            nome.strip(),
+            link,
+            token,
+            contexto="Você recebeu um convite para acessar o Horizon.",
         ),
         "CONVITE",
         projeto_id,
         consultor.id,
     )
-    convite.entrega = "ENVIADO" if entrega.status == "ENVIADO" else "FALHA"
+    convite.entrega = "ENVIADO" if entrega_aceita(entrega) else "FALHA"
     # B6: o contador de espera é só para abuso / falha real de envio.
     # Somar em sucesso travava o 4º convite de órgão (429 falso).
     if papel != "FUNCIONARIO":

@@ -4,7 +4,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
-from app.integrations.email import EmailNaoEnviado, caixa_email, modo_envio
+from app.integrations.email import (
+    EmailNaoEnviado,
+    ResultadoEmail,
+    caixa_email,
+    modo_envio,
+)
 from app.main import app
 
 
@@ -45,6 +50,7 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
 
     class RespostaFalsa:
         status = 202
+        headers = {"X-Message-Id": "sg-message-123"}
 
         def __enter__(self):
             return self
@@ -69,7 +75,7 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
     monkeypatch.setattr(settings, "sendgrid_from_name", "Horizon")
     monkeypatch.setattr("urllib.request.urlopen", urlopen_falso)
 
-    caixa_email.enviar(
+    resultado = caixa_email.enviar(
         "destinatario@exemplo.dev",
         "Você é incrível!",
         "Parabéns pelo envio de teste.\nhttps://orizon-api.onrender.com/app/primeiro-acesso?t=abc",
@@ -81,10 +87,13 @@ def test_envia_pelo_sendgrid(monkeypatch) -> None:
     assert visto["remetente"] == "noreply@orizon.dev"
     assert visto["nome"] == "Horizon"
     assert visto["assunto"] == "Você é incrível!"
+    assert resultado == ResultadoEmail("sendgrid", "sg-message-123")
     assert "Parabéns pelo envio de teste." in str(visto["texto"])
-    assert '<a href="https://orizon-api.onrender.com/app/primeiro-acesso?t=abc">' in str(
-        visto["html"]
+    link_html = (
+        '<a href="https://orizon-api.onrender.com/'
+        'app/primeiro-acesso?t=abc">'
     )
+    assert link_html in str(visto["html"])
 
 
 def test_envia_pelo_sdk_mailtrap(monkeypatch) -> None:
@@ -135,6 +144,25 @@ def test_mailtrap_sem_remetente_falha(monkeypatch) -> None:
     monkeypatch.setattr(settings, "smtp_from", "")
     with pytest.raises(EmailNaoEnviado):
         caixa_email.enviar("a@b.dev", "assunto", "corpo")
+
+
+def test_fallback_mailtrap_quando_sendgrid_falha(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "sendgrid_api_key", "SG.invalida")
+    monkeypatch.setattr(settings, "mailtrap_api_token", "mt-valido")
+    monkeypatch.setattr(
+        "app.integrations.email._enviar_sendgrid",
+        lambda *a, **k: (_ for _ in ()).throw(
+            EmailNaoEnviado("SendGrid indisponível")
+        ),
+    )
+    monkeypatch.setattr(
+        "app.integrations.email._enviar_mailtrap",
+        lambda *a, **k: ResultadoEmail("mailtrap", "mt-123"),
+    )
+
+    resultado = caixa_email.enviar("a@b.dev", "assunto", "corpo")
+
+    assert resultado == ResultadoEmail("mailtrap", "mt-123")
 
 
 def test_sem_token_nao_chama_mailtrap(monkeypatch) -> None:

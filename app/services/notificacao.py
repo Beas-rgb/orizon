@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.tokens import novo_id
-from app.integrations.email import caixa_email
+from app.integrations.email import ResultadoEmail, caixa_email, modo_envio
 from app.models.base import agora
 from app.models.notificacao import EntregaMensagem, Notificacao
 from app.models.projeto import Projeto, ProjetoUsuario
@@ -16,6 +16,24 @@ from app.services.auditoria import registrar as _auditar
 
 CANAIS = {"EMAIL", "TELEFONE"}
 TIPOS = {"CONVITE", "PESQUISA", "DOCUMENTO", "SISTEMA"}
+STATUS_EMAIL_OK = {"ACEITO", "ENVIADO"}
+
+
+def entrega_aceita(entrega: EntregaMensagem) -> bool:
+    return entrega.status in STATUS_EMAIL_OK
+
+
+def _registrar_aceite(
+    entrega: EntregaMensagem,
+    resultado: ResultadoEmail,
+) -> None:
+    """Registra aceite técnico sem chamar de entrega confirmada."""
+    entrega.provedor = resultado.provedor
+    entrega.provedor_mensagem_id = resultado.mensagem_id
+    entrega.status = "ENVIADO" if resultado.provedor == "local" else "ACEITO"
+    entrega.erro = None
+    entrega.enviado_em = agora()
+    entrega.atualizado_em = entrega.enviado_em
 
 
 def avisar(
@@ -87,23 +105,27 @@ def _completar_entrega_email(
     get_engine()
     if SessionLocal is None:
         return
-    status = "ENVIADO"
+    resultado: ResultadoEmail | None = None
     erro = None
     try:
-        caixa_email.enviar(destino, assunto, corpo, categoria=categoria)
+        resultado = caixa_email.enviar(
+            destino,
+            assunto,
+            corpo,
+            categoria=categoria,
+        )
     except Exception as exc:
-        status = "FALHA"
         erro = _erro_entrega_seguro(exc)
     with SessionLocal() as db:
         entrega = db.get(EntregaMensagem, entrega_id)
         if entrega is None:
             return
-        entrega.status = status
-        entrega.erro = erro
-        agora_ = agora()
-        entrega.atualizado_em = agora_
-        if status == "ENVIADO":
-            entrega.enviado_em = agora_
+        if resultado is not None:
+            _registrar_aceite(entrega, resultado)
+        else:
+            entrega.status = "FALHA"
+            entrega.erro = erro
+            entrega.atualizado_em = agora()
         db.commit()
 
 
@@ -133,6 +155,8 @@ def entregar_email(
         projeto_id=projeto_id,
         usuario_id=usuario_id,
         erro=None,
+        provedor=modo_envio(),
+        provedor_mensagem_id=None,
         criado_em=agora_,
         atualizado_em=agora_,
         enviado_em=None,
@@ -150,15 +174,18 @@ def entregar_email(
         )
         return entrega
     try:
-        caixa_email.enviar(destino, assunto, corpo, categoria=referencia)
+        resultado = caixa_email.enviar(
+            destino,
+            assunto,
+            corpo,
+            categoria=referencia,
+        )
     except Exception as exc:
         entrega.status = "FALHA"
         entrega.erro = _erro_entrega_seguro(exc)
         entrega.atualizado_em = agora()
         return entrega
-    entrega.status = "ENVIADO"
-    entrega.enviado_em = agora()
-    entrega.atualizado_em = entrega.enviado_em
+    _registrar_aceite(entrega, resultado)
     return entrega
 
 
@@ -240,6 +267,8 @@ def reservar_telefone(
         projeto_id=projeto_id,
         usuario_id=usuario_id,
         erro="SMS ainda não habilitado.",
+        provedor=None,
+        provedor_mensagem_id=None,
         criado_em=agora_,
         atualizado_em=agora_,
         enviado_em=None,

@@ -81,21 +81,25 @@ Conta do TI (opcional): preencha `ADMIN_NOME`, `ADMIN_EMAIL` e `ADMIN_SENHA` no
 ### Ativar e-mail real no Render (SendGrid)
 
 1. Crie conta em [sendgrid.com](https://sendgrid.com).
-2. **Settings → Sender Authentication → Single Sender Verification** e verifique
-   o seu Gmail (clique no link que o SendGrid envia).
+2. Para produção, prefira **Domain Authentication** e publique no DNS os
+   registros SPF/DKIM indicados pelo SendGrid. `Single Sender Verification`
+   com Gmail serve para teste, mas tende a cair no spam.
 3. Crie uma **API Key** com permissão de Mail Send.
 4. No Render → `orizon-api` → **Environment**:
    - `SENDGRID_API_KEY` — a chave
    - `SENDGRID_FROM_EMAIL` — o **mesmo** Gmail verificado
    - `SENDGRID_FROM_NAME` — `Horizon`
    - `APP_PUBLIC_URL` — `https://orizon-api.onrender.com/app`
-5. Esvazie `MAILTRAP_API_TOKEN` e `SMTP_*` (para o canal ser só SendGrid).
+5. Opcional: mantenha `MAILTRAP_API_TOKEN` + `MAILTRAP_FROM_EMAIL` configurados
+   como fallback. Ele só é usado quando o SendGrid rejeita a requisição.
 6. Salve e aguarde o redeploy.
 7. Confira `https://orizon-api.onrender.com/health/email` →
    `{"modo":"sendgrid"}`.
 
 **Importante:** não cole a API Key no chat nem no git. Se o envio falhar, o painel
-do TI mostra o motivo e o link de primeiro acesso.
+do TI mostra o motivo e o link de primeiro acesso. O estado `ACEITO` significa
+que o provedor colocou a mensagem na fila; entrega no Gmail deve ser confirmada
+em **Activity/Suppressions** no SendGrid.
 
 ## Testes
 

@@ -72,6 +72,8 @@ def entregas(
             assunto=item.assunto,
             status=item.status,
             referencia=item.referencia,
+            provedor=item.provedor,
+            erro=item.erro,
             criado_em=item.criado_em,
         )
         for item in itens
