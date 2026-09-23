@@ -98,3 +98,42 @@ def url_publica() -> str:
     ):
         return f"{externa}/app"
     return atual
+
+
+# Destinos permitidos em /entrar?next= (anti open-redirect).
+_PREFIXOS_NEXT = (
+    "/inicio",
+    "/projetos",
+    "/responder",
+    "/consultora",
+    "/primeiro-acesso",
+    "/recuperar",
+)
+
+
+def caminho_seguro_next(caminho: str | None) -> str | None:
+    """Só path relativo interno. Rejeita //, http e query externa."""
+    if not caminho:
+        return None
+    valor = caminho.strip()
+    if not valor.startswith("/") or valor.startswith("//"):
+        return None
+    if "://" in valor or "\\" in valor:
+        return None
+    path = valor.split("?", 1)[0].split("#", 1)[0]
+    if path != "/" and not any(
+        path == p or path.startswith(p + "/") for p in _PREFIXOS_NEXT
+    ):
+        return None
+    return valor if "?" not in valor and "#" not in valor else path
+
+
+def url_entrar_com_next(caminho: str | None = None) -> str:
+    """CTA de aviso: login com destino seguro após autenticar."""
+    from urllib.parse import quote
+
+    base = url_publica().rstrip("/")
+    seguro = caminho_seguro_next(caminho)
+    if not seguro:
+        return f"{base}/entrar"
+    return f"{base}/entrar?next={quote(seguro, safe='/:')}"

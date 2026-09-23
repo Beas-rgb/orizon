@@ -62,6 +62,18 @@ function CampoSenha({
   );
 }
 
+/** Destino pós-login seguro (mesma regra do backend). */
+function nextDaUrl(): string | null {
+  const raw = new URLSearchParams(window.location.search).get("next");
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+  if (raw.includes("://") || raw.includes("\\")) return null;
+  const path = raw.split("?")[0].split("#")[0];
+  const ok = ["/inicio", "/projetos", "/responder", "/consultora"].some(
+    (p) => path === p || path.startsWith(`${p}/`),
+  );
+  return ok ? path : null;
+}
+
 export function LoginPage() {
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
@@ -70,8 +82,9 @@ export function LoginPage() {
 
   useEffect(() => {
     if (!pronto || !usuario) return;
+    const next = nextDaUrl();
     const retorno = consumirRetornoResponder();
-    navigate(retorno || "/inicio", { replace: true });
+    navigate(next || retorno || "/inicio", { replace: true });
   }, [pronto, usuario, navigate]);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
@@ -95,9 +108,11 @@ export function LoginPage() {
         setErro("Este acesso não abre painel.");
         return;
       }
+      const next = nextDaUrl();
       const retorno = sessionStorage.getItem("horizon_responder_retorno");
       await entrarComTokens(dados);
-      if (!retorno) navigate("/inicio");
+      if (next) navigate(next);
+      else if (!retorno) navigate("/inicio");
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Falha no login");
     } finally {

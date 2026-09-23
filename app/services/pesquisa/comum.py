@@ -6,7 +6,13 @@ from sqlalchemy.orm import Session
 from app.models.pesquisa import OpcaoResposta, Pesquisa
 from app.services.identidade import ErroAuth
 
-TIPOS = {"CLIMA", "DESEMPENHO", "CARGOS_SALARIOS", "PERSONALIZADA"}
+TIPOS = {
+    "CLIMA",
+    "DESEMPENHO",
+    "CARGOS_SALARIOS",
+    "PERSONALIZADA",
+    "DIAGNOSTICO_ORGANIZACIONAL",
+}
 TIPOS_PERGUNTA = {
     "TEXTO_LIVRE",
     "NOTA_5",

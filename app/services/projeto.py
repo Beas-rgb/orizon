@@ -31,6 +31,11 @@ from app.services.identidade import (
     ErroAuth,
     criar_convite,
     email_acesso,
+    resolver_usuario_orgao_por_email,
+    vincular_orgao_existente_ao_projeto,
+)
+from app.services.identidade.convites import (
+    SIT_ORGAO_ATIVO,
 )
 
 ROTULOS = (
@@ -214,7 +219,19 @@ def criar_projeto(
     except ErroAuth as exc:
         # B8: o projeto já nasceu. Não apaga; grava estado legível.
         if exc.status == 409:
-            _tratar_orgao_ja_existente(db, consultor, projeto, endereco)
+            orgao_vinculado = _tratar_orgao_ja_existente(
+                db, consultor, projeto, endereco
+            )
+            if orgao_vinculado is not None:
+                from app.services.notificacao import notificar_novo_trabalho_orgao
+
+                notificar_novo_trabalho_orgao(
+                    db,
+                    orgao_vinculado,
+                    projeto,
+                    tarefas=None,
+                )
+                db.commit()
         elif exc.status == 429:
             _registrar_convite_pendente(
                 db,
@@ -577,54 +594,35 @@ def _tratar_orgao_ja_existente(
     consultor: Usuario,
     projeto: Projeto,
     endereco: str,
-) -> None:
-    existente = db.scalar(
-        select(Usuario).where(
-            Usuario.email == endereco,
-            Usuario.deleted_at.is_(None),
-        )
-    )
-    if (
-        existente is not None
-        and existente.papel == "ORGAO"
-        and existente.ativo
-    ):
-        ja = db.scalar(
-            select(ProjetoUsuario.id).where(
-                ProjetoUsuario.projeto_id == projeto.id,
-                ProjetoUsuario.usuario_id == existente.id,
-            )
-        )
-        if ja is None:
-            db.add(
-                ProjetoUsuario(
-                    id=novo_id(),
-                    projeto_id=projeto.id,
-                    usuario_id=existente.id,
-                    papel="ORGAO",
-                )
-            )
-        db.add(
-            LogAuditoria(
-                id=novo_id(),
-                usuario_id=consultor.id,
-                acao="ORGAO_VINCULADO",
-                criado_em=agora(),
-            )
+) -> Usuario | None:
+    """Vínculo ORGAO ativo ou registro de onboarding pendente.
+
+    Devolve o usuário ORGAO ativo quando o vínculo foi garantido
+    (para aviso de novo trabalho). Caso contrário None.
+    """
+    resolucao = resolver_usuario_orgao_por_email(db, endereco)
+    if resolucao.situacao == SIT_ORGAO_ATIVO and resolucao.usuario is not None:
+        vincular_orgao_existente_ao_projeto(
+            db, consultor, projeto, resolucao.usuario
         )
         db.commit()
-        return
-    motivo = _motivo_nao_enviado(existente)
+        return resolucao.usuario
+    motivo = _motivo_nao_enviado(resolucao.usuario)
     _registrar_convite_pendente(
         db,
         consultor,
         projeto,
-        (existente.nome if existente else endereco.split("@")[0])[:160],
+        (
+            resolucao.usuario.nome
+            if resolucao.usuario
+            else endereco.split("@")[0]
+        )[:160],
         endereco,
         motivo=motivo,
         acao="CONVITE_NAO_ENVIADO",
         status="CANCELADO",
     )
+    return None
 
 
 def _motivo_nao_enviado(existente: Usuario | None) -> str:

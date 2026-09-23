@@ -1,5 +1,6 @@
 """Convites e links de primeiro acesso."""
 
+from dataclasses import dataclass
 from datetime import timedelta
 from urllib.parse import quote
 
@@ -7,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import url_publica
-from app.core.tokens import hash_token, novo_token_opaco
+from app.core.tokens import hash_token, novo_id, novo_token_opaco
 from app.models.convite import Convite
 from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.usuario import Usuario
@@ -25,6 +26,86 @@ from .erros import (
     segundos_bloqueio,
     settings,
 )
+
+# Situações de resolver_usuario_orgao_por_email
+SIT_NOVO = "novo"
+SIT_ORGAO_ATIVO = "orgao_ativo"
+SIT_ORGAO_INATIVO = "orgao_inativo"
+SIT_CONFLITO = "conflito"
+
+
+@dataclass(frozen=True)
+class ResolucaoOrgao:
+    """Resultado interno: não expor em JSON público sem filtrar."""
+
+    situacao: str
+    usuario: Usuario | None = None
+    papel_conflito: str | None = None
+    email: str = ""
+
+
+def resolver_usuario_orgao_por_email(db: Session, email: str) -> ResolucaoOrgao:
+    """Classifica o e-mail para onboarding de órgão (sem efeito colateral)."""
+    endereco = email_acesso(email)
+    usuario = _usuario_por_email(db, endereco)
+    if usuario is None:
+        return ResolucaoOrgao(situacao=SIT_NOVO, email=endereco)
+    if usuario.papel == "ORGAO":
+        if usuario.ativo:
+            return ResolucaoOrgao(
+                situacao=SIT_ORGAO_ATIVO,
+                usuario=usuario,
+                email=endereco,
+            )
+        return ResolucaoOrgao(
+            situacao=SIT_ORGAO_INATIVO,
+            usuario=usuario,
+            email=endereco,
+        )
+    return ResolucaoOrgao(
+        situacao=SIT_CONFLITO,
+        usuario=usuario,
+        papel_conflito=usuario.papel,
+        email=endereco,
+    )
+
+
+def vincular_orgao_existente_ao_projeto(
+    db: Session,
+    consultor: Usuario,
+    projeto: Projeto,
+    usuario: Usuario,
+) -> bool:
+    """Garante ProjetoUsuario ORGAO. Idempotente. Devolve True se criou agora.
+
+    Não reativa conta inativa. Não troca papel. Exige consultora dona do projeto.
+    """
+    if consultor.papel != "CONSULTOR" or projeto.consultor_id != consultor.id:
+        raise ErroAuth(404, "Projeto não encontrado.")
+    if projeto.deleted_at is not None:
+        raise ErroAuth(404, "Projeto não encontrado.")
+    if usuario.papel != "ORGAO":
+        raise ErroAuth(422, "Só conta de órgão pode ser vinculada assim.")
+    if not usuario.ativo or usuario.deleted_at is not None:
+        raise ErroAuth(422, "Conta de órgão inativa. Peça reativação ao TI.")
+    ja = db.scalar(
+        select(ProjetoUsuario.id).where(
+            ProjetoUsuario.projeto_id == projeto.id,
+            ProjetoUsuario.usuario_id == usuario.id,
+        )
+    )
+    if ja is not None:
+        return False
+    db.add(
+        ProjetoUsuario(
+            id=novo_id(),
+            projeto_id=projeto.id,
+            usuario_id=usuario.id,
+            papel="ORGAO",
+        )
+    )
+    _auditar(db, "ORGAO_VINCULADO", consultor.id)
+    return True
 
 
 def _link_com_token(pagina: str, token: str) -> str:

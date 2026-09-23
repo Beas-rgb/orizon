@@ -17,7 +17,12 @@ from .auth import (
     refresh,
     sair,
 )
-from .convites import criar_convite
+from .convites import (
+    ResolucaoOrgao,
+    criar_convite,
+    resolver_usuario_orgao_por_email,
+    vincular_orgao_existente_ao_projeto,
+)
 from .erros import (
     MSG_CREDENCIAL,
     MSG_ESPERA,
@@ -51,6 +56,7 @@ __all__ = [
     "PAPEIS",
     "PAINEIS",
     "ErroAuth",
+    "ResolucaoOrgao",
     "autorizar_pedido",
     "bootstrap",
     "criar_convite",
@@ -69,8 +75,10 @@ __all__ = [
     "reenviar_primeiro_acesso_consultora",
     "refresh",
     "registrar_falha",
+    "resolver_usuario_orgao_por_email",
     "sair",
     "segundos_bloqueio",
     "settings",
     "testar_email_ti",
+    "vincular_orgao_existente_ao_projeto",
 ]

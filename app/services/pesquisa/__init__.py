@@ -20,6 +20,7 @@ from app.services.pesquisa.crud import (
     listar_participantes_status,
     listar_perguntas_pesquisa,
     listar_pesquisas,
+    listar_pesquisas_consultora,
     publicar,
     reordenar_perguntas,
 )
@@ -71,6 +72,7 @@ __all__ = [
     "listar_participantes_status",
     "listar_perguntas_pesquisa",
     "listar_pesquisas",
+    "listar_pesquisas_consultora",
     "nota_da_pesquisa",
     "nota_do_token",
     "painel",

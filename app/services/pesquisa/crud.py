@@ -75,6 +75,72 @@ def listar_pesquisas(db: Session, usuario: Usuario, projeto_id: str) -> list[Pes
     )
 
 
+def listar_pesquisas_consultora(
+    db: Session,
+    consultor: Usuario,
+    *,
+    organizacao_id: str | None = None,
+    tipo: str | None = None,
+    status: str | None = None,
+    ano: int | None = None,
+    limite: int = 50,
+    deslocamento: int = 0,
+) -> list[dict[str, object]]:
+    """Todas as pesquisas dos projetos da consultora. Filtros opcionais."""
+    if consultor.papel != "CONSULTOR":
+        raise ErroAuth(404, "Pesquisa não encontrada.")
+    from app.models.organizacao import Organizacao
+    from app.models.projeto import Projeto
+
+    limite = max(1, min(limite, 100))
+    deslocamento = max(0, deslocamento)
+    consulta = (
+        select(Pesquisa, Projeto, Organizacao)
+        .join(Projeto, Projeto.id == Pesquisa.projeto_id)
+        .join(Organizacao, Organizacao.id == Projeto.organizacao_id)
+        .where(
+            Projeto.consultor_id == consultor.id,
+            Projeto.deleted_at.is_(None),
+            Pesquisa.deleted_at.is_(None),
+        )
+    )
+    if organizacao_id:
+        consulta = consulta.where(Projeto.organizacao_id == organizacao_id)
+    if tipo:
+        if tipo not in TIPOS:
+            raise ErroAuth(422, "Tipo de pesquisa inválido.")
+        consulta = consulta.where(Pesquisa.tipo == tipo)
+    if status:
+        consulta = consulta.where(Pesquisa.status == status)
+    if ano is not None:
+        consulta = consulta.where(
+            func.extract("year", Pesquisa.criado_em) == ano
+        )
+    consulta = (
+        consulta.order_by(Pesquisa.criado_em.desc())
+        .offset(deslocamento)
+        .limit(limite)
+    )
+    saida: list[dict[str, object]] = []
+    for pesquisa, projeto, org in db.execute(consulta).all():
+        saida.append(
+            {
+                "id": pesquisa.id,
+                "projeto_id": pesquisa.projeto_id,
+                "titulo": pesquisa.titulo,
+                "tipo": pesquisa.tipo,
+                "status": pesquisa.status,
+                "descricao": pesquisa.descricao,
+                "organizacao_id": projeto.organizacao_id,
+                "organizacao_nome": org.nome_fantasia or org.razao_social,
+                "criado_em": pesquisa.criado_em.isoformat()
+                if pesquisa.criado_em
+                else None,
+            }
+        )
+    return saida
+
+
 def listar_perguntas_pesquisa(
     db: Session,
     usuario: Usuario,
@@ -403,20 +469,10 @@ def publicar(db: Session, consultor: Usuario, pesquisa_id: str, *, tarefas=None)
     pesquisa.atualizado_em = agora_
     _auditar(db, "PESQUISA_PUBLICADA", consultor.id)
     _sincronizar_participantes(db, pesquisa)
-    from app.services.notificacao import avisar, membros_orgao
+    from app.services.notificacao import membros_orgao, notificar_nova_pesquisa
 
     for membro in membros_orgao(db, pesquisa.projeto_id):
-        avisar(
-            db,
-            membro,
-            "PESQUISA",
-            "Pesquisa publicada",
-            f"A pesquisa {pesquisa.titulo} está aberta.",
-            pesquisa.projeto_id,
-            "EMAIL",
-            "PESQUISA_PUBLICADA",
-            tarefas=tarefas,
-        )
+        notificar_nova_pesquisa(db, membro, pesquisa, tarefas=tarefas)
     db.commit()
     return pesquisa
 

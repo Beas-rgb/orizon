@@ -9,6 +9,8 @@ import {
   RecuperarPage,
 } from "./pages/AuthPages";
 import { ConsultoraDashboard } from "./pages/ConsultoraDashboard";
+import { ConsultoraPesquisasPage } from "./pages/ConsultoraPesquisasPage";
+import { ConsultoraPesquisasTestePage } from "./pages/ConsultoraPesquisasTestePage";
 import { DevPainel, FuncionarioPainel, OrgaoPainel } from "./pages/Paineis";
 import { PesquisaEditorPage } from "./pages/PesquisaEditorPage";
 import {
@@ -92,6 +94,22 @@ export default function App() {
         element={
           <RequireAuth>
             <PesquisaEditorPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/consultora/pesquisas"
+        element={
+          <RequireAuth>
+            <ConsultoraPesquisasPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/consultora/pesquisas-teste"
+        element={
+          <RequireAuth>
+            <ConsultoraPesquisasTestePage />
           </RequireAuth>
         }
       />

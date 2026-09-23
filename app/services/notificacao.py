@@ -370,3 +370,82 @@ def membros_orgao(db: Session, projeto_id: str) -> list[Usuario]:
             )
         ).all()
     )
+
+
+def notificar_novo_trabalho_orgao(
+    db: Session,
+    orgao: Usuario,
+    projeto: Projeto,
+    *,
+    tarefas=None,
+) -> Notificacao:
+    """Aviso a ORGAO já ativo: novo projeto, sem primeiro acesso/token."""
+    from app.core.config import url_entrar_com_next
+    from app.models.organizacao import Organizacao
+
+    org = db.get(Organizacao, projeto.organizacao_id)
+    nome_cliente = ""
+    if org is not None:
+        nome_cliente = (org.nome_fantasia or org.razao_social or "").strip()
+    destino = f"/projetos/{projeto.id}"
+    link = url_entrar_com_next(destino)
+    titulo = "Orizon — novo trabalho disponível"
+    mensagem = (
+        f"Olá, {orgao.nome.strip()}.\n\n"
+        "Um novo trabalho foi vinculado à sua conta no Orizon.\n"
+        f"{('Cliente: ' + nome_cliente + chr(10)) if nome_cliente else ''}"
+        f"Referência: {projeto.vinculo_titulo or projeto.id}.\n\n"
+        "Entre com a senha que você já cadastrou:\n"
+        f"{link}\n\n"
+        "Não é necessário criar outra conta."
+    )
+    return avisar(
+        db,
+        orgao,
+        "SISTEMA",
+        titulo,
+        mensagem,
+        projeto.id,
+        "EMAIL",
+        "AVISO_NOVO_TRABALHO",
+        tarefas=tarefas,
+    )
+
+
+def notificar_nova_pesquisa(
+    db: Session,
+    usuario: Usuario,
+    pesquisa,
+    *,
+    tarefas=None,
+) -> Notificacao:
+    """Aviso reutilizável (CLIMA/DESEMPENHO/DIAGNOSTICO): conta já existe."""
+    from app.core.config import url_entrar_com_next
+
+    prazo = ""
+    if getattr(pesquisa, "disponivel_ate", None) is not None:
+        prazo = (
+            f"Prazo até {pesquisa.disponivel_ate.strftime('%d/%m/%Y')}.\n"
+        )
+    destino = f"/projetos/{pesquisa.projeto_id}"
+    link = url_entrar_com_next(destino)
+    titulo = "Orizon — nova pesquisa disponível"
+    mensagem = (
+        f"Olá, {usuario.nome.strip()}.\n\n"
+        f"A pesquisa «{pesquisa.titulo}» está disponível.\n"
+        f"{prazo}"
+        "Entre com sua conta existente:\n"
+        f"{link}\n\n"
+        "Não enviamos senha nem link de primeiro acesso."
+    )
+    return avisar(
+        db,
+        usuario,
+        "PESQUISA",
+        titulo,
+        mensagem,
+        pesquisa.projeto_id,
+        "EMAIL",
+        "AVISO_NOVA_PESQUISA",
+        tarefas=tarefas,
+    )

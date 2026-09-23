@@ -8,6 +8,7 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Query,
     Request,
     UploadFile,
 )
@@ -31,6 +32,7 @@ from app.schemas.pesquisa import (
     PerguntaCriar,
     PerguntaSaida,
     PesquisaAtualizar,
+    PesquisaConsultoraSaida,
     PesquisaCriar,
     PesquisaDeModelo,
     PesquisaSaida,
@@ -54,6 +56,7 @@ from app.services.pesquisa import (
     listar_participantes_status,
     listar_perguntas_pesquisa,
     listar_pesquisas,
+    listar_pesquisas_consultora,
     nota_da_pesquisa,
     nota_do_token,
     opcoes_da,
@@ -110,6 +113,36 @@ def listar(
 ) -> list[PesquisaSaida]:
     itens = chamar(lambda: listar_pesquisas(db, usuario, projeto_id))
     return [_saida(item) for item in itens]
+
+
+@router.get(
+    "/consultora/pesquisas",
+    response_model=list[PesquisaConsultoraSaida],
+)
+def listar_todas_consultora(
+    organizacao_id: str | None = Query(default=None),
+    tipo: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    ano: int | None = Query(default=None),
+    limite: int = Query(default=50, ge=1, le=100),
+    deslocamento: int = Query(default=0, ge=0),
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[PesquisaConsultoraSaida]:
+    """Pesquisas de todos os trabalhos da consultora. Segurança no backend."""
+    itens = chamar(
+        lambda: listar_pesquisas_consultora(
+            db,
+            usuario,
+            organizacao_id=organizacao_id,
+            tipo=tipo,
+            status=status,
+            ano=ano,
+            limite=limite,
+            deslocamento=deslocamento,
+        )
+    )
+    return [PesquisaConsultoraSaida(**item) for item in itens]
 
 
 def _pergunta_saida(db: Session, pergunta) -> PerguntaSaida:

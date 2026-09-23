@@ -72,6 +72,20 @@ class PesquisaSaida(BaseModel):
     descricao: str | None
 
 
+class PesquisaConsultoraSaida(BaseModel):
+    """Listagem global do painel Pesquisas e Avaliações."""
+
+    id: str
+    projeto_id: str
+    titulo: str
+    tipo: str
+    status: str
+    descricao: str | None = None
+    organizacao_id: str | None = None
+    organizacao_nome: str | None = None
+    criado_em: str | None = None
+
+
 class PerguntaSaida(BaseModel):
     id: str
     pesquisa_id: str | None = None

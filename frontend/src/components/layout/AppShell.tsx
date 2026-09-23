@@ -62,9 +62,9 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
               },
               {
                 icon: iconMap.FileText,
-                label: "Pesquisas",
+                label: "Pesquisas e Avaliações",
                 active: active === "pesquisas",
-                onClick: () => navigate("/projetos"),
+                onClick: () => navigate("/consultora/pesquisas"),
               },
               {
                 icon: iconMap.Archive,

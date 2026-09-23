@@ -31,6 +31,9 @@ export function OrgaoPainel() {
   const [pesquisas, setPesquisas] = useState<Pesquisa[]>([]);
   const [painel, setPainel] = useState<PainelItem[]>([]);
   const [erro, setErro] = useState("");
+  const [abaPesq, setAbaPesq] = useState<
+    "ativas" | "agendadas" | "encerradas" | "historico"
+  >("ativas");
 
   useEffect(() => {
     api<Projeto[]>("/projetos")
@@ -58,11 +61,25 @@ export function OrgaoPainel() {
     }
   }
 
+  const pesquisasFiltradas = pesquisas.filter((pe) => {
+    if (abaPesq === "ativas") return pe.status === "PUBLICADA";
+    if (abaPesq === "agendadas") return pe.status === "AGENDADA" || pe.status === "RASCUNHO";
+    if (abaPesq === "encerradas") return pe.status === "ENCERRADA";
+    return true; // historico = todas
+  });
+
+  const porAno = pesquisasFiltradas.reduce<Record<string, Pesquisa[]>>((acc, pe) => {
+    // Sem data na listagem simples: agrupa por status no histórico.
+    const chave = pe.status === "ENCERRADA" ? "Anteriores" : "Atuais";
+    (acc[chave] ||= []).push(pe);
+    return acc;
+  }, {});
+
   return (
     <AppShell active="dashboard">
       <h1 className="text-[18px] font-bold text-gray-800 mb-1">Painel do órgão</h1>
       <p className="text-[12px] text-gray-500 mb-5">
-        Só trabalhos em que você participa. Resultado agregado, sem nota individual.
+        Só trabalhos em que você participa. Histórico de pesquisas antigas e novas.
       </p>
       {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
 
@@ -101,35 +118,100 @@ export function OrgaoPainel() {
         </div>
 
         <div className="rounded-3xl p-5" style={glassStyle}>
-          <h2 className="text-[14px] font-bold mb-3">Resultado</h2>
+          <h2 className="text-[14px] font-bold mb-3">Pesquisas</h2>
           {!ativo ? (
             <p className="text-gray-500 text-[13px]">Selecione um trabalho.</p>
           ) : (
             <>
-              <ul className="flex flex-col gap-2 mb-4">
-                {pesquisas.map((pe) => (
-                  <li
-                    key={pe.id}
-                    className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
-                    style={{ background: "rgba(255,255,255,0.55)" }}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {(
+                  [
+                    ["ativas", "Ativas"],
+                    ["agendadas", "Agendadas"],
+                    ["encerradas", "Encerradas"],
+                    ["historico", "Histórico"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setAbaPesq(id)}
+                    className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                    style={{
+                      background:
+                        abaPesq === id
+                          ? "rgba(29,95,175,0.15)"
+                          : "rgba(255,255,255,0.5)",
+                      color: abaPesq === id ? "#1D5FAF" : "#6b7280",
+                    }}
                   >
-                    <div>
-                      <p className="text-[13px] font-semibold">{pe.titulo}</p>
-                      <p className="text-[11px] text-gray-500">
-                        {pe.tipo} · {pe.status}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void verResultado(pe.id)}
-                      className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                      style={{ background: ACCENT }}
-                    >
-                      Ver consolidado
-                    </button>
-                  </li>
+                    {label}
+                  </button>
                 ))}
-              </ul>
+              </div>
+              {abaPesq === "historico" ? (
+                Object.entries(porAno).map(([grupo, lista]) => (
+                  <div key={grupo} className="mb-3">
+                    <p className="text-[11px] font-bold text-gray-500 mb-1">{grupo}</p>
+                    <ul className="flex flex-col gap-2">
+                      {lista.map((pe) => (
+                        <li
+                          key={pe.id}
+                          className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
+                          style={{ background: "rgba(255,255,255,0.55)" }}
+                        >
+                          <div>
+                            <p className="text-[13px] font-semibold">{pe.titulo}</p>
+                            <p className="text-[11px] text-gray-500">
+                              {pe.tipo} · {pe.status}
+                            </p>
+                          </div>
+                          {(pe.status === "PUBLICADA" || pe.status === "ENCERRADA") && (
+                            <button
+                              type="button"
+                              onClick={() => void verResultado(pe.id)}
+                              className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
+                              style={{ background: ACCENT }}
+                            >
+                              Ver consolidado
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))
+              ) : (
+                <ul className="flex flex-col gap-2 mb-4">
+                  {pesquisasFiltradas.map((pe) => (
+                    <li
+                      key={pe.id}
+                      className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
+                      style={{ background: "rgba(255,255,255,0.55)" }}
+                    >
+                      <div>
+                        <p className="text-[13px] font-semibold">{pe.titulo}</p>
+                        <p className="text-[11px] text-gray-500">
+                          {pe.tipo} · {pe.status}
+                        </p>
+                      </div>
+                      {(pe.status === "PUBLICADA" || pe.status === "ENCERRADA") && (
+                        <button
+                          type="button"
+                          onClick={() => void verResultado(pe.id)}
+                          className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
+                          style={{ background: ACCENT }}
+                        >
+                          Ver consolidado
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                  {pesquisasFiltradas.length === 0 ? (
+                    <p className="text-gray-500 text-[13px]">Nenhuma nesta aba.</p>
+                  ) : null}
+                </ul>
+              )}
               {painel.map((item) => (
                 <p key={item.pergunta_id} className="text-[12px] text-gray-600 mb-2">
                   {item.texto} · {item.respostas} respostas
