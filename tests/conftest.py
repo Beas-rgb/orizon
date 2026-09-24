@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import desvincular_engine, get_db, vincular_engine
 from app.integrations.email import caixa_email
 from app.main import app
 from app.models.base import Base
@@ -37,6 +37,8 @@ def db() -> Generator[Session, None, None]:
         poolclass=StaticPool,
     )
     Base.metadata.create_all(engine)
+    # A BackgroundTask abre outra sessão neste mesmo SQLite, não no Neon.
+    vincular_engine(engine)
     fabrica = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     seed = fabrica()
     try:
@@ -60,6 +62,7 @@ def db() -> Generator[Session, None, None]:
     finally:
         session.close()
         app.dependency_overrides.clear()
+        desvincular_engine()
         engine.dispose()
 
 

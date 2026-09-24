@@ -5,7 +5,7 @@ foi vinculado. ID de outro cliente responde 404, não 403, para não
 confirmar que o projeto existe.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -89,6 +89,7 @@ def detalhe(
 @router.post("", response_model=ProjetoSaida)
 def criar(
     corpo: ProjetoCriar,
+    background_tasks: BackgroundTasks,
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> ProjetoSaida:
@@ -102,6 +103,7 @@ def criar(
             corpo.email_orgao,
             corpo.vinculo_tipo,
             corpo.vinculo_titulo,
+            tarefas=background_tasks,
         )
     )
     return ProjetoSaida.model_validate(montado, from_attributes=True)

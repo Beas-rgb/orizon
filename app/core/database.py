@@ -12,24 +12,51 @@ _engine: Engine | None = None
 SessionLocal: sessionmaker[Session] | None = None
 
 
-def get_engine() -> Engine:
-    """Fábrica de conexões. Reutiliza o mesmo engine no processo."""
+def vincular_engine(engine: Engine) -> None:
+    """Aponta a fábrica global para um engine já criado.
+
+    Testes usam isto para a BackgroundTask abrir outra sessão no mesmo
+    SQLite do request. Produção continua em get_engine().
+    """
     global _engine, SessionLocal
+    _engine = engine
+    SessionLocal = sessionmaker(
+        bind=engine,
+        autoflush=False,
+        autocommit=False,
+    )
+
+
+def desvincular_engine() -> None:
+    """Solta a fábrica global. Não fecha o engine (quem criou dispõe)."""
+    global _engine, SessionLocal
+    _engine = None
+    SessionLocal = None
+
+
+def get_engine() -> Engine:
+    """Fábrica de conexões. Reutiliza o mesmo engine no processo.
+
+    Se vincular_engine já definiu o engine, devolve esse — sem exigir
+    DATABASE_URL. Assim o teste não cai no Neon.
+    """
+    global _engine, SessionLocal
+    if _engine is not None:
+        return _engine
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL não configurada")
-    if _engine is None:
-        _engine = create_engine(
-            settings.database_url,
-            pool_size=settings.db_pool_size,
-            max_overflow=settings.db_max_overflow,
-            pool_pre_ping=True,
-            pool_recycle=300,
-        )
-        SessionLocal = sessionmaker(
-            bind=_engine,
-            autoflush=False,
-            autocommit=False,
-        )
+    _engine = create_engine(
+        settings.database_url,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
+    SessionLocal = sessionmaker(
+        bind=_engine,
+        autoflush=False,
+        autocommit=False,
+    )
     return _engine
 
 

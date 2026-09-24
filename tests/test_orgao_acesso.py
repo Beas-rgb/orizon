@@ -134,7 +134,10 @@ def test_email_novo_cria_convite_primeiro_acesso(client, monkeypatch) -> None:
     assert msg["destino"] == "novo-orgao@prefeitura.dev"
     assert "senha" not in msg["assunto"].lower() or "criar" in msg["assunto"].lower()
     assert "?t=" in msg["corpo"]
-    assert "senha" not in msg["corpo"].lower() or "criada por você" in msg["corpo"].lower()
+    assert (
+        "senha" not in msg["corpo"].lower()
+        or "criada por você" in msg["corpo"].lower()
+    )
 
 
 def test_orgao_ativo_vincula_segundo_projeto_sem_novo_usuario(
@@ -431,6 +434,48 @@ def test_isolamento_orgao_nao_acessa_projeto_alheio(client, monkeypatch) -> None
     assert p_a["id"]
 
 
+def test_matriz_orgao_nao_abre_pesquisa_alheia(client, monkeypatch) -> None:
+    """Órgão A conhece o id da pesquisa de B e mesmo assim recebe 404."""
+    monkeypatch.setattr("app.services.projeto.buscar", _cnpj)
+    headers = abrir_consultora(client)
+    rid = _rotulo_clima(client, headers)
+    _criar_projeto(
+        client,
+        headers,
+        cnpj="19131243000197",
+        email="matriz-a@prefeitura.dev",
+        titulo="Matriz A",
+        rotulo_id=rid,
+    )
+    p_b = _criar_projeto(
+        client,
+        headers,
+        cnpj="00000000000191",
+        email="matriz-b@camara.dev",
+        titulo="Matriz B",
+        rotulo_id=rid,
+    )
+    client.patch(
+        f"/projetos/{p_b['id']}/configuracao",
+        headers=headers,
+        json={"pesquisas_habilitadas": True},
+    )
+    pesquisa = client.post(
+        f"/projetos/{p_b['id']}/pesquisas",
+        headers=headers,
+        json={"titulo": "Pesquisa B", "tipo": "CLIMA"},
+    )
+    assert pesquisa.status_code == 200
+    orgao_a = _entrar_orgao(client, "matriz-a@prefeitura.dev")
+    pid = pesquisa.json()["id"]
+    assert client.get(f"/pesquisas/{pid}/perguntas", headers=orgao_a).status_code == 404
+    assert client.get(f"/pesquisas/{pid}/painel", headers=orgao_a).status_code == 404
+    assert (
+        client.get(f"/projetos/{p_b['id']}/pesquisas", headers=orgao_a).status_code
+        == 404
+    )
+
+
 def test_resolver_email_novo(db) -> None:
     r = resolver_usuario_orgao_por_email(db, "nunca-existiu@exemplo.dev")
     assert r.situacao == SIT_NOVO
@@ -470,6 +515,7 @@ def test_publicar_envia_aviso_nova_pesquisa(client, monkeypatch, db) -> None:
     msgs_antes = len(caixa_email.mensagens)
     pub = client.post(f"/pesquisas/{pesquisa['id']}/publicar", headers=headers)
     assert pub.status_code == 200
+    db.expire_all()
     avisos = db.scalars(
         select(Notificacao).where(
             Notificacao.tipo == "PESQUISA",
@@ -484,5 +530,7 @@ def test_publicar_envia_aviso_nova_pesquisa(client, monkeypatch, db) -> None:
         )
     ).all()
     assert entregas
-    # BackgroundTasks: a caixa local pode receber depois; o registro já existe.
-    assert msgs_antes >= 0
+    assert all(item.status == "ENVIADO" for item in entregas)
+    novos = caixa_email.mensagens[msgs_antes:]
+    assert any("nova pesquisa" in m["assunto"].lower() for m in novos)
+    assert all("?t=" not in m["corpo"] for m in novos)

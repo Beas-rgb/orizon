@@ -137,6 +137,8 @@ def criar_projeto(
     email_orgao: str,
     vinculo_tipo: str,
     vinculo_titulo: str,
+    *,
+    tarefas=None,
 ) -> "ProjetoSaidaMontada":
     if consultor.papel != "CONSULTOR":
         raise ErroAuth(404, "Projeto não encontrado.")
@@ -229,7 +231,7 @@ def criar_projeto(
                     db,
                     orgao_vinculado,
                     projeto,
-                    tarefas=None,
+                    tarefas=tarefas,
                 )
                 db.commit()
         elif exc.status == 429:

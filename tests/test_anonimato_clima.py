@@ -137,3 +137,95 @@ def test_painel_k_anonimato_n1_suprimido(client, monkeypatch, db):
     )
     assert log is not None
     assert log.usuario_id is None
+
+
+def test_cinco_funcionarios_clima_sem_elo_de_identidade(client, monkeypatch, db):
+    """Cinco respostas: token do participante fica nulo e o join não acha usuário."""
+    from sqlalchemy import func
+
+    from app.models.usuario import Usuario
+
+    monkeypatch.setattr("app.services.projeto.buscar", _cnpj_falso)
+    headers = abrir_consultora(client)
+    rotulos = client.get("/projetos/rotulos", headers=headers).json()
+    clima = next(item for item in rotulos if item["codigo"] == "CLIMA")
+    projeto = client.post(
+        "/projetos",
+        headers=headers,
+        json={
+            "rotulo_id": clima["id"],
+            "cnpj": "19131243000197",
+            "email_orgao": "rh-cinco@prefeitura.dev",
+            "vinculo_tipo": "EDITAL",
+            "vinculo_titulo": "Edital cinco",
+        },
+    )
+    projeto_id = projeto.json()["id"]
+    client.patch(
+        f"/projetos/{projeto_id}/configuracao",
+        headers=headers,
+        json={"pesquisas_habilitadas": True},
+    )
+    funcionarios = []
+    for indice in range(5):
+        email = f"func{indice}@cinco.dev"
+        client.post(
+            "/auth/convites",
+            headers=headers,
+            json={
+                "projeto_id": projeto_id,
+                "email": email,
+                "papel": "FUNCIONARIO",
+                "nome": f"Func {indice}",
+            },
+        )
+        funcionarios.append(_entrar(client, email, SENHA_FUNC))
+    pesquisa = client.post(
+        f"/projetos/{projeto_id}/pesquisas",
+        headers=headers,
+        json={"titulo": "Clima cinco", "tipo": "CLIMA"},
+    )
+    pid = pesquisa.json()["id"]
+    client.post(
+        f"/pesquisas/{pid}/perguntas",
+        headers=headers,
+        json={"texto": "Nota do clima?", "tipo": "NOTA_5"},
+    )
+    assert client.post(f"/pesquisas/{pid}/publicar", headers=headers).status_code == 200
+    for acesso in funcionarios:
+        pergunta_id = client.get(
+            f"/eu/pesquisas/{pid}/formulario", headers=acesso
+        ).json()[0]["id"]
+        envio = client.post(
+            f"/eu/pesquisas/{pid}/responder",
+            headers=acesso,
+            json={"respostas": [{"pergunta_id": pergunta_id, "valor_numerico": 3}]},
+        )
+        assert envio.status_code == 200
+
+    db.expire_all()
+    partes = db.scalars(
+        select(PesquisaParticipante).where(PesquisaParticipante.pesquisa_id == pid)
+    ).all()
+    assert len(partes) == 5
+    assert all(item.token_id is None for item in partes)
+    assert all(item.status == "RESPONDIDA" for item in partes)
+
+    identidades = db.scalar(
+        select(func.count())
+        .select_from(Resposta)
+        .join(TokenResposta, TokenResposta.id == Resposta.token_id)
+        .join(
+            PesquisaParticipante,
+            PesquisaParticipante.token_id == TokenResposta.id,
+        )
+        .join(Usuario, Usuario.id == PesquisaParticipante.usuario_id)
+        .where(TokenResposta.pesquisa_id == pid)
+    )
+    assert identidades == 0
+
+    logs = db.scalars(
+        select(LogAuditoria).where(LogAuditoria.acao == "PESQUISA_RESPONDIDA")
+    ).all()
+    assert len(logs) >= 5
+    assert all(item.usuario_id is None for item in logs)

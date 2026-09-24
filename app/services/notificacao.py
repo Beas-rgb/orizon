@@ -99,11 +99,17 @@ def _completar_entrega_email(
     corpo: str,
     categoria: str,
 ) -> None:
-    """Roda fora do request: SMTP não segura o pool da API."""
-    from app.core.database import SessionLocal, get_engine
+    """Roda fora do request: SMTP não segura o pool da API.
 
-    get_engine()
-    if SessionLocal is None:
+    Abre uma sessão nova. Se o ambiente já vinculou um engine (teste
+    SQLite ou o primeiro get_engine de produção), usa essa fábrica.
+    Não reutiliza a Session do request.
+    """
+    from app.core import database as banco
+
+    if banco.SessionLocal is None:
+        banco.get_engine()
+    if banco.SessionLocal is None:
         return
     resultado: ResultadoEmail | None = None
     erro = None
@@ -116,7 +122,7 @@ def _completar_entrega_email(
         )
     except Exception as exc:
         erro = _erro_entrega_seguro(exc)
-    with SessionLocal() as db:
+    with banco.SessionLocal() as db:
         entrega = db.get(EntregaMensagem, entrega_id)
         if entrega is None:
             return
