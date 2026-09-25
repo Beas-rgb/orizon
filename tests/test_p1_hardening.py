@@ -95,6 +95,8 @@ def test_access_morre_apos_sair(client):
     assert client.get("/auth/eu", headers=auth).status_code == 200
     assert client.post("/auth/sair", json={"refresh_token": refresh}).status_code == 200
     assert client.get("/auth/eu", headers=auth).status_code == 401
+    renovar = client.post("/auth/refresh", json={"refresh_token": refresh})
+    assert renovar.status_code == 401
 
 
 def test_link_primeiro_acesso_ausente_em_production(client, monkeypatch):
