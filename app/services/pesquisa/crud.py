@@ -239,19 +239,54 @@ def editar_pesquisa(
     descricao: str | None,
     *,
     descricao_enviada: bool,
+    config_calculo: str | None = None,
 ) -> Pesquisa:
     pesquisa = _exigir_rascunho_consultor(db, consultor, pesquisa_id)
-    if titulo is None and not descricao_enviada:
+    if titulo is None and not descricao_enviada and config_calculo is None:
         raise ErroAuth(422, "Nada para atualizar.")
     agora_ = agora()
     if titulo is not None:
         pesquisa.titulo = titulo.strip()
     if descricao_enviada:
         pesquisa.descricao = descricao.strip() if descricao else None
+    if config_calculo is not None:
+        pesquisa.config_calculo = _validar_config_calculo(config_calculo)
     pesquisa.atualizado_em = agora_
     _auditar(db, "PESQUISA_EDITADA", consultor.id)
     db.commit()
     return pesquisa
+
+
+def _validar_config_calculo(config: str) -> str:
+    """JSON estruturado. Nunca código do usuário."""
+    import json
+
+    try:
+        dados = json.loads(config)
+    except json.JSONDecodeError:
+        raise ErroAuth(422, "Configuração inválida. Use JSON.") from None
+    if not isinstance(dados, dict):
+        raise ErroAuth(422, "Configuração deve ser um objeto JSON.")
+    # Não aceita chaves que pareçam código.
+    proibidas = {"eval", "exec", "import", "__", "sql", "python", "javascript"}
+    for chave in dados:
+        if any(p in chave.lower() for p in proibidas):
+            raise ErroAuth(422, "Configuração não pode conter código.")
+    # Estrutura esperada: pesos por perspectiva, escala, etc.
+    if "pesos" in dados:
+        pesos = dados["pesos"]
+        if not isinstance(pesos, dict):
+            raise ErroAuth(422, "Pesos devem ser um objeto.")
+        for perspectiva, peso in pesos.items():
+            if not isinstance(peso, (int, float)) or peso < 0:
+                raise ErroAuth(422, "Peso deve ser número positivo.")
+    if "escala" in dados:
+        escala = dados["escala"]
+        if not isinstance(escala, dict):
+            raise ErroAuth(422, "Escala deve ser um objeto.")
+        if "min" not in escala or "max" not in escala:
+            raise ErroAuth(422, "Escala precisa de min e max.")
+    return json.dumps(dados, ensure_ascii=False, sort_keys=True)
 
 
 def editar_pergunta(
@@ -440,7 +475,13 @@ def _criar_token_resposta(
     return tid, plain
 
 
-def publicar(db: Session, consultor: Usuario, pesquisa_id: str, *, tarefas=None) -> Pesquisa:
+def publicar(
+    db: Session,
+    consultor: Usuario,
+    pesquisa_id: str,
+    *,
+    tarefas=None,
+) -> Pesquisa:
     pesquisa = _pesquisa_viva(db, pesquisa_id)
     if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")

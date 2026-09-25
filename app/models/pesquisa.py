@@ -27,6 +27,8 @@ class Pesquisa(Base):
     tipo: Mapped[str] = mapped_column(String(40))
     status: Mapped[str] = mapped_column(String(32), default="RASCUNHO")
     bloqueada: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Configuração de cálculo (JSON). Nunca código do usuário.
+    config_calculo: Mapped[str | None] = mapped_column(Text, nullable=True)
     publicada_em: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

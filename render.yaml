@@ -53,3 +53,7 @@ services:
         sync: false
       - key: R2_SECRET_ACCESS_KEY
         sync: false
+      # Banco separado para o cenário de teste (500 funcionários).
+      # Criar um branch no Neon e preencher no painel — nunca no git.
+      - key: STAGING_DATABASE_URL
+        sync: false

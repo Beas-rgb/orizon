@@ -7,7 +7,6 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     File,
-    HTTPException,
     Query,
     Request,
     UploadFile,
@@ -327,6 +326,7 @@ def atualizar_pesquisa(
             campos.get("titulo"),
             campos.get("descricao"),
             descricao_enviada="descricao" in campos,
+            config_calculo=campos.get("config_calculo"),
         )
     )
     return _saida(pesquisa)

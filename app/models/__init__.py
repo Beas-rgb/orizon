@@ -9,6 +9,7 @@ from app.models.configuracao import ConfiguracaoProjeto
 from app.models.controle_acesso import ControleAcesso
 from app.models.convite import Convite
 from app.models.documento import Documento
+from app.models.estrutura import Cargo, PerfilFuncionario
 from app.models.organizacao import Organizacao
 from app.models.projeto import Projeto, ProjetoUsuario, RotuloProjeto
 from app.models.sessao import Sessao
@@ -18,10 +19,12 @@ from app.models.usuario import Usuario
 
 __all__ = [
     "Base",
+    "Cargo",
     "ConfiguracaoProjeto",
     "ControleAcesso",
     "Convite",
     "Documento",
+    "PerfilFuncionario",
     "Setor",
     "LogAuditoria",
     "Organizacao",

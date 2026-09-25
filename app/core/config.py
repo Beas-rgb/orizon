@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     admin_email: str = ""
     admin_senha: str = ""
 
+    # Banco separado para o cenário de teste. Sem isso, o seed de 500
+    # funcionários não roda. Não é o mesmo que DATABASE_URL.
+    staging_database_url: str = ""
+
     def __repr__(self) -> str:
         return "Settings(segredos ocultos)"
 

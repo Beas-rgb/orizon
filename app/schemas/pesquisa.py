@@ -37,6 +37,7 @@ class PerguntaCriar(BaseModel):
 class PesquisaAtualizar(BaseModel):
     titulo: str | None = Field(default=None, min_length=2, max_length=200)
     descricao: str | None = None
+    config_calculo: str | None = None
 
 
 class PerguntaAtualizar(BaseModel):

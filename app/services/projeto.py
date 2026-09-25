@@ -344,6 +344,7 @@ def listar_equipe(db: Session, consultor: Usuario, projeto_id: str) -> list[dict
         vistos.add(pessoa.email)
         itens.append(
             {
+                "id": pessoa.id,
                 "nome": pessoa.nome,
                 "email": pessoa.email,
                 "papel": vinculo.papel,
@@ -367,6 +368,7 @@ def listar_equipe(db: Session, consultor: Usuario, projeto_id: str) -> list[dict
         vistos.add(convite.email)
         itens.append(
             {
+                "id": None,
                 "nome": convite.nome,
                 "email": convite.email,
                 "papel": convite.papel,

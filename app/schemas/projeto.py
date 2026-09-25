@@ -40,7 +40,62 @@ class SetorSaida(BaseModel):
     nome: str
 
 
+class CargoCriar(BaseModel):
+    nome: str = Field(min_length=2, max_length=120)
+
+
+class CargoSaida(BaseModel):
+    id: str
+    nome: str
+
+
+class PerfilFuncionarioEntrada(BaseModel):
+    usuario_id: str
+    setor_id: str | None = None
+    cargo_id: str | None = None
+    superior_id: str | None = None
+
+
+class PerfilFuncionarioSaida(BaseModel):
+    usuario_id: str
+    setor_id: str | None = None
+    cargo_id: str | None = None
+    superior_id: str | None = None
+
+
+class ImportacaoPreviaSaida(BaseModel):
+    total: int
+    validos: int
+    invalidos: int
+    setores: int
+    cargos: int
+    niveis: int
+    duplicados: int
+    superiores_inexistentes: int
+    linhas: list[dict[str, object]]
+
+
+class ImportacaoConfirmarEntrada(BaseModel):
+    linhas: list[dict[str, object]] = Field(min_length=1)
+
+
+class ImportacaoConfirmarSaida(BaseModel):
+    criados: int
+    total: int
+
+
+class ArvoreNo(BaseModel):
+    usuario_id: str
+    nome: str
+    email: str
+    subordinados: list["ArvoreNo"] = []
+
+
+ArvoreNo.model_rebuild()
+
+
 class EquipeSaida(BaseModel):
+    id: str | None = None
     nome: str
     email: str
     papel: str
