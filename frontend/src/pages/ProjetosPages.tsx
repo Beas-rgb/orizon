@@ -200,11 +200,27 @@ type Membro = {
 type Setor = { id: string; nome: string };
 type Doc = { id: string; nome: string; visibilidade?: string };
 
+type PainelItem = {
+  pergunta_id: string;
+  texto: string;
+  respostas: number;
+  media?: number | null;
+  suprimido?: boolean;
+};
+
 export function ProjetoDetalhePage() {
   const { id } = useParams();
-  const [aba, setAba] = useState<"resumo" | "equipe" | "pesquisas" | "docs" | "config">(
-    "resumo",
-  );
+  const navigate = useNavigate();
+  const [aba, setAba] = useState<
+    | "visao"
+    | "estrutura"
+    | "participantes"
+    | "pesquisas"
+    | "resultados"
+    | "historico"
+    | "biblioteca"
+    | "config"
+  >("visao");
   const [projeto, setProjeto] = useState<Projeto | null>(null);
   const [pesquisas, setPesquisas] = useState<Pesquisa[]>([]);
   const [equipe, setEquipe] = useState<Membro[]>([]);
@@ -213,9 +229,9 @@ export function ProjetoDetalhePage() {
   const [aviso, setAviso] = useState("");
   const [conviteMsg, setConviteMsg] = useState("");
   const [linkAcesso, setLinkAcesso] = useState("");
-  const [linksResposta, setLinksResposta] = useState<string[]>([]);
-  const [pesquisaAtiva, setPesquisaAtiva] = useState<string>("");
   const [pesquisasOk, setPesquisasOk] = useState(false);
+  const [painel, setPainel] = useState<PainelItem[]>([]);
+  const [painelTitulo, setPainelTitulo] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -237,7 +253,6 @@ export function ProjetoDetalhePage() {
         setEquipe(eq);
         setSetores(se);
         setDocs(d);
-        if (pe[0]) setPesquisaAtiva(pe[0].id);
       })
       .catch((exc) => setAviso(exc instanceof Error ? exc.message : "Erro"));
     api<{ pesquisas_habilitadas: boolean }>(`/projetos/${id}/configuracao`)
@@ -345,63 +360,24 @@ export function ProjetoDetalhePage() {
         json: {
           titulo: (form.elements.namedItem("titulo") as HTMLInputElement).value,
           tipo: (form.elements.namedItem("tipo") as HTMLSelectElement).value,
+          descricao:
+            (form.elements.namedItem("descricao") as HTMLInputElement).value || null,
         },
       });
-      const lista = await api<Pesquisa[]>(`/projetos/${id}/pesquisas`);
-      setPesquisas(lista);
-      setPesquisaAtiva(criada.id);
-      form.reset();
+      navigate(`/projetos/${id}/pesquisas/${criada.id}`);
     } catch (exc) {
       setAviso(exc instanceof Error ? exc.message : "Erro");
     }
   }
 
-  async function adicionarPergunta(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    if (!pesquisaAtiva) {
-      setAviso("Selecione ou crie uma pesquisa.");
-      return;
-    }
+  async function verResultado(pesquisa: Pesquisa) {
     setAviso("");
-    const form = evento.currentTarget;
+    setPainelTitulo(pesquisa.titulo);
     try {
-      await api(`/pesquisas/${pesquisaAtiva}/perguntas`, {
-        method: "POST",
-        json: {
-          texto: (form.elements.namedItem("texto") as HTMLInputElement).value,
-          tipo: (form.elements.namedItem("tipo_pergunta") as HTMLSelectElement).value,
-          obrigatoria: true,
-        },
-      });
-      setAviso("");
-      form.reset();
-      setConviteMsg("Pergunta adicionada.");
+      setPainel(await api<PainelItem[]>(`/pesquisas/${pesquisa.id}/painel`));
     } catch (exc) {
-      setAviso(exc instanceof Error ? exc.message : "Erro na pergunta");
-    }
-  }
-
-  async function publicarPesquisa(pesquisaId: string) {
-    setAviso("");
-    try {
-      await api(`/pesquisas/${pesquisaId}/publicar`, { method: "POST" });
-      setPesquisas(await api<Pesquisa[]>(`/projetos/${id}/pesquisas`));
-    } catch (exc) {
-      setAviso(exc instanceof Error ? exc.message : "Erro ao publicar");
-    }
-  }
-
-  async function gerarLinks(pesquisaId: string) {
-    setAviso("");
-    setLinksResposta([]);
-    try {
-      const resp = await api<{ tokens: string[]; links: string[] }>(
-        `/pesquisas/${pesquisaId}/tokens?quantidade=1`,
-        { method: "POST" },
-      );
-      setLinksResposta(resp.links?.length ? resp.links : resp.tokens.map((t) => `/app/responder/${t}`));
-    } catch (exc) {
-      setAviso(exc instanceof Error ? exc.message : "Erro ao gerar link");
+      setPainel([]);
+      setAviso(exc instanceof Error ? exc.message : "Erro no resultado");
     }
   }
 
@@ -420,11 +396,14 @@ export function ProjetoDetalhePage() {
   }
 
   const abas = [
-    ["resumo", "Resumo"],
-    ["equipe", "Equipe"],
+    ["visao", "Visão geral"],
+    ["estrutura", "Estrutura"],
+    ["participantes", "Participantes"],
     ["pesquisas", "Pesquisas"],
-    ["docs", "Biblioteca"],
-    ["config", "Config"],
+    ["resultados", "Resultados"],
+    ["historico", "Histórico"],
+    ["biblioteca", "Biblioteca"],
+    ["config", "Configurações"],
   ] as const;
 
   const field =
@@ -435,14 +414,25 @@ export function ProjetoDetalhePage() {
       <Link to="/projetos" className="text-[12px] text-[#1D5FAF] font-semibold">
         ← Voltar aos trabalhos
       </Link>
-      <h1 className="text-[18px] font-bold text-gray-800 mt-2">
-        {projeto ? projeto.vinculo_titulo || nomeCliente(projeto) : "Carregando…"}
-      </h1>
-      {projeto ? (
-        <p className="text-[12px] text-gray-500 mb-4">
-          {nomeCliente(projeto)} · {projeto.rotulo} · {projeto.estado}
+      <div
+        className="mt-3 mb-4 rounded-3xl px-5 py-4"
+        style={{
+          ...glassStyle,
+          borderLeft: `4px solid ${ACCENT}`,
+        }}
+      >
+        <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: ACCENT }}>
+          Trabalho
         </p>
-      ) : null}
+        <h1 className="text-[18px] font-bold text-gray-800 mt-1">
+          {projeto ? projeto.vinculo_titulo || nomeCliente(projeto) : "Carregando…"}
+        </h1>
+        {projeto ? (
+          <p className="text-[12px] text-gray-500 mt-1">
+            {nomeCliente(projeto)} · {projeto.rotulo} · {projeto.estado}
+          </p>
+        ) : null}
+      </div>
 
       <div
         className="flex gap-1 p-1 rounded-2xl mb-4 overflow-x-auto"
@@ -486,7 +476,7 @@ export function ProjetoDetalhePage() {
       ) : null}
 
       <div className="rounded-3xl p-4 sm:p-5" style={glassStyle}>
-        {aba === "resumo" && (
+        {aba === "visao" && (
           <div className="grid sm:grid-cols-3 gap-3">
             <Stat label="Pesquisas" value={String(pesquisas.length)} />
             <Stat label="Equipe" value={String(equipe.length)} />
@@ -494,7 +484,7 @@ export function ProjetoDetalhePage() {
           </div>
         )}
 
-        {aba === "equipe" && (
+        {aba === "participantes" && (
           <div className="flex flex-col gap-4">
             <div className="hz-table-wrap overflow-x-auto">
               <table className="w-full text-[12px] text-left">
@@ -580,11 +570,36 @@ export function ProjetoDetalhePage() {
           </div>
         )}
 
+        {aba === "estrutura" && (
+          <div>
+            <p className="text-[13px] text-gray-600 mb-3">
+              Setores deste trabalho. A hierarquia de cargos entra numa etapa seguinte.
+            </p>
+            <ul className="flex flex-wrap gap-2">
+              {setores.map((s) => (
+                <li
+                  key={s.id}
+                  className="px-3 py-1.5 rounded-xl text-[12px] font-semibold"
+                  style={{ background: "rgba(29,95,175,0.10)", color: ACCENT }}
+                >
+                  {s.nome}
+                </li>
+              ))}
+              {setores.length === 0 ? (
+                <p className="text-gray-500 text-[13px]">Nenhum setor neste trabalho.</p>
+              ) : null}
+            </ul>
+          </div>
+        )}
+
         {aba === "pesquisas" && (
           <div className="flex flex-col gap-4">
+            <p className="text-[13px] text-gray-600">
+              Cada pesquisa é um registro novo. A edição completa abre na tela seguinte.
+            </p>
             {!pesquisasOk ? (
               <div className="rounded-2xl p-3 text-[12px] text-gray-700" style={{ background: "rgba(160,112,32,0.1)" }}>
-                Pesquisas desligadas neste projeto.{" "}
+                Pesquisas desligadas neste trabalho.{" "}
                 <button type="button" className="font-bold text-[#1D5FAF] underline" onClick={() => void ligarPesquisas()}>
                   Ligar agora
                 </button>
@@ -595,107 +610,117 @@ export function ProjetoDetalhePage() {
                 <li
                   key={p.id}
                   className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
-                  style={{
-                    background:
-                      pesquisaAtiva === p.id ? "rgba(29,95,175,0.12)" : "rgba(255,255,255,0.55)",
-                  }}
+                  style={{ background: "rgba(255,255,255,0.55)" }}
                 >
-                  <button type="button" className="text-left" onClick={() => setPesquisaAtiva(p.id)}>
+                  <div>
                     <p className="text-[13px] font-semibold">{p.titulo}</p>
                     <p className="text-[11px] text-gray-500">
                       {p.tipo} · {p.status}
                     </p>
-                  </button>
-                  <div className="flex gap-2 flex-wrap">
-                    <Link
-                      to={`/projetos/${id}/pesquisas/${p.id}`}
-                      className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                      style={{ background: "#164A8A" }}
-                    >
-                      Abrir editor
-                    </Link>
-                    {p.status === "RASCUNHO" ? (
-                      <button
-                        type="button"
-                        className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                        style={{ background: ACCENT }}
-                        onClick={() => void publicarPesquisa(p.id)}
-                      >
-                        Publicar
-                      </button>
-                    ) : null}
-                    {p.status === "PUBLICADA" ? (
-                      <button
-                        type="button"
-                        className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                        style={{ background: "#1E7A4A" }}
-                        onClick={() => void gerarLinks(p.id)}
-                      >
-                        Gerar link
-                      </button>
-                    ) : null}
                   </div>
+                  <Link
+                    to={`/projetos/${id}/pesquisas/${p.id}`}
+                    className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
+                    style={{ background: "#164A8A" }}
+                  >
+                    Abrir edição
+                  </Link>
                 </li>
               ))}
+              {pesquisas.length === 0 ? (
+                <p className="text-gray-500 text-[13px]">Nenhuma pesquisa neste trabalho.</p>
+              ) : null}
             </ul>
-            {linksResposta.length > 0 ? (
-              <div className="rounded-2xl p-3 text-[12px] break-all" style={{ background: "rgba(29,95,175,0.08)" }}>
-                <p className="font-bold mb-1">Link de resposta (copie e envie)</p>
-                {linksResposta.map((link) => (
-                  <a key={link} href={link} className="block text-[#1D5FAF] font-semibold underline mb-1">
-                    {link}
-                  </a>
-                ))}
-              </div>
-            ) : null}
-            <form onSubmit={criarPesquisa} className="grid sm:grid-cols-3 gap-2 items-end">
-              <label className="text-[12px] font-semibold text-gray-600 sm:col-span-1">
-                Título
-                <input name="titulo" required className={field} />
-              </label>
+            <form
+              onSubmit={criarPesquisa}
+              className="grid gap-3 max-w-lg rounded-3xl p-4"
+              style={{ ...glassStyle, borderTop: `3px solid ${ACCENT}` }}
+            >
+              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: ACCENT }}>
+                Nova pesquisa neste trabalho
+              </p>
+              <p className="text-[13px] font-bold text-gray-800">Tipo, nome e descrição</p>
               <label className="text-[12px] font-semibold text-gray-600">
                 Tipo
                 <select name="tipo" className={field} defaultValue="CLIMA">
-                  <option value="CLIMA">Clima</option>
-                  <option value="DESEMPENHO">Desempenho</option>
-                  <option value="CARGOS_SALARIOS">Cargos e salários</option>
-                  <option value="PERSONALIZADA">Personalizada</option>
+                  <option value="CLIMA">Clima organizacional</option>
+                  <option value="DESEMPENHO">Avaliação de desempenho</option>
+                  <option value="DIAGNOSTICO_ORGANIZACIONAL">Diagnóstico organizacional</option>
                 </select>
+              </label>
+              <label className="text-[12px] font-semibold text-gray-600">
+                Nome
+                <input name="titulo" required minLength={2} className={field} placeholder="Ex.: Clima 2026" />
+              </label>
+              <label className="text-[12px] font-semibold text-gray-600">
+                Descrição
+                <input name="descricao" className={field} placeholder="Opcional" />
               </label>
               <button
                 type="submit"
                 className="rounded-xl py-2.5 text-white text-[13px] font-bold"
                 style={{ background: ACCENT }}
               >
-                Criar pesquisa
-              </button>
-            </form>
-            <form onSubmit={adicionarPergunta} className="grid sm:grid-cols-3 gap-2 items-end">
-              <label className="text-[12px] font-semibold text-gray-600 sm:col-span-1">
-                Pergunta (pesquisa selecionada)
-                <input name="texto" required className={field} placeholder="Ex.: Como está o clima?" />
-              </label>
-              <label className="text-[12px] font-semibold text-gray-600">
-                Tipo da pergunta
-                <select name="tipo_pergunta" className={field} defaultValue="NOTA_5">
-                  <option value="NOTA_5">Nota 1–5</option>
-                  <option value="NOTA_10">Nota 1–10</option>
-                  <option value="TEXTO_LIVRE">Texto livre</option>
-                  <option value="SIM_NAO">Sim / Não</option>
-                </select>
-              </label>
-              <button
-                type="submit"
-                className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-                style={{ background: "#164A8A" }}
-              >
-                Adicionar pergunta
+                Criar e abrir edição
               </button>
             </form>
           </div>
         )}
 
-        {aba === "docs" && (
+        {aba === "resultados" && (
+          <div className="flex flex-col gap-3">
+            <p className="text-[13px] text-gray-600">
+              Resultado agregado das pesquisas publicadas ou encerradas deste trabalho.
+            </p>
+            <ul className="flex flex-col gap-2">
+              {pesquisas
+                .filter((p) => p.status === "PUBLICADA" || p.status === "ENCERRADA")
+                .map((p) => (
+                  <li key={p.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[13px] font-semibold">{p.titulo}</span>
+                    <button
+                      type="button"
+                      className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
+                      style={{ background: ACCENT }}
+                      onClick={() => void verResultado(p)}
+                    >
+                      Ver consolidado
+                    </button>
+                  </li>
+                ))}
+            </ul>
+            {painelTitulo ? (
+              <div>
+                <p className="text-[12px] font-bold text-gray-700 mb-2">{painelTitulo}</p>
+                {painel.map((item) => (
+                  <p key={item.pergunta_id} className="text-[12px] text-gray-600 mb-1">
+                    {item.texto} · {item.respostas} respostas
+                    {item.suprimido ? " · oculto (poucas respostas)" : ""}
+                    {item.media != null ? ` · média ${item.media}` : ""}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {aba === "historico" && (
+          <ul className="flex flex-col gap-2">
+            {pesquisas.map((p) => (
+              <li key={p.id} className="p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.55)" }}>
+                <p className="text-[13px] font-semibold">{p.titulo}</p>
+                <p className="text-[11px] text-gray-500">
+                  {p.tipo} · {p.status}
+                </p>
+              </li>
+            ))}
+            {pesquisas.length === 0 ? (
+              <p className="text-gray-500 text-[13px]">Nenhuma pesquisa no histórico.</p>
+            ) : null}
+          </ul>
+        )}
+
+        {aba === "biblioteca" && (
           <div className="flex flex-col gap-4">
             <ul className="flex flex-col gap-2">
               {docs.map((d) => (

@@ -55,7 +55,12 @@ export function PesquisaEditorPage() {
     total: number;
     respondidas: number;
   } | null>(null);
-  const [aba, setAba] = useState<"perguntas" | "participantes" | "preview">("perguntas");
+  const [aba, setAba] = useState<
+    "geral" | "perguntas" | "participantes" | "preview" | "aplicacao" | "resultados"
+  >("geral");
+  const [painel, setPainel] = useState<
+    { pergunta_id: string; texto: string; respostas: number; media?: number | null; suprimido?: boolean }[]
+  >([]);
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
   const [links, setLinks] = useState<string[]>([]);
@@ -302,19 +307,26 @@ export function PesquisaEditorPage() {
 
   return (
     <AppShell active="pesquisas">
-      <div className="mb-4">
+      <div
+        className="mb-4 rounded-3xl px-5 py-4"
+        style={{ ...glassStyle, borderLeft: "4px solid #0F766E" }}
+      >
         <button
           type="button"
           onClick={() => navigate(`/projetos/${projetoId}`)}
-          className="text-[12px] text-[#1D5FAF] font-semibold mb-2"
+          className="text-[12px] font-semibold mb-2"
+          style={{ color: "#0F766E" }}
         >
-          ← Voltar ao projeto
+          ← Voltar ao trabalho
         </button>
-        <h1 className="text-[18px] font-bold text-gray-800">
-          {pesquisa?.titulo || "Editor de pesquisa"}
+        <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#0F766E" }}>
+          Edição da pesquisa
+        </p>
+        <h1 className="text-[18px] font-bold text-gray-800 mt-1">
+          {pesquisa?.titulo || "Nova pesquisa"}
         </h1>
-        <p className="text-[12px] text-gray-500">
-          {pesquisa?.tipo} · {pesquisa?.status || "…"}
+        <p className="text-[12px] text-gray-500 mt-1">
+          {pesquisa?.tipo || "…"} · {pesquisa?.status || "…"}
         </p>
       </div>
       {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
@@ -323,19 +335,23 @@ export function PesquisaEditorPage() {
       <div className="flex flex-wrap gap-2 mb-4">
         {(
           [
+            ["geral", "Geral"],
             ["perguntas", "Perguntas"],
             ["participantes", "Participantes"],
             ["preview", "Preview"],
+            ["aplicacao", "Aplicação"],
+            ["resultados", "Resultados"],
           ] as const
         ).map(([id, label]) => (
           <button
             key={id}
             type="button"
             onClick={() => setAba(id)}
-            className="px-3 py-1.5 rounded-xl text-[12px] font-bold"
+            className="px-3 py-1.5 rounded-full text-[12px] font-bold border"
             style={{
-              background: aba === id ? ACCENT : "rgba(255,255,255,0.7)",
-              color: aba === id ? "#fff" : "#334",
+              background: aba === id ? "#0F766E" : "rgba(255,255,255,0.55)",
+              color: aba === id ? "#fff" : "#0F766E",
+              borderColor: aba === id ? "#0F766E" : "rgba(15,118,110,0.25)",
             }}
           >
             {label}
@@ -371,6 +387,26 @@ export function PesquisaEditorPage() {
             </a>
           ))}
         </div>
+      ) : null}
+
+      {aba === "geral" && pesquisa ? (
+        <form onSubmit={salvarMeta} className="rounded-3xl p-4 grid gap-3 max-w-lg mb-4" style={glassStyle}>
+          <p className="text-[13px] font-bold text-gray-800">Dados da pesquisa</p>
+          <label className="text-[12px] font-semibold text-gray-600">
+            Nome
+            <input name="titulo" defaultValue={pesquisa.titulo} required className={field} disabled={!rascunho} />
+          </label>
+          <label className="text-[12px] font-semibold text-gray-600">
+            Descrição
+            <input name="descricao" defaultValue={pesquisa.descricao || ""} className={field} disabled={!rascunho} />
+          </label>
+          <p className="text-[12px] text-gray-500">Tipo: {pesquisa.tipo}. Status: {pesquisa.status}.</p>
+          {rascunho ? (
+            <button type="submit" className="rounded-xl py-2.5 text-white text-[13px] font-bold" style={{ background: ACCENT }}>
+              Salvar dados
+            </button>
+          ) : null}
+        </form>
       ) : null}
 
       {aba === "perguntas" && (
@@ -625,8 +661,63 @@ export function PesquisaEditorPage() {
             to={`/projetos/${projetoId}`}
             className="inline-block mt-4 text-[12px] font-bold text-[#1D5FAF]"
           >
-            Voltar
+            Voltar ao trabalho
           </Link>
+        </div>
+      )}
+
+      {aba === "aplicacao" && (
+        <div className="rounded-3xl p-5 max-w-lg" style={glassStyle}>
+          <p className="text-[13px] text-gray-700 mb-3">
+            Publicar abre a pesquisa para quem já está no trabalho e envia o aviso.
+            O rascunho precisa de ao menos uma pergunta e das pesquisas ligadas na configuração.
+          </p>
+          <p className="text-[12px] text-gray-500 mb-4">
+            Status atual: <strong>{pesquisa?.status || "…"}</strong>
+          </p>
+          {rascunho ? (
+            <button
+              type="button"
+              onClick={() => void publicar()}
+              className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
+              style={{ background: "#1E7A4A" }}
+            >
+              Publicar pesquisa
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void gerarLink()}
+              className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
+              style={{ background: ACCENT }}
+            >
+              Gerar link de resposta
+            </button>
+          )}
+        </div>
+      )}
+
+      {aba === "resultados" && (
+        <div className="rounded-3xl p-5" style={glassStyle}>
+          <button
+            type="button"
+            className="rounded-xl px-4 py-2 text-white text-[12px] font-bold mb-3"
+            style={{ background: ACCENT }}
+            onClick={() =>
+              void api<typeof painel>(`/pesquisas/${pesquisaId}/painel`)
+                .then(setPainel)
+                .catch((exc) => setErro(exc instanceof Error ? exc.message : "Erro"))
+            }
+          >
+            Carregar consolidado
+          </button>
+          {painel.map((item) => (
+            <p key={item.pergunta_id} className="text-[12px] text-gray-600 mb-1">
+              {item.texto} · {item.respostas} respostas
+              {item.suprimido ? " · oculto (poucas respostas)" : ""}
+              {item.media != null ? ` · média ${item.media}` : ""}
+            </p>
+          ))}
         </div>
       )}
     </AppShell>
