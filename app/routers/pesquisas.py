@@ -43,19 +43,24 @@ from app.services.pesquisa import (
     baixar_midia_da_pesquisa,
     baixar_midia_pelo_token,
     baixar_midia_pergunta,
+    calcular_resultado_avaliacao,
+    criar_ciclo,
     criar_de_modelo,
     criar_pesquisa,
     editar_pergunta,
     editar_pesquisa,
     encerrar,
     excluir_pergunta,
+    gerar_relacoes,
     gerar_tokens,
+    listar_ciclos,
     listar_minhas_pesquisas,
     listar_modelos,
     listar_participantes_status,
     listar_perguntas_pesquisa,
     listar_pesquisas,
     listar_pesquisas_consultora,
+    listar_relacoes,
     nota_da_pesquisa,
     nota_do_token,
     opcoes_da,
@@ -65,6 +70,7 @@ from app.services.pesquisa import (
     publicar,
     registrar_respostas,
     registrar_respostas_da_pesquisa,
+    relacao_do_avaliador,
     remover_midia_pergunta,
     reordenar_perguntas,
     salvar_modelo,
@@ -607,6 +613,106 @@ def responder(
         mensagem="Esta é a sua nota. O órgão vê só a média.",
         nota=nota,
     )
+
+
+@router.post("/projetos/{projeto_id}/ciclos")
+def criar_ciclo_rota(
+    projeto_id: str,
+    corpo: dict,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    ciclo = chamar(
+        lambda: criar_ciclo(
+            db,
+            consultor,
+            projeto_id,
+            corpo.get("nome", ""),
+            escopo=corpo.get("escopo", "ORGANIZACAO"),
+            configuracao=corpo.get("configuracao"),
+        )
+    )
+    return {
+        "id": ciclo.id,
+        "nome": ciclo.nome,
+        "escopo": ciclo.escopo,
+        "status": ciclo.status,
+    }
+
+
+@router.get("/projetos/{projeto_id}/ciclos")
+def listar_ciclos_rota(
+    projeto_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    itens = chamar(lambda: listar_ciclos(db, usuario, projeto_id))
+    return [
+        {
+            "id": item.id,
+            "nome": item.nome,
+            "escopo": item.escopo,
+            "status": item.status,
+        }
+        for item in itens
+    ]
+
+
+@router.post("/ciclos/{ciclo_id}/gerar-relacoes")
+def gerar_relacoes_rota(
+    ciclo_id: str,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    return chamar(lambda: gerar_relacoes(db, consultor, ciclo_id))
+
+
+@router.get("/ciclos/{ciclo_id}/relacoes")
+def listar_relacoes_rota(
+    ciclo_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    itens = chamar(lambda: listar_relacoes(db, usuario, ciclo_id))
+    return [
+        {
+            "id": item.id,
+            "avaliador_id": item.avaliador_id,
+            "avaliado_id": item.avaliado_id,
+            "tipo_relacao": item.tipo_relacao,
+            "peso": item.peso,
+            "status": item.status,
+        }
+        for item in itens
+    ]
+
+
+@router.get("/ciclos/{ciclo_id}/relacao/{avaliado_id}")
+def relacao_rota(
+    ciclo_id: str,
+    avaliado_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    relacao = chamar(lambda: relacao_do_avaliador(db, usuario, ciclo_id, avaliado_id))
+    return {
+        "id": relacao.id,
+        "avaliador_id": relacao.avaliador_id,
+        "avaliado_id": relacao.avaliado_id,
+        "tipo_relacao": relacao.tipo_relacao,
+        "peso": relacao.peso,
+        "status": relacao.status,
+    }
+
+
+@router.get("/ciclos/{ciclo_id}/resultado/{avaliado_id}")
+def resultado_rota(
+    ciclo_id: str,
+    avaliado_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    return chamar(lambda: calcular_resultado_avaliacao(db, ciclo_id, avaliado_id))
 
 
 @router.get("/responder/{token}/nota", response_model=NotaSaida)

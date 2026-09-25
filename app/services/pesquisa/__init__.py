@@ -24,14 +24,13 @@ from app.services.pesquisa.crud import (
     publicar,
     reordenar_perguntas,
 )
-from app.services.pesquisa.resposta import (
-    gerar_tokens,
-    nota_da_pesquisa,
-    nota_do_token,
-    perguntas_da_pesquisa,
-    perguntas_do_token,
-    registrar_respostas,
-    registrar_respostas_da_pesquisa,
+from app.services.pesquisa.desempenho import (
+    calcular_resultado_avaliacao,
+    criar_ciclo,
+    gerar_relacoes,
+    listar_ciclos,
+    listar_relacoes,
+    relacao_do_avaliador,
 )
 from app.services.pesquisa.midia import (
     anexar_midia_pergunta,
@@ -46,6 +45,15 @@ from app.services.pesquisa.modelos import (
     salvar_modelo,
 )
 from app.services.pesquisa.painel import painel
+from app.services.pesquisa.resposta import (
+    gerar_tokens,
+    nota_da_pesquisa,
+    nota_do_token,
+    perguntas_da_pesquisa,
+    perguntas_do_token,
+    registrar_respostas,
+    registrar_respostas_da_pesquisa,
+)
 
 __all__ = [
     "K_ANONIMATO",
@@ -60,15 +68,20 @@ __all__ = [
     "baixar_midia_da_pesquisa",
     "baixar_midia_pelo_token",
     "baixar_midia_pergunta",
+    "calcular_resultado_avaliacao",
+    "criar_ciclo",
     "criar_de_modelo",
     "criar_pesquisa",
     "editar_pergunta",
     "editar_pesquisa",
     "encerrar",
     "excluir_pergunta",
+    "gerar_relacoes",
     "gerar_tokens",
+    "listar_ciclos",
     "listar_minhas_pesquisas",
     "listar_modelos",
+    "listar_relacoes",
     "listar_participantes_status",
     "listar_perguntas_pesquisa",
     "listar_pesquisas",
@@ -79,6 +92,7 @@ __all__ = [
     "perguntas_da_pesquisa",
     "perguntas_do_token",
     "publicar",
+    "relacao_do_avaliador",
     "registrar_respostas",
     "registrar_respostas_da_pesquisa",
     "remover_midia_pergunta",

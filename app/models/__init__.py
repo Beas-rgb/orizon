@@ -8,6 +8,7 @@ from app.models.base import Base
 from app.models.configuracao import ConfiguracaoProjeto
 from app.models.controle_acesso import ControleAcesso
 from app.models.convite import Convite
+from app.models.desempenho import AvaliacaoRelacionamento, CicloAvaliacao
 from app.models.documento import Documento
 from app.models.estrutura import Cargo, PerfilFuncionario
 from app.models.organizacao import Organizacao
@@ -18,8 +19,10 @@ from app.models.token_redefinicao import TokenRedefinicao
 from app.models.usuario import Usuario
 
 __all__ = [
+    "AvaliacaoRelacionamento",
     "Base",
     "Cargo",
+    "CicloAvaliacao",
     "ConfiguracaoProjeto",
     "ControleAcesso",
     "Convite",
