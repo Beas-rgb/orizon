@@ -414,9 +414,6 @@ export function ProjetoDetalhePage() {
 
   return (
     <AppShell active="projetos">
-      <Link to="/projetos" className="text-[12px] text-[#1D5FAF] font-semibold">
-        ← Voltar aos trabalhos
-      </Link>
       <div
         className="mt-3 mb-4 rounded-3xl px-5 py-4"
         style={{

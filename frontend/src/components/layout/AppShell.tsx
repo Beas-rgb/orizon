@@ -19,6 +19,7 @@ const papelRotulo: Record<string, string> = {
 
 export function AppShell({ children, active = "dashboard", searchHints }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [confirmarVolta, setConfirmarVolta] = useState(false);
   const { usuario, sair } = useAuth();
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
@@ -90,6 +91,11 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
               label: "Biblioteca",
               active: abaAtual === "biblioteca",
               onClick: () => irTrabalho("biblioteca"),
+            },
+            {
+              icon: iconMap.ArrowLeft,
+              label: "Voltar aos trabalhos",
+              onClick: () => setConfirmarVolta(true),
             },
             {
               icon: iconMap.Settings,
@@ -269,6 +275,47 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
       >
         {children}
       </main>
+      {confirmarVolta ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+          style={{ background: "rgba(20,30,50,0.28)" }}
+        >
+          <div
+            className="w-full max-w-xs rounded-3xl p-5"
+            style={{
+              background: "rgba(255,255,255,0.96)",
+              border: "1px solid rgba(255,255,255,0.8)",
+              boxShadow: "0 16px 40px rgba(0,0,0,0.16)",
+            }}
+          >
+            <p className="text-[14px] font-bold text-gray-800">Voltar aos trabalhos?</p>
+            <p className="text-[12px] text-gray-500 mt-1 mb-4">
+              Você sai deste trabalho e volta para a lista.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-xl py-2 text-[12px] font-bold text-gray-600"
+                style={{ background: "rgba(0,0,0,0.06)" }}
+                onClick={() => setConfirmarVolta(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="flex-1 rounded-xl py-2 text-[12px] font-bold text-white"
+                style={{ background: "#1D5FAF" }}
+                onClick={() => {
+                  setConfirmarVolta(false);
+                  navigate("/projetos");
+                }}
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

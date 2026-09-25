@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import {
   Archive,
+  ArrowLeft,
   BarChart2,
   Bell,
   Briefcase,
@@ -191,4 +192,5 @@ export const iconMap = {
   Bell,
   Settings,
   HelpCircle,
+  ArrowLeft,
 };
