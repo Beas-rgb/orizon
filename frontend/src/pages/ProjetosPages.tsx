@@ -1,5 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArvoreOrganizacional } from "../components/estrutura/ArvoreOrganizacional";
+import { ImportacaoEquipe } from "../components/estrutura/ImportacaoEquipe";
+import type { NoArvore } from "../components/estrutura/tipos";
 import { AppShell } from "../components/layout/AppShell";
 import { api } from "../lib/api";
 import { ACCENT, glassStyle } from "../lib/theme";
@@ -246,6 +249,7 @@ export function ProjetoDetalhePage() {
   const [pesquisasOk, setPesquisasOk] = useState(false);
   const [painel, setPainel] = useState<PainelItem[]>([]);
   const [painelTitulo, setPainelTitulo] = useState("");
+  const [arvore, setArvore] = useState<NoArvore[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -272,6 +276,9 @@ export function ProjetoDetalhePage() {
     api<{ pesquisas_habilitadas: boolean }>(`/projetos/${id}/configuracao`)
       .then((c) => setPesquisasOk(c.pesquisas_habilitadas))
       .catch(() => setPesquisasOk(false));
+    api<NoArvore[]>(`/projetos/${id}/arvore`)
+      .then(setArvore)
+      .catch(() => setArvore([]));
   }, [id]);
 
   async function reenviarConviteOrgao() {
@@ -395,6 +402,13 @@ export function ProjetoDetalhePage() {
     }
   }
 
+  async function recarregarEquipe() {
+    if (!id) return;
+    setEquipe(await api<Membro[]>(`/projetos/${id}/equipe`));
+    setArvore(await api<NoArvore[]>(`/projetos/${id}/arvore`));
+    setSetores(await api<Setor[]>(`/projetos/${id}/setores`).catch(() => []));
+  }
+
   async function ligarPesquisas() {
     if (!id) return;
     setAviso("");
@@ -465,6 +479,16 @@ export function ProjetoDetalhePage() {
 
         {aba === "participantes" && (
           <div className="flex flex-col gap-4">
+            {id ? (
+              <ImportacaoEquipe
+                projetoId={id}
+                onErro={setAviso}
+                onImportado={(criados) => {
+                  setAviso(`${criados} funcionários importados.`);
+                  void recarregarEquipe();
+                }}
+              />
+            ) : null}
             <div className="hz-table-wrap overflow-x-auto">
               <table className="w-full text-[12px] text-left">
                 <thead>
@@ -552,8 +576,11 @@ export function ProjetoDetalhePage() {
         {aba === "estrutura" && (
           <div>
             <p className="text-[13px] text-gray-600 mb-3">
-              Setores deste trabalho. A hierarquia de cargos entra numa etapa seguinte.
+              Hierarquia topo→base. Expanda, recolha ou busque. Cargo e setor
+              aparecem no nó, mas não montam a árvore.
             </p>
+            <ArvoreOrganizacional arvore={arvore} />
+            <p className="text-[12px] text-gray-500 mt-4 mb-2">Setores</p>
             <ul className="flex flex-wrap gap-2">
               {setores.map((s) => (
                 <li

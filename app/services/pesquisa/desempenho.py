@@ -107,6 +107,40 @@ def criar_ciclo(
     return ciclo
 
 
+def atualizar_ciclo(
+    db: Session,
+    consultor: Usuario,
+    ciclo_id: str,
+    *,
+    nome: str | None = None,
+    escopo: str | None = None,
+    configuracao: str | None = None,
+) -> CicloAvaliacao:
+    """Altera rascunho: nome, escopo ou pesos. Publicado não muda."""
+    ciclo = db.get(CicloAvaliacao, ciclo_id)
+    if ciclo is None or ciclo.deleted_at is not None:
+        raise ErroAuth(404, "Ciclo não encontrado.")
+    _projeto_da_consultora(db, consultor, ciclo.projeto_id)
+    if ciclo.status != "RASCUNHO":
+        raise ErroAuth(422, "Só rascunho pode ser alterado.")
+    if nome is None and escopo is None and configuracao is None:
+        raise ErroAuth(422, "Nada para atualizar.")
+    if nome is not None:
+        if len(nome.strip()) < 2:
+            raise ErroAuth(422, "Informe o nome do ciclo.")
+        ciclo.nome = nome.strip()[:200]
+    if escopo is not None:
+        if escopo not in ESCOPOS:
+            raise ErroAuth(422, "Escopo inválido.")
+        ciclo.escopo = escopo
+    if configuracao is not None:
+        ciclo.configuracao = _validar_configuracao(configuracao)
+    ciclo.atualizado_em = agora()
+    _auditar(db, "CICLO_ATUALIZADO", consultor.id)
+    db.commit()
+    return ciclo
+
+
 def listar_ciclos(
     db: Session, usuario: Usuario, projeto_id: str
 ) -> list[CicloAvaliacao]:

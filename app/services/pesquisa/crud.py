@@ -485,6 +485,8 @@ def publicar(
     pesquisa = _pesquisa_viva(db, pesquisa_id)
     if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
+    # Trava a pesquisa para publicar. Outro POST simultâneo espera ou falha.
+    db.refresh(pesquisa, with_for_update=True)
     if pesquisa.status != "RASCUNHO":
         raise ErroAuth(422, "Só rascunho pode ser publicado.")
     config = db.scalar(

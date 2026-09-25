@@ -265,6 +265,43 @@ def test_calcular_resultado_com_pesos(client, monkeypatch, db) -> None:
     assert dados["por_perspectiva"]["SUPERIOR"] == 5.0
 
 
+def test_ciclo_atualiza_pesos_so_rascunho(client, monkeypatch) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    ciclo = client.post(
+        f"/projetos/{projeto_id}/ciclos",
+        headers=headers,
+        json={"nome": "Avaliação 2026"},
+    ).json()
+    ok = client.patch(
+        f"/ciclos/{ciclo['id']}",
+        headers=headers,
+        json={
+            "configuracao": (
+                '{"pesos": {"AUTO": 1, "SUPERIOR": 3, "SUBORDINADO": 1}}'
+            )
+        },
+    )
+    assert ok.status_code == 200
+    assert "SUPERIOR" in (ok.json()["configuracao"] or "")
+    lista = client.get(f"/projetos/{projeto_id}/ciclos", headers=headers).json()
+    assert lista[0]["id"] == ciclo["id"]
+    assert lista[0]["configuracao"]
+
+
+def test_relacao_lista_nomes(client, monkeypatch) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    _funcionario(client, headers, projeto_id, "func@prefeitura.dev", "Funcionario")
+    ciclo = client.post(
+        f"/projetos/{projeto_id}/ciclos",
+        headers=headers,
+        json={"nome": "Avaliação 2026"},
+    ).json()
+    client.post(f"/ciclos/{ciclo['id']}/gerar-relacoes", headers=headers)
+    relacoes = client.get(f"/ciclos/{ciclo['id']}/relacoes", headers=headers).json()
+    assert relacoes[0]["avaliador_nome"] == "Funcionario"
+    assert relacoes[0]["avaliado_nome"] == "Funcionario"
+
+
 def test_relacao_nao_existente_404(client, monkeypatch) -> None:
     headers, projeto_id = _projeto(client, monkeypatch)
     email = "func@prefeitura.dev"

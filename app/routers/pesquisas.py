@@ -40,6 +40,7 @@ from app.schemas.pesquisa import (
 from app.services.pesquisa import (
     adicionar_pergunta,
     anexar_midia_pergunta,
+    atualizar_ciclo,
     baixar_midia_da_pesquisa,
     baixar_midia_pelo_token,
     baixar_midia_pergunta,
@@ -88,6 +89,16 @@ def _saida(pesquisa) -> PesquisaSaida:
         status=pesquisa.status,
         descricao=pesquisa.descricao,
     )
+
+
+def _ciclo_saida(ciclo) -> dict:
+    return {
+        "id": ciclo.id,
+        "nome": ciclo.nome,
+        "escopo": ciclo.escopo,
+        "status": ciclo.status,
+        "configuracao": ciclo.configuracao,
+    }
 
 
 @router.post("/projetos/{projeto_id}/pesquisas", response_model=PesquisaSaida)
@@ -632,12 +643,27 @@ def criar_ciclo_rota(
             configuracao=corpo.get("configuracao"),
         )
     )
-    return {
-        "id": ciclo.id,
-        "nome": ciclo.nome,
-        "escopo": ciclo.escopo,
-        "status": ciclo.status,
-    }
+    return _ciclo_saida(ciclo)
+
+
+@router.patch("/ciclos/{ciclo_id}")
+def atualizar_ciclo_rota(
+    ciclo_id: str,
+    corpo: dict,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    ciclo = chamar(
+        lambda: atualizar_ciclo(
+            db,
+            consultor,
+            ciclo_id,
+            nome=corpo.get("nome"),
+            escopo=corpo.get("escopo"),
+            configuracao=corpo.get("configuracao"),
+        )
+    )
+    return _ciclo_saida(ciclo)
 
 
 @router.get("/projetos/{projeto_id}/ciclos")
@@ -647,15 +673,7 @@ def listar_ciclos_rota(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     itens = chamar(lambda: listar_ciclos(db, usuario, projeto_id))
-    return [
-        {
-            "id": item.id,
-            "nome": item.nome,
-            "escopo": item.escopo,
-            "status": item.status,
-        }
-        for item in itens
-    ]
+    return [_ciclo_saida(item) for item in itens]
 
 
 @router.post("/ciclos/{ciclo_id}/gerar-relacoes")
@@ -674,11 +692,19 @@ def listar_relacoes_rota(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     itens = chamar(lambda: listar_relacoes(db, usuario, ciclo_id))
+    nomes: dict[str, str] = {}
+    for item in itens:
+        for uid in (item.avaliador_id, item.avaliado_id):
+            if uid not in nomes:
+                pessoa = db.get(Usuario, uid)
+                nomes[uid] = pessoa.nome if pessoa else ""
     return [
         {
             "id": item.id,
             "avaliador_id": item.avaliador_id,
             "avaliado_id": item.avaliado_id,
+            "avaliador_nome": nomes.get(item.avaliador_id, ""),
+            "avaliado_nome": nomes.get(item.avaliado_id, ""),
             "tipo_relacao": item.tipo_relacao,
             "peso": item.peso,
             "status": item.status,

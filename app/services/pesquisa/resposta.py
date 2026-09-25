@@ -228,6 +228,10 @@ def _registrar_respostas_em(
     participante = _participante_da_pesquisa(
         db, usuario, pesquisa, para_envio=True
     )
+    # Trava o participante para o envio. Outro POST simultâneo espera ou falha.
+    db.refresh(participante, with_for_update=True)
+    if participante.status == "RESPONDIDA":
+        raise ErroAuth(409, "Você já respondeu esta pesquisa.")
     linha = _token_pessoal(db, participante)
     perguntas = {
         item.id: item

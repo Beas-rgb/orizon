@@ -219,10 +219,14 @@ def arvore_hierarquica(
 
     def montar(perfil: PerfilFuncionario) -> dict[str, object]:
         pessoa = db.get(Usuario, perfil.usuario_id)
+        cargo = db.get(Cargo, perfil.cargo_id) if perfil.cargo_id else None
+        setor = db.get(Setor, perfil.setor_id) if perfil.setor_id else None
         return {
             "usuario_id": perfil.usuario_id,
             "nome": pessoa.nome if pessoa else "",
             "email": pessoa.email if pessoa else "",
+            "cargo": cargo.nome if cargo else None,
+            "setor": setor.nome if setor else None,
             "subordinados": [
                 montar(filho)
                 for filho in por_superior.get(perfil.usuario_id, [])

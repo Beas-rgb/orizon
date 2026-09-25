@@ -25,6 +25,7 @@ from app.services.pesquisa.crud import (
     reordenar_perguntas,
 )
 from app.services.pesquisa.desempenho import (
+    atualizar_ciclo,
     calcular_resultado_avaliacao,
     criar_ciclo,
     gerar_relacoes,
@@ -65,6 +66,7 @@ __all__ = [
     "opcoes_da",
     "adicionar_pergunta",
     "anexar_midia_pergunta",
+    "atualizar_ciclo",
     "baixar_midia_da_pesquisa",
     "baixar_midia_pelo_token",
     "baixar_midia_pergunta",

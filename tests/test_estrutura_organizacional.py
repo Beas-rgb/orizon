@@ -150,7 +150,10 @@ def test_perfil_com_setor_cargo_e_superior(client, monkeypatch, db) -> None:
     arvore = client.get(f"/projetos/{projeto_id}/arvore", headers=headers).json()
     assert len(arvore) == 1
     assert arvore[0]["usuario_id"] == gerente_id
+    assert arvore[0]["cargo"] == "Gerente"
+    assert arvore[0]["setor"] == "Recursos Humanos"
     assert arvore[0]["subordinados"][0]["usuario_id"] == func_id
+    assert arvore[0]["subordinados"][0]["cargo"] == "Gerente"
 
 
 def test_hierarquia_rejeita_ciclo(client, monkeypatch) -> None:
