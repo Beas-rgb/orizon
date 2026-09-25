@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { Navbar } from "./Navbar";
 import { Sidebar, iconMap } from "./Sidebar";
@@ -21,12 +21,86 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { usuario, sair } = useAuth();
   const navigate = useNavigate();
+  const { pathname, search } = useLocation();
   const nome = usuario?.nome || "Usuário";
   const painel = usuario?.painel || "";
   const label = papelRotulo[painel] || "Horizon";
+  const partes = pathname.split("/").filter(Boolean);
+  const trabalhoId =
+    partes[0] === "projetos" && partes[1] && partes[1] !== "novo" ? partes[1] : null;
+  const abaAtual = new URLSearchParams(search).get("aba") || "";
 
-  const sections =
-    painel === "consultora"
+  useEffect(() => {
+    if (trabalhoId || (painel === "orgao" && abaAtual)) setSidebarOpen(true);
+  }, [trabalhoId, painel, abaAtual]);
+
+  const irTrabalho = (aba: string) => {
+    if (!trabalhoId) return;
+    navigate(`/projetos/${trabalhoId}?aba=${aba}`);
+  };
+
+  const sections = trabalhoId
+    ? [
+        {
+          title: "Trabalho",
+          items: [
+            {
+              icon: iconMap.LayoutDashboard,
+              label: "Home",
+              onClick: () => navigate("/inicio"),
+            },
+            {
+              icon: iconMap.Briefcase,
+              label: "Visão geral",
+              active: abaAtual === "" || abaAtual === "visao",
+              onClick: () => irTrabalho("visao"),
+            },
+            {
+              icon: iconMap.Star,
+              label: "Estrutura",
+              active: abaAtual === "estrutura",
+              onClick: () => irTrabalho("estrutura"),
+            },
+            {
+              icon: iconMap.Users,
+              label: "Participantes",
+              active: abaAtual === "participantes",
+              onClick: () => irTrabalho("participantes"),
+            },
+            {
+              icon: iconMap.ClipboardList,
+              label: "Pesquisas",
+              active: abaAtual === "pesquisas" || partes[2] === "pesquisas",
+              onClick: () => irTrabalho("pesquisas"),
+            },
+            {
+              icon: iconMap.BarChart2,
+              label: "Resultados",
+              active: abaAtual === "resultados",
+              onClick: () => irTrabalho("resultados"),
+            },
+            {
+              icon: iconMap.Clock,
+              label: "Histórico",
+              active: abaAtual === "historico",
+              onClick: () => irTrabalho("historico"),
+            },
+            {
+              icon: iconMap.Archive,
+              label: "Biblioteca",
+              active: abaAtual === "biblioteca",
+              onClick: () => irTrabalho("biblioteca"),
+            },
+            {
+              icon: iconMap.Settings,
+              label: "Configurações",
+              active: abaAtual === "config",
+              onClick: () => irTrabalho("config"),
+            },
+          ],
+        },
+      ]
+    : painel === "consultora"
       ? [
           {
             title: "Principal",
@@ -78,19 +152,43 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
       : painel === "orgao"
         ? [
             {
-              title: "Principal",
+              title: "Órgão",
               items: [
                 {
                   icon: iconMap.LayoutDashboard,
-                  label: "Meus trabalhos",
-                  active: active === "dashboard",
+                  label: "Home",
+                  active: !abaAtual,
                   onClick: () => navigate("/inicio"),
                 },
                 {
+                  icon: iconMap.Briefcase,
+                  label: "Meus trabalhos",
+                  active: abaAtual === "trabalhos",
+                  onClick: () => navigate("/inicio?aba=trabalhos"),
+                },
+                {
+                  icon: iconMap.ClipboardList,
+                  label: "Ativas",
+                  active: abaAtual === "ativas",
+                  onClick: () => navigate("/inicio?aba=ativas"),
+                },
+                {
+                  icon: iconMap.Clock,
+                  label: "Agendadas",
+                  active: abaAtual === "agendadas",
+                  onClick: () => navigate("/inicio?aba=agendadas"),
+                },
+                {
+                  icon: iconMap.Archive,
+                  label: "Encerradas",
+                  active: abaAtual === "encerradas",
+                  onClick: () => navigate("/inicio?aba=encerradas"),
+                },
+                {
                   icon: iconMap.BarChart2,
-                  label: "Resultados",
-                  active: active === "resultados",
-                  onClick: () => navigate("/inicio"),
+                  label: "Histórico",
+                  active: abaAtual === "historico",
+                  onClick: () => navigate("/inicio?aba=historico"),
                 },
               ],
             },
@@ -156,6 +254,7 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
         nome={nome}
         papelLabel={label}
         sections={sections}
+        manterAberto={Boolean(trabalhoId) || painel === "orgao"}
       />
       <Navbar
         nome={nome}

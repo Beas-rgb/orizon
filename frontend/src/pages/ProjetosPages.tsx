@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
-import { MenuTrabalho } from "../components/layout/MenuTrabalho";
 import { api } from "../lib/api";
 import { ACCENT, glassStyle } from "../lib/theme";
 
@@ -212,16 +211,30 @@ type PainelItem = {
 export function ProjetoDetalhePage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [aba, setAba] = useState<
-    | "visao"
-    | "estrutura"
-    | "participantes"
-    | "pesquisas"
-    | "resultados"
-    | "historico"
-    | "biblioteca"
-    | "config"
-  >("visao");
+  const [params] = useSearchParams();
+  const abaPedida = params.get("aba") || "visao";
+  const aba = (
+    [
+      "visao",
+      "estrutura",
+      "participantes",
+      "pesquisas",
+      "resultados",
+      "historico",
+      "biblioteca",
+      "config",
+    ] as const
+  ).includes(abaPedida as "visao")
+    ? (abaPedida as
+        | "visao"
+        | "estrutura"
+        | "participantes"
+        | "pesquisas"
+        | "resultados"
+        | "historico"
+        | "biblioteca"
+        | "config")
+    : "visao";
   const [projeto, setProjeto] = useState<Projeto | null>(null);
   const [pesquisas, setPesquisas] = useState<Pesquisa[]>([]);
   const [equipe, setEquipe] = useState<Membro[]>([]);
@@ -424,22 +437,6 @@ export function ProjetoDetalhePage() {
         ) : null}
       </div>
 
-      <div className="flex gap-4 items-start">
-        <MenuTrabalho
-          ativo={aba}
-          onEscolher={(id) => setAba(id as typeof aba)}
-          itens={[
-            { id: "visao", label: "Visão geral" },
-            { id: "estrutura", label: "Estrutura" },
-            { id: "participantes", label: "Participantes" },
-            { id: "pesquisas", label: "Pesquisas" },
-            { id: "resultados", label: "Resultados" },
-            { id: "historico", label: "Histórico" },
-            { id: "biblioteca", label: "Biblioteca" },
-            { id: "config", label: "Configurações" },
-          ]}
-        />
-        <div className="min-w-0 flex-1">
       {aviso ? <p className="text-[#A02828] text-[13px] mb-3">{aviso}</p> : null}
       {linkAcesso ? (
         <div
@@ -782,8 +779,6 @@ export function ProjetoDetalhePage() {
             </ul>
           </div>
         )}
-      </div>
-        </div>
       </div>
     </AppShell>
   );

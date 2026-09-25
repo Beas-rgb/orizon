@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
-import { MenuTrabalho } from "../components/layout/MenuTrabalho";
 import { api } from "../lib/api";
 import { ACCENT, glassStyle } from "../lib/theme";
 
@@ -32,9 +31,12 @@ export function OrgaoPainel() {
   const [pesquisas, setPesquisas] = useState<Pesquisa[]>([]);
   const [painel, setPainel] = useState<PainelItem[]>([]);
   const [erro, setErro] = useState("");
-  const [abaPesq, setAbaPesq] = useState<
-    "ativas" | "agendadas" | "encerradas" | "historico"
-  >("ativas");
+  const [params, setParams] = useSearchParams();
+  const abaUrl = params.get("aba");
+  const abaPesq =
+    abaUrl === "agendadas" || abaUrl === "encerradas" || abaUrl === "historico"
+      ? abaUrl
+      : "ativas";
 
   useEffect(() => {
     api<Projeto[]>("/projetos")
@@ -78,31 +80,6 @@ export function OrgaoPainel() {
 
   return (
     <AppShell active="dashboard">
-      <div className="flex gap-4 items-start">
-        <MenuTrabalho
-          ativo={ativo ? abaPesq : "trabalhos"}
-          onEscolher={(id) => {
-            if (id === "trabalhos") {
-              setAtivo(null);
-              setPesquisas([]);
-              setPainel([]);
-              return;
-            }
-            setAbaPesq(id as typeof abaPesq);
-          }}
-          itens={
-            ativo
-              ? [
-                  { id: "trabalhos", label: "Meus trabalhos" },
-                  { id: "ativas", label: "Ativas" },
-                  { id: "agendadas", label: "Agendadas" },
-                  { id: "encerradas", label: "Encerradas" },
-                  { id: "historico", label: "Histórico" },
-                ]
-              : [{ id: "trabalhos", label: "Meus trabalhos" }]
-          }
-        />
-        <div className="min-w-0 flex-1">
       <h1 className="text-[18px] font-bold text-gray-800 mb-1">Painel do órgão</h1>
       <p className="text-[12px] text-gray-500 mb-5">
         Só trabalhos em que você participa. Histórico de pesquisas antigas e novas.
@@ -161,7 +138,7 @@ export function OrgaoPainel() {
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setAbaPesq(id)}
+                    onClick={() => setParams({ aba: id })}
                     className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
                     style={{
                       background:
@@ -246,8 +223,6 @@ export function OrgaoPainel() {
               ))}
             </>
           )}
-        </div>
-      </div>
         </div>
       </div>
     </AppShell>
