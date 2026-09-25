@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
+import { MenuTrabalho } from "../components/layout/MenuTrabalho";
 import { api } from "../lib/api";
 import { ACCENT, glassStyle } from "../lib/theme";
 
@@ -395,17 +396,6 @@ export function ProjetoDetalhePage() {
     }
   }
 
-  const abas = [
-    ["visao", "Visão geral"],
-    ["estrutura", "Estrutura"],
-    ["participantes", "Participantes"],
-    ["pesquisas", "Pesquisas"],
-    ["resultados", "Resultados"],
-    ["historico", "Histórico"],
-    ["biblioteca", "Biblioteca"],
-    ["config", "Configurações"],
-  ] as const;
-
   const field =
     "mt-1 w-full rounded-xl px-3 py-2.5 outline-none bg-white/70 border border-white/80 text-[13px]";
 
@@ -434,27 +424,22 @@ export function ProjetoDetalhePage() {
         ) : null}
       </div>
 
-      <div
-        className="flex gap-1 p-1 rounded-2xl mb-4 overflow-x-auto"
-        style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(255,255,255,0.55)" }}
-      >
-        {abas.map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setAba(key)}
-            className="px-3 py-1.5 rounded-xl text-[12px] whitespace-nowrap"
-            style={{
-              fontWeight: aba === key ? 700 : 400,
-              background: aba === key ? "rgba(255,255,255,0.9)" : "transparent",
-              color: aba === key ? ACCENT : "#9ca3af",
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
+      <div className="flex gap-4 items-start">
+        <MenuTrabalho
+          ativo={aba}
+          onEscolher={(id) => setAba(id as typeof aba)}
+          itens={[
+            { id: "visao", label: "Visão geral" },
+            { id: "estrutura", label: "Estrutura" },
+            { id: "participantes", label: "Participantes" },
+            { id: "pesquisas", label: "Pesquisas" },
+            { id: "resultados", label: "Resultados" },
+            { id: "historico", label: "Histórico" },
+            { id: "biblioteca", label: "Biblioteca" },
+            { id: "config", label: "Configurações" },
+          ]}
+        />
+        <div className="min-w-0 flex-1">
       {aviso ? <p className="text-[#A02828] text-[13px] mb-3">{aviso}</p> : null}
       {linkAcesso ? (
         <div
@@ -797,6 +782,8 @@ export function ProjetoDetalhePage() {
             </ul>
           </div>
         )}
+      </div>
+        </div>
       </div>
     </AppShell>
   );
