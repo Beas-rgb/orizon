@@ -17,8 +17,8 @@ Data de abertura: 25/09/2026.
 | --- | --- | --- | --- | --- |
 | P0-1 | CRÍTICO | Cálculo lia `Resposta.token_id` como id da relação | Tabela `avaliacao_respostas` | corrigido em `544716c` |
 | P0-2 | CRÍTICO | Resultado sem checar o usuário | 404 fora de consultora, órgão ou o próprio avaliado | corrigido em `544716c` |
-| P0-3 | ALTO | Confirmação da importação confia em `erros` do cliente | Revalidar no backend | corrigido neste documento |
-| P0-4 | ALTO | Superior de outro projeto ganhava perfil | Exigir funcionário deste projeto | pendente |
+| P0-3 | ALTO | Confirmação da importação confia em `erros` do cliente | Revalidar no backend | corrigido em `fa1819b` |
+| P0-4 | ALTO | Superior de outro projeto ganhava perfil | Exigir funcionário deste projeto | corrigido neste documento |
 | P1 | MÉDIO | SELECT por relação e `db.get` por nó da árvore | Carga em memória, depois de medir | não agora |
 | P2 | INCOMPLETO | Carga real (login → resposta) até 1.000 | Staging/Postgres, fase posterior | não agora |
 
@@ -73,7 +73,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 25/09/2026
-COMMIT: (este commit)
+COMMIT: fa1819b
 OBJETIVO: a confirmação da importação não pode confiar nos erros que o cliente manda.
 
 MUDANÇAS:
@@ -110,3 +110,44 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Superior só pode ser funcionário deste projeto. Testar A→B→C→A e UUID de outro tenant.
+
+---
+
+DATA: 25/09/2026
+COMMIT: (este commit)
+OBJETIVO: o superior da hierarquia tem de ser funcionário deste projeto.
+
+MUDANÇAS:
+- `_superior_valido` exige vínculo FUNCIONARIO no projeto e usuário ativo.
+- Sem esse vínculo, não cria perfil. A cadeia A→B→C→A continua rejeitada pela subida que já existia.
+
+PROBLEMA:
+- Qualquer UUID de usuário virava superior e ganhava um perfil mínimo neste projeto, mesmo vindo de outro órgão.
+
+CORREÇÃO:
+- 404, igual ao restante do isolamento. Não há árvore nova no banco.
+
+ARQUIVOS:
+- `app/services/estrutura.py`
+- `tests/test_estrutura_organizacional.py`
+
+TESTES:
+- A→B→C→A responde 422.
+- Funcionário do projeto B como superior no projeto A responde 404 e não ganha perfil em A.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- A hierarquia não atravessa tenant.
+
+RISCOS RESTANTES:
+- N+1 na geração de relações e na montagem da árvore (P1). Não medir ainda não autoriza índice às cegas.
+- Carga de 1.000 simultâneos no fluxo login → resposta não foi feita. `/health` não conta.
+- Importação ainda grava superior por e-mail dentro do próprio arquivo, sem passar por esta função. Isso é o mesmo projeto, não outro tenant.
+
+O QUE NÃO FOI ALTERADO:
+- A árvore continua derivada de `superior_id` na leitura. Setor e cargo não montam hierarquia. CLIMA, cálculo e importação não mudaram neste commit.
+
+PRÓXIMO PASSO:
+- Medir queries da geração de relações e da árvore antes de trocar o algoritmo. Não subir pool. Não declarar capacidade.

@@ -10,7 +10,7 @@ from app.core.autorizacao import exigir_papel
 from app.core.tokens import novo_id
 from app.models.base import agora
 from app.models.estrutura import Cargo, PerfilFuncionario
-from app.models.projeto import Projeto
+from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.setor import Setor
 from app.models.usuario import Usuario
 from app.services.identidade import ErroAuth
@@ -84,7 +84,16 @@ def _superior_valido(
     if superior_id == usuario_id:
         raise ErroAuth(422, "O funcionário não pode ser o próprio superior.")
     superior = db.get(Usuario, superior_id)
-    if superior is None or superior.deleted_at is not None:
+    if superior is None or superior.deleted_at is not None or not superior.ativo:
+        raise ErroAuth(404, "Superior não encontrado.")
+    membro = db.scalar(
+        select(ProjetoUsuario).where(
+            ProjetoUsuario.projeto_id == projeto_id,
+            ProjetoUsuario.usuario_id == superior_id,
+            ProjetoUsuario.papel == "FUNCIONARIO",
+        )
+    )
+    if membro is None:
         raise ErroAuth(404, "Superior não encontrado.")
     vinculo = db.scalar(
         select(PerfilFuncionario).where(

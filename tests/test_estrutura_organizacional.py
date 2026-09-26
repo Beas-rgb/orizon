@@ -191,6 +191,68 @@ def test_hierarquia_rejeita_auto_superior(client, monkeypatch) -> None:
     assert erro.status_code == 422
 
 
+def test_hierarquia_rejeita_ciclo_de_tres(client, monkeypatch) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    _funcionario(client, headers, projeto_id, "a@prefeitura.dev", "Ana")
+    _funcionario(client, headers, projeto_id, "b@prefeitura.dev", "Bruno")
+    _funcionario(client, headers, projeto_id, "c@prefeitura.dev", "Carla")
+    a_id = _usuario_id(client, headers, projeto_id, "a@prefeitura.dev")
+    b_id = _usuario_id(client, headers, projeto_id, "b@prefeitura.dev")
+    c_id = _usuario_id(client, headers, projeto_id, "c@prefeitura.dev")
+    client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": a_id, "superior_id": b_id},
+    )
+    client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": b_id, "superior_id": c_id},
+    )
+    ciclo = client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": c_id, "superior_id": a_id},
+    )
+    assert ciclo.status_code == 422
+    assert "ciclo" in ciclo.json()["detail"].lower()
+
+
+def test_superior_de_outro_projeto_nao_entra(client, monkeypatch, db) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    _funcionario(client, headers, projeto_id, "ana@prefeitura.dev", "Ana")
+    ana_id = _usuario_id(client, headers, projeto_id, "ana@prefeitura.dev")
+    rotulo = client.get("/projetos/rotulos", headers=headers).json()[0]["id"]
+    outro = client.post(
+        "/projetos",
+        headers=headers,
+        json={
+            "rotulo_id": rotulo,
+            "cnpj": "00000000000191",
+            "email_orgao": "outro@camara.dev",
+            "vinculo_tipo": "EDITAL",
+            "vinculo_titulo": "Outro",
+        },
+    )
+    assert outro.status_code == 200, outro.text
+    outro_id = outro.json()["id"]
+    _funcionario(client, headers, outro_id, "bruno@camara.dev", "Bruno")
+    bruno_id = _usuario_id(client, headers, outro_id, "bruno@camara.dev")
+    erro = client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": ana_id, "superior_id": bruno_id},
+    )
+    assert erro.status_code == 404
+    vazou = db.scalar(
+        select(PerfilFuncionario).where(
+            PerfilFuncionario.projeto_id == projeto_id,
+            PerfilFuncionario.usuario_id == bruno_id,
+        )
+    )
+    assert vazou is None
+
+
 def test_cargo_nao_existe_em_outro_projeto(client, monkeypatch) -> None:
     headers, projeto_id = _projeto(client, monkeypatch)
     cargo = client.post(
