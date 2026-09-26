@@ -277,10 +277,18 @@ def participantes(
     pesquisa_id: str,
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
+    limite: int = Query(default=50, ge=1, le=100),
+    deslocamento: int = Query(default=0, ge=0),
 ) -> ParticipantesSaida:
     """CLIMA: só totais. Demais tipos: status nominal — sem conteúdo de resposta."""
     dados = chamar(
-        lambda: listar_participantes_status(db, consultor, pesquisa_id)
+        lambda: listar_participantes_status(
+            db,
+            consultor,
+            pesquisa_id,
+            limite=limite,
+            deslocamento=deslocamento,
+        )
     )
     itens = None
     if dados.get("itens") is not None:

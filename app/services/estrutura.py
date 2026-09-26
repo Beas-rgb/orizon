@@ -225,11 +225,46 @@ def arvore_hierarquica(
     por_superior: dict[str | None, list[PerfilFuncionario]] = {}
     for perfil in perfis:
         por_superior.setdefault(perfil.superior_id, []).append(perfil)
+    ids = [p.usuario_id for p in perfis]
+    pessoas = {
+        u.id: u
+        for u in (
+            db.scalars(select(Usuario).where(Usuario.id.in_(ids))).all() if ids else []
+        )
+    }
+    cargo_ids = [p.cargo_id for p in perfis if p.cargo_id]
+    setor_ids = [p.setor_id for p in perfis if p.setor_id]
+    cargos = {
+        c.id: c
+        for c in (
+            db.scalars(
+                select(Cargo).where(
+                    Cargo.id.in_(cargo_ids),
+                    Cargo.deleted_at.is_(None),
+                )
+            ).all()
+            if cargo_ids
+            else []
+        )
+    }
+    setores = {
+        s.id: s
+        for s in (
+            db.scalars(
+                select(Setor).where(
+                    Setor.id.in_(setor_ids),
+                    Setor.deleted_at.is_(None),
+                )
+            ).all()
+            if setor_ids
+            else []
+        )
+    }
 
     def montar(perfil: PerfilFuncionario) -> dict[str, object]:
-        pessoa = db.get(Usuario, perfil.usuario_id)
-        cargo = db.get(Cargo, perfil.cargo_id) if perfil.cargo_id else None
-        setor = db.get(Setor, perfil.setor_id) if perfil.setor_id else None
+        pessoa = pessoas.get(perfil.usuario_id)
+        cargo = cargos.get(perfil.cargo_id) if perfil.cargo_id else None
+        setor = setores.get(perfil.setor_id) if perfil.setor_id else None
         return {
             "usuario_id": perfil.usuario_id,
             "nome": pessoa.nome if pessoa else "",

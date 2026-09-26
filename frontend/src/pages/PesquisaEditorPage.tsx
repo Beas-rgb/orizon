@@ -74,6 +74,7 @@ export function PesquisaEditorPage() {
   const [pesquisa, setPesquisa] = useState<Pesquisa | null>(null);
   const [perguntas, setPerguntas] = useState<Pergunta[]>([]);
   const [participantes, setParticipantes] = useState<Participante[]>([]);
+  const [totalNominal, setTotalNominal] = useState(0);
   const [resumoParticipantes, setResumoParticipantes] = useState<{
     total: number;
     respondidas: number;
@@ -153,7 +154,7 @@ export function PesquisaEditorPage() {
       const perguntasLista = await api<Pergunta[]>(`/pesquisas/${pesquisaId}/perguntas`);
       setPerguntas([...perguntasLista].sort((a, b) => a.ordem - b.ordem));
       const parts = await api<ParticipantesResp>(
-        `/pesquisas/${pesquisaId}/participantes`,
+        `/pesquisas/${pesquisaId}/participantes?limite=100`,
       ).catch(() => null);
       if (parts?.agregado) {
         setResumoParticipantes({
@@ -161,9 +162,11 @@ export function PesquisaEditorPage() {
           respondidas: parts.respondidas ?? 0,
         });
         setParticipantes([]);
+        setTotalNominal(0);
       } else {
         setResumoParticipantes(null);
         setParticipantes(parts?.itens || []);
+        setTotalNominal(parts?.total ?? 0);
       }
       setArvore(await api<NoArvore[]>(`/projetos/${projetoId}/arvore`).catch(() => []));
       if (atual?.tipo === "DESEMPENHO") {
@@ -369,7 +372,7 @@ export function PesquisaEditorPage() {
       setPesquisa(pub);
       setAviso("Publicada. Gere o link para enviar.");
       const parts = await api<ParticipantesResp>(
-        `/pesquisas/${pesquisaId}/participantes`,
+        `/pesquisas/${pesquisaId}/participantes?limite=100`,
       );
       if (parts.agregado) {
         setResumoParticipantes({
@@ -377,9 +380,11 @@ export function PesquisaEditorPage() {
           respondidas: parts.respondidas ?? 0,
         });
         setParticipantes([]);
+        setTotalNominal(0);
       } else {
         setResumoParticipantes(null);
         setParticipantes(parts.itens || []);
+        setTotalNominal(parts.total ?? 0);
       }
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Erro");
@@ -799,6 +804,22 @@ export function PesquisaEditorPage() {
                   <p className="text-gray-500 text-[13px]">
                     Nenhum funcionário no projeto ainda. Convide na aba Equipe.
                   </p>
+                ) : null}
+                {participantes.length < totalNominal ? (
+                  <button
+                    type="button"
+                    className="text-[12px] font-bold text-left"
+                    style={{ color: "#0F766E" }}
+                    onClick={() =>
+                      void api<ParticipantesResp>(
+                        `/pesquisas/${pesquisaId}/participantes?limite=100&deslocamento=${participantes.length}`,
+                      ).then((pagina) => {
+                        setParticipantes((atual) => [...atual, ...(pagina.itens || [])]);
+                      })
+                    }
+                  >
+                    Carregar mais
+                  </button>
                 ) : null}
               </ul>
             </>

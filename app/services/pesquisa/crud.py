@@ -620,33 +620,57 @@ def listar_participantes_status(
     db: Session,
     consultor: Usuario,
     pesquisa_id: str,
+    *,
+    limite: int = 50,
+    deslocamento: int = 0,
 ) -> dict:
-    """CLIMA: só totais. Demais tipos: funcionários + status (sem respostas)."""
+    """CLIMA: só totais. Demais tipos: página de status, sem o texto da resposta."""
+    limite = max(1, min(limite, 100))
+    deslocamento = max(0, deslocamento)
     pesquisa = _pesquisa_viva(db, pesquisa_id)
     if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
         raise ErroAuth(404, "Pesquisa não encontrada.")
-    vinculos = db.scalars(
-        select(ProjetoUsuario).where(
-            ProjetoUsuario.projeto_id == pesquisa.projeto_id,
-            ProjetoUsuario.papel == "FUNCIONARIO",
+    vinculos = list(
+        db.scalars(
+            select(ProjetoUsuario).where(
+                ProjetoUsuario.projeto_id == pesquisa.projeto_id,
+                ProjetoUsuario.papel == "FUNCIONARIO",
+            )
+        ).all()
+    )
+    ids = [v.usuario_id for v in vinculos]
+    pessoas = {
+        u.id: u
+        for u in (
+            db.scalars(
+                select(Usuario).where(
+                    Usuario.id.in_(ids),
+                    Usuario.deleted_at.is_(None),
+                )
+            ).all()
+            if ids
+            else []
         )
-    ).all()
+    }
+    status_por_usuario: dict[str, str] = {}
+    if ids:
+        for participante in db.scalars(
+            select(PesquisaParticipante).where(
+                PesquisaParticipante.pesquisa_id == pesquisa.id,
+                PesquisaParticipante.usuario_id.in_(ids),
+                PesquisaParticipante.deleted_at.is_(None),
+            )
+        ).all():
+            status_por_usuario[participante.usuario_id] = participante.status
     total = 0
     respondidas = 0
     itens: list[dict] = []
     for vinculo in vinculos:
-        pessoa = db.get(Usuario, vinculo.usuario_id)
-        if pessoa is None or pessoa.deleted_at is not None:
+        pessoa = pessoas.get(vinculo.usuario_id)
+        if pessoa is None:
             continue
         total += 1
-        participante = db.scalar(
-            select(PesquisaParticipante).where(
-                PesquisaParticipante.pesquisa_id == pesquisa.id,
-                PesquisaParticipante.usuario_id == pessoa.id,
-                PesquisaParticipante.deleted_at.is_(None),
-            )
-        )
-        status = participante.status if participante else "PENDENTE"
+        status = status_por_usuario.get(pessoa.id, "PENDENTE")
         if status == "RESPONDIDA":
             respondidas += 1
         itens.append(
@@ -669,7 +693,7 @@ def listar_participantes_status(
         "agregado": False,
         "total": total,
         "respondidas": respondidas,
-        "itens": itens,
+        "itens": itens[deslocamento : deslocamento + limite],
     }
 
 

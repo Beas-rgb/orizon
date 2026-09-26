@@ -101,3 +101,94 @@ def test_equipe_pagina_sem_consulta_por_pessoa(client, monkeypatch, db) -> None:
         if " in " not in s.lower() and " usu" in s.lower()
     ]
     assert len(individuais) <= 2
+
+
+def _id(client, headers, projeto_id: str, email: str) -> str:
+    equipe = client.get(
+        f"/projetos/{projeto_id}/equipe?limite=100",
+        headers=headers,
+    ).json()
+    return next(item["id"] for item in equipe if item["email"] == email)
+
+
+def _contar(engine, caminho: str, client, headers) -> tuple[int, list[str]]:
+    sqls: list[str] = []
+
+    def ouvir(_c, _cur, statement, _p, _ctx, _ex) -> None:
+        sqls.append(statement)
+
+    event.listen(engine, "before_cursor_execute", ouvir)
+    try:
+        resp = client.get(caminho, headers=headers)
+    finally:
+        event.remove(engine, "before_cursor_execute", ouvir)
+    assert resp.status_code == 200
+    return resp.status_code, sqls
+
+
+def test_participantes_pagina_e_clima_sem_nome(client, monkeypatch, db) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    for i, nome in enumerate(("Ana", "Bruno", "Carla"), start=1):
+        _aceitar(client, headers, projeto_id, f"f{i}@prefeitura.dev", nome)
+    clima = client.post(
+        f"/projetos/{projeto_id}/pesquisas",
+        headers=headers,
+        json={"titulo": "Clima", "tipo": "CLIMA"},
+    ).json()
+    agregado = client.get(
+        f"/pesquisas/{clima['id']}/participantes?limite=1",
+        headers=headers,
+    )
+    assert agregado.status_code == 200
+    assert agregado.json()["agregado"] is True
+    assert agregado.json()["itens"] is None
+    assert agregado.json()["total"] == 3
+    assert "f1@prefeitura.dev" not in agregado.text
+
+    desempenho = client.post(
+        f"/projetos/{projeto_id}/pesquisas",
+        headers=headers,
+        json={"titulo": "Nota", "tipo": "DESEMPENHO"},
+    ).json()
+    pagina = client.get(
+        f"/pesquisas/{desempenho['id']}/participantes?limite=1",
+        headers=headers,
+    )
+    assert pagina.status_code == 200
+    assert pagina.json()["total"] == 3
+    assert len(pagina.json()["itens"]) == 1
+    _, sqls = _contar(
+        db.get_bind(),
+        f"/pesquisas/{desempenho['id']}/participantes?limite=100",
+        client,
+        headers,
+    )
+    de_usuario = [s for s in sqls if "usuarios" in s.lower()]
+    assert any(" in " in s.lower() for s in de_usuario)
+
+
+def test_arvore_le_pessoas_de_uma_vez(client, monkeypatch, db) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    ids = []
+    for i, nome in enumerate(("Ana", "Bruno", "Carla", "Dora"), start=1):
+        email = f"a{i}@prefeitura.dev"
+        _aceitar(client, headers, projeto_id, email, nome)
+        ids.append(_id(client, headers, projeto_id, email))
+    for filho, pai in zip(ids[1:], ids[:-1], strict=True):
+        perfil = client.put(
+            f"/projetos/{projeto_id}/perfis",
+            headers=headers,
+            json={"usuario_id": filho, "superior_id": pai},
+        )
+        assert perfil.status_code == 200, perfil.text
+    _, sqls = _contar(
+        db.get_bind(),
+        f"/projetos/{projeto_id}/arvore",
+        client,
+        headers,
+    )
+    de_usuario = [s for s in sqls if "usuarios" in s.lower()]
+    assert any(" in " in s.lower() for s in de_usuario)
+    individuais = [s for s in de_usuario if " in " not in s.lower()]
+    assert len(individuais) <= 3
+

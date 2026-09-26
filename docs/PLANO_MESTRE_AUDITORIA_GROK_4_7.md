@@ -199,7 +199,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 26/09/2026
-COMMIT: (este commit)
+COMMIT: ffbf75e
 OBJETIVO: a lista da equipe não consulta o banco uma pessoa por vez e cabe numa página.
 
 MUDANÇAS:
@@ -237,3 +237,48 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - A mesma leitura em lote para participantes (exceto o agregado do CLIMA) e para a árvore, com contagem de queries.
+
+---
+
+DATA: 26/09/2026
+COMMIT: (este commit)
+OBJETIVO: participantes e árvore deixam de buscar uma pessoa por nó.
+
+MUDANÇAS:
+- Participantes de desempenho: usuários e status numa leitura `IN`, página de até 100. O total continua sendo o da equipe inteira.
+- CLIMA segue só com totais. A página não devolve nome.
+- A árvore carrega pessoas, cargos e setores uma vez e monta os nós em memória.
+
+PROBLEMA:
+- Cada funcionário gerava um `db.get` e, nos participantes, outro `select`. Cada nó da árvore repetia usuário, cargo e setor.
+
+CORREÇÃO:
+- Mapas em memória. Sem tabela nova e sem índice novo: 500 linhas cabem numa leitura.
+
+ARQUIVOS:
+- `app/services/pesquisa/crud.py`
+- `app/routers/pesquisas.py`
+- `app/services/estrutura.py`
+- `frontend/src/pages/PesquisaEditorPage.tsx`
+- `tests/test_listagens_lote.py`
+
+TESTES:
+- CLIMA com `limite=1` devolve total 3 e `itens` nulo, sem e-mail no JSON.
+- Desempenho devolve uma pessoa na página e total 3. A SQL de usuários usa `IN`.
+- Árvore de 4 pessoas usa `IN` e não uma consulta por nó.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- O número de consultas de usuário não acompanha o tamanho da equipe nessas duas listas.
+
+RISCOS RESTANTES:
+- Upload da biblioteca e geração de token de resposta ainda serão conferidos quanto ao `controle_acesso`.
+- Carga de 1.000 continua fora: exige staging, pool segue 2/0.
+
+O QUE NÃO FOI ALTERADO:
+- O painel agregado, o anonimato do CLIMA, a regra de superior e a paginação da equipe. A geração de relações continua com um select por vínculo: ainda não foi medida em staging, então não foi reescrita.
+
+PRÓXIMO PASSO:
+- Se upload ou geração de token não tiver bloqueio, aplicar 3 falhas e 5 minutos de espera. Sucesso não pode contar como falha.
