@@ -448,7 +448,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 26/09/2026
-COMMIT: (este commit)
+COMMIT: 8265e49
 OBJETIVO: deixar o harness de carga e a checagem estática prontos, sem medir 1.000 e sem ZAP.
 
 MUDANÇAS:
