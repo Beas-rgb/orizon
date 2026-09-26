@@ -15,9 +15,9 @@ Data de abertura: 25/09/2026.
 
 | ID | Severidade | Problema | Correção mínima | Estado |
 | --- | --- | --- | --- | --- |
-| P0-1 | CRÍTICO | Cálculo lia `Resposta.token_id` como id da relação | Tabela `avaliacao_respostas` | corrigido neste documento |
-| P0-2 | CRÍTICO | Resultado sem checar o usuário | 404 fora de consultora, órgão ou o próprio avaliado | corrigido neste documento |
-| P0-3 | ALTO | Confirmação da importação confia em `erros` do cliente | Revalidar no backend | pendente |
+| P0-1 | CRÍTICO | Cálculo lia `Resposta.token_id` como id da relação | Tabela `avaliacao_respostas` | corrigido em `544716c` |
+| P0-2 | CRÍTICO | Resultado sem checar o usuário | 404 fora de consultora, órgão ou o próprio avaliado | corrigido em `544716c` |
+| P0-3 | ALTO | Confirmação da importação confia em `erros` do cliente | Revalidar no backend | corrigido neste documento |
 | P0-4 | ALTO | Superior de outro projeto ganhava perfil | Exigir funcionário deste projeto | pendente |
 | P1 | MÉDIO | SELECT por relação e `db.get` por nó da árvore | Carga em memória, depois de medir | não agora |
 | P2 | INCOMPLETO | Carga real (login → resposta) até 1.000 | Staging/Postgres, fase posterior | não agora |
@@ -25,7 +25,7 @@ Data de abertura: 25/09/2026.
 ---
 
 DATA: 25/09/2026
-COMMIT: (preenchido no commit desta correção)
+COMMIT: 544716c
 OBJETIVO: ligar a nota de desempenho à relação, não ao token da pesquisa.
 
 MUDANÇAS:
@@ -69,3 +69,44 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Revalidar a confirmação da importação no backend.
+
+---
+
+DATA: 25/09/2026
+COMMIT: (este commit)
+OBJETIVO: a confirmação da importação não pode confiar nos erros que o cliente manda.
+
+MUDANÇAS:
+- `confirmar_importacao` monta as linhas de novo e chama `validar_linhas`.
+- Só entra no banco a linha que a validação do servidor deixou sem erro.
+
+PROBLEMA:
+- O backend pulava a linha se `erros` viesse preenchido e gravava o resto sem olhar de novo. Quem apagasse os erros gravava duplicata, superior inexistente ou ciclo.
+
+CORREÇÃO:
+- A prévia continua igual. A confirmação repete a mesma validação. Erro inventado pelo cliente não bloqueia linha boa. Erro apagado não libera linha ruim.
+
+ARQUIVOS:
+- `app/services/importacao.py`
+- `tests/test_importacao.py`
+
+TESTES:
+- E-mail duplicado com `erros: []` não cria usuário.
+- Linha válida com `erros: ["email inválido"]` é gravada.
+- Linha com e-mail inválido continua de fora.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- O frontend deixa de ser fonte de verdade na confirmação.
+
+RISCOS RESTANTES:
+- Superior de outro projeto ainda pode receber perfil (P0-4).
+- N+1 na geração de relações e carga real continuam fora.
+
+O QUE NÃO FOI ALTERADO:
+- Leitura de CSV/XLSX, limite de 500 linhas e 2 MB, e a prévia. O parser já validava; faltava repetir isso na confirmação.
+
+PRÓXIMO PASSO:
+- Superior só pode ser funcionário deste projeto. Testar A→B→C→A e UUID de outro tenant.

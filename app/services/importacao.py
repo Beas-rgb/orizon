@@ -275,7 +275,7 @@ def confirmar_importacao(
     projeto_id: str,
     linhas: list[LinhaImportacao],
 ) -> dict[str, int]:
-    """Grava só as linhas válidas. Tudo numa transação."""
+    """Grava só as linhas válidas. Revalida. O cliente não é fonte dos erros."""
     if consultor.papel != "CONSULTOR":
         raise ErroAuth(404, "Projeto não encontrado.")
     projeto = db.get(Projeto, projeto_id)
@@ -285,6 +285,23 @@ def confirmar_importacao(
         or projeto.consultor_id != consultor.id
     ):
         raise ErroAuth(404, "Projeto não encontrado.")
+
+    enviadas = len(linhas)
+    brutas = [
+        {
+            "nome": linha.nome,
+            "email": linha.email,
+            "cargo": linha.cargo,
+            "setor": linha.setor,
+            "superior_email": linha.superior_email,
+        }
+        for linha in linhas
+    ]
+    try:
+        previa = validar_linhas(db, projeto, brutas)
+    except ImportacaoInvalida as exc:
+        raise ErroAuth(422, str(exc)) from None
+    linhas = [linha for linha in previa.linhas if not linha.erros]
 
     setores = {
         s.nome.strip().lower(): s
@@ -416,4 +433,4 @@ def confirmar_importacao(
         criados += 1
 
     db.commit()
-    return {"criados": criados, "total": len(linhas)}
+    return {"criados": criados, "total": enviadas}

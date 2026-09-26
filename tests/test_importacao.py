@@ -148,11 +148,11 @@ def test_confirmar_grava_so_validos(client, monkeypatch, db) -> None:
         },
         {
             "nome": "Erro",
-            "email": "erro@prefeitura.dev",
+            "email": "invalido",
             "cargo": "",
             "setor": "",
             "superior_email": "",
-            "erros": ["email inválido"],
+            "erros": [],
         },
     ]
     resp = client.post(
@@ -184,6 +184,49 @@ def test_confirmar_grava_so_validos(client, monkeypatch, db) -> None:
         )
     ).all()
     assert len(vinculos) == 2
+
+
+def test_confirmacao_revalida_no_servidor(client, monkeypatch, db) -> None:
+    """Linha inválida com erros vazios não grava. Erro falso não bloqueia a válida."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    linhas = [
+        {
+            "nome": "Ana",
+            "email": "ana@prefeitura.dev",
+            "cargo": "Analista",
+            "setor": "RH",
+            "superior_email": "",
+            "erros": [],
+        },
+        {
+            "nome": "Copia",
+            "email": "ana@prefeitura.dev",
+            "cargo": "Analista",
+            "setor": "RH",
+            "superior_email": "",
+            "erros": [],
+        },
+        {
+            "nome": "Carla",
+            "email": "carla@prefeitura.dev",
+            "cargo": "Analista",
+            "setor": "RH",
+            "superior_email": "",
+            "erros": ["email inválido"],
+        },
+    ]
+    resp = client.post(
+        f"/projetos/{projeto_id}/importar/confirmar",
+        headers=headers,
+        json={"linhas": linhas},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["criados"] == 2
+    emails = {
+        u.email
+        for u in db.scalars(select(Usuario).where(Usuario.papel == "FUNCIONARIO")).all()
+    }
+    assert emails == {"ana@prefeitura.dev", "carla@prefeitura.dev"}
 
 
 def test_importacao_rejeita_html_disfarcado(client, monkeypatch) -> None:
