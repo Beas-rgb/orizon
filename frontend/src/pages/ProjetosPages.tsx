@@ -249,6 +249,7 @@ export function ProjetoDetalhePage() {
   const [pesquisasOk, setPesquisasOk] = useState(false);
   const [painel, setPainel] = useState<PainelItem[]>([]);
   const [painelTitulo, setPainelTitulo] = useState("");
+  const [arvore, setArvore] = useState<NoArvore[]>([]);
   const [equipeTemMais, setEquipeTemMais] = useState(false);
 
   useEffect(() => {
