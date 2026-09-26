@@ -198,19 +198,37 @@ def test_sem_subordinado_nao_cria_subordinado(client, monkeypatch, db) -> None:
     assert len(relacoes) == 0
 
 
+def _nota(client, token: str, relacao_id: str, pergunta_id: str, valor: int):
+    return client.post(
+        f"/relacionamentos/{relacao_id}/respostas",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"pergunta_id": pergunta_id, "valor_numerico": valor},
+    )
+
+
 def test_calcular_resultado_com_pesos(client, monkeypatch, db) -> None:
     headers, projeto_id = _projeto(client, monkeypatch)
     gerente_email = "gerente@prefeitura.dev"
-    _funcionario(client, headers, projeto_id, gerente_email, "Gerente")
+    gerente_token = _funcionario(client, headers, projeto_id, gerente_email, "Gerente")
     gerente_id = _usuario_id(client, headers, projeto_id, gerente_email)
     func_email = "func@prefeitura.dev"
-    _funcionario(client, headers, projeto_id, func_email, "Funcionario")
+    func_token = _funcionario(client, headers, projeto_id, func_email, "Funcionario")
     func_id = _usuario_id(client, headers, projeto_id, func_email)
     client.put(
         f"/projetos/{projeto_id}/perfis",
         headers=headers,
         json={"usuario_id": func_id, "superior_id": gerente_id},
     )
+    pesquisa = client.post(
+        f"/projetos/{projeto_id}/pesquisas",
+        headers=headers,
+        json={"titulo": "Desempenho 2026", "tipo": "DESEMPENHO"},
+    ).json()
+    pergunta = client.post(
+        f"/pesquisas/{pesquisa['id']}/perguntas",
+        headers=headers,
+        json={"texto": "Entrega", "tipo": "NOTA_5"},
+    ).json()
     ciclo = client.post(
         f"/projetos/{projeto_id}/ciclos",
         headers=headers,
@@ -229,31 +247,12 @@ def test_calcular_resultado_com_pesos(client, monkeypatch, db) -> None:
         r for r in relacoes if r.tipo_relacao == "AUTO" and r.avaliado_id == func_id
     )
     superior = next(r for r in relacoes if r.tipo_relacao == "SUPERIOR")
-    # Simula respostas: AUTO 4,0 e SUPERIOR 4,5.
-    from app.core.tokens import novo_id
-    from app.models.base import agora
-    from app.models.pesquisa import Resposta
-
-    agora_ = agora()
-    db.add(
-        Resposta(
-            id=novo_id(),
-            token_id=auto.id,
-            pergunta_id="p1",
-            valor_numerico=4,
-            respondido_em=agora_,
-        )
-    )
-    db.add(
-        Resposta(
-            id=novo_id(),
-            token_id=superior.id,
-            pergunta_id="p1",
-            valor_numerico=5,
-            respondido_em=agora_,
-        )
-    )
-    db.commit()
+    nota_auto = _nota(client, func_token, auto.id, pergunta["id"], 4)
+    nota_superior = _nota(client, gerente_token, superior.id, pergunta["id"], 5)
+    assert nota_auto.status_code == 200
+    assert nota_superior.status_code == 200
+    repetida = _nota(client, func_token, auto.id, pergunta["id"], 1)
+    assert repetida.status_code == 409
     resultado = client.get(
         f"/ciclos/{ciclo['id']}/resultado/{func_id}",
         headers=headers,
@@ -263,6 +262,34 @@ def test_calcular_resultado_com_pesos(client, monkeypatch, db) -> None:
     assert dados["resultado"] == 4.67  # (4*1 + 5*2) / 3
     assert dados["por_perspectiva"]["AUTO"] == 4.0
     assert dados["por_perspectiva"]["SUPERIOR"] == 5.0
+    from app.models.desempenho import AvaliacaoResposta
+    from app.models.pesquisa import Resposta
+
+    assert db.scalar(select(AvaliacaoResposta).limit(1)) is not None
+    assert db.scalar(select(Resposta).limit(1)) is None
+
+
+def test_resultado_404_fora_do_escopo(client, monkeypatch) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    email = "func@prefeitura.dev"
+    func_token = _funcionario(client, headers, projeto_id, email, "Funcionario")
+    func_id = _usuario_id(client, headers, projeto_id, email)
+    outro_token = _funcionario(
+        client, headers, projeto_id, "outro@prefeitura.dev", "Outro"
+    )
+    ciclo = client.post(
+        f"/projetos/{projeto_id}/ciclos",
+        headers=headers,
+        json={"nome": "Avaliação 2026"},
+    ).json()
+    caminho = f"/ciclos/{ciclo['id']}/resultado/{func_id}"
+    assert client.get(caminho, headers=headers).status_code == 200
+    propria = {"Authorization": f"Bearer {func_token}"}
+    assert client.get(caminho, headers=propria).status_code == 200
+    alheio = {"Authorization": f"Bearer {outro_token}"}
+    assert client.get(caminho, headers=alheio).status_code == 404
+    outra = abrir_consultora(client, email="outra@horizon.dev", nome="Outra")
+    assert client.get(caminho, headers=outra).status_code == 404
 
 
 def test_ciclo_atualiza_pesos_so_rascunho(client, monkeypatch) -> None:

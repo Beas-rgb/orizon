@@ -2,7 +2,14 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    SmallInteger,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, IdTempo
@@ -66,3 +73,27 @@ class AvaliacaoRelacionamento(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+
+
+class AvaliacaoResposta(Base):
+    """Nota de uma pergunta dentro de uma relação. Não usa token de pesquisa."""
+
+    __tablename__ = "avaliacao_respostas"
+    __table_args__ = (
+        UniqueConstraint(
+            "relacionamento_id",
+            "pergunta_id",
+            name="uq_avaliacao_resposta_relacao_pergunta",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    relacionamento_id: Mapped[str] = mapped_column(
+        ForeignKey("avaliacao_relacionamentos.id"),
+        index=True,
+    )
+    pergunta_id: Mapped[str] = mapped_column(ForeignKey("perguntas.id"), index=True)
+    valor_numerico: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    valor_texto: Mapped[str | None] = mapped_column(Text, nullable=True)
+    opcao_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    respondido_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))

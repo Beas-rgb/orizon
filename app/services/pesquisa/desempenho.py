@@ -7,14 +7,19 @@ import json
 from datetime import datetime
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.autorizacao import exigir_papel, papel_no_projeto
 from app.core.tokens import novo_id
 from app.models.base import agora
-from app.models.desempenho import AvaliacaoRelacionamento, CicloAvaliacao
+from app.models.desempenho import (
+    AvaliacaoRelacionamento,
+    AvaliacaoResposta,
+    CicloAvaliacao,
+)
 from app.models.estrutura import PerfilFuncionario
-from app.models.pesquisa import Resposta
+from app.models.pesquisa import Pergunta, Pesquisa
 from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.usuario import Usuario
 from app.services.auditoria import registrar as _auditar
@@ -331,56 +336,121 @@ def relacao_do_avaliador(
     return relacao
 
 
+def registrar_resposta_avaliacao(
+    db: Session,
+    usuario: Usuario,
+    relacionamento_id: str,
+    pergunta_id: str,
+    *,
+    valor_numerico: int | None = None,
+    valor_texto: str | None = None,
+    opcao_id: str | None = None,
+) -> AvaliacaoResposta:
+    """Grava a nota na relação. Só o avaliador daquela relação."""
+    relacao = db.get(AvaliacaoRelacionamento, relacionamento_id)
+    if relacao is None or relacao.deleted_at is not None:
+        raise ErroAuth(404, "Relação não encontrada.")
+    if relacao.avaliador_id != usuario.id:
+        raise ErroAuth(404, "Relação não encontrada.")
+    ciclo = db.get(CicloAvaliacao, relacao.ciclo_id)
+    if ciclo is None or ciclo.deleted_at is not None:
+        raise ErroAuth(404, "Ciclo não encontrado.")
+    if papel_no_projeto(db, usuario, ciclo.projeto_id) is None:
+        raise ErroAuth(404, "Relação não encontrada.")
+    pergunta = db.get(Pergunta, pergunta_id)
+    if pergunta is None or pergunta.deleted_at is not None:
+        raise ErroAuth(422, "Pergunta inválida.")
+    pesquisa = db.get(Pesquisa, pergunta.pesquisa_id)
+    if (
+        pesquisa is None
+        or pesquisa.deleted_at is not None
+        or pesquisa.tipo != "DESEMPENHO"
+        or pesquisa.projeto_id != ciclo.projeto_id
+    ):
+        raise ErroAuth(422, "Pergunta não pertence a este ciclo.")
+    if valor_numerico is None and not (valor_texto or "").strip() and not opcao_id:
+        raise ErroAuth(422, "Informe a resposta.")
+    if valor_numerico is not None and not isinstance(valor_numerico, int):
+        raise ErroAuth(422, "Nota inválida.")
+    ja = db.scalar(
+        select(AvaliacaoResposta).where(
+            AvaliacaoResposta.relacionamento_id == relacao.id,
+            AvaliacaoResposta.pergunta_id == pergunta.id,
+        )
+    )
+    if ja is not None:
+        raise ErroAuth(409, "Esta pergunta já foi respondida nesta relação.")
+    agora_ = agora()
+    resposta = AvaliacaoResposta(
+        id=novo_id(),
+        relacionamento_id=relacao.id,
+        pergunta_id=pergunta.id,
+        valor_numerico=valor_numerico,
+        valor_texto=valor_texto.strip() if valor_texto else None,
+        opcao_id=opcao_id,
+        respondido_em=agora_,
+    )
+    relacao.status = "RESPONDIDA"
+    relacao.atualizado_em = agora_
+    db.add(resposta)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ErroAuth(409, "Esta pergunta já foi respondida nesta relação.") from None
+    return resposta
+
+
 def calcular_resultado_avaliacao(
     db: Session,
+    usuario: Usuario,
     ciclo_id: str,
     avaliado_id: str,
 ) -> dict[str, float | None]:
-    """Média por pergunta → consolidação por perspectiva → pesos → resultado.
+    """Média da relação → média da perspectiva → pesos.
 
-    Exemplo: AUTO 4,0×1 + SUPERIOR 4,5×2 + SUBORDINADOS 4,2×1 → 4,30.
+    Consultora e órgão do projeto veem. O avaliado vê a própria nota.
     """
     ciclo = db.get(CicloAvaliacao, ciclo_id)
     if ciclo is None or ciclo.deleted_at is not None:
         raise ErroAuth(404, "Ciclo não encontrado.")
-    relacoes = db.scalars(
-        select(AvaliacaoRelacionamento).where(
+    papel = papel_no_projeto(db, usuario, ciclo.projeto_id)
+    if papel in {"CONSULTOR", "ORGAO"}:
+        pass
+    elif papel == "FUNCIONARIO" and usuario.id == avaliado_id:
+        pass
+    else:
+        raise ErroAuth(404, "Ciclo não encontrado.")
+
+    config = json.loads(ciclo.configuracao) if ciclo.configuracao else {}
+    pesos = config.get("pesos", PESOS_PADRAO)
+    medias = (
+        select(
+            AvaliacaoResposta.relacionamento_id.label("rel_id"),
+            func.avg(AvaliacaoResposta.valor_numerico).label("media"),
+        )
+        .where(AvaliacaoResposta.valor_numerico.is_not(None))
+        .group_by(AvaliacaoResposta.relacionamento_id)
+        .subquery()
+    )
+    linhas = db.execute(
+        select(
+            AvaliacaoRelacionamento.tipo_relacao,
+            func.avg(medias.c.media),
+        )
+        .join(medias, medias.c.rel_id == AvaliacaoRelacionamento.id)
+        .where(
             AvaliacaoRelacionamento.ciclo_id == ciclo_id,
             AvaliacaoRelacionamento.avaliado_id == avaliado_id,
             AvaliacaoRelacionamento.deleted_at.is_(None),
         )
+        .group_by(AvaliacaoRelacionamento.tipo_relacao)
     ).all()
-    if not relacoes:
-        return {"resultado": None, "por_perspectiva": {}}
-
-    config = json.loads(ciclo.configuracao) if ciclo.configuracao else {}
-    pesos = config.get("pesos", PESOS_PADRAO)
-    agregacao = config.get("agregacao", "MEDIA")
-
-    por_perspectiva: dict[str, float] = {}
-    for tipo in TIPOS_RELACAO:
-        relacoes_tipo = [r for r in relacoes if r.tipo_relacao == tipo]
-        if not relacoes_tipo:
-            continue
-        notas = []
-        for relacao in relacoes_tipo:
-            media = db.scalar(
-                select(func.avg(Resposta.valor_numerico)).where(
-                    Resposta.token_id == relacao.id,
-                    Resposta.valor_numerico.is_not(None),
-                )
-            )
-            if media is not None:
-                notas.append(float(media))
-        if notas:
-            if agregacao == "MEDIA":
-                por_perspectiva[tipo] = round(sum(notas) / len(notas), 2)
-            else:
-                por_perspectiva[tipo] = round(sum(notas) / len(notas), 2)
-
+    por_perspectiva = {
+        tipo: round(float(media), 2) for tipo, media in linhas if media is not None
+    }
     if not por_perspectiva:
         return {"resultado": None, "por_perspectiva": {}}
-
     soma_pesos = sum(pesos.get(tipo, PESOS_PADRAO[tipo]) for tipo in por_perspectiva)
     if soma_pesos == 0:
         return {"resultado": None, "por_perspectiva": por_perspectiva}

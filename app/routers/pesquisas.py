@@ -7,6 +7,7 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     File,
+    HTTPException,
     Query,
     Request,
     UploadFile,
@@ -69,6 +70,7 @@ from app.services.pesquisa import (
     perguntas_da_pesquisa,
     perguntas_do_token,
     publicar,
+    registrar_resposta_avaliacao,
     registrar_respostas,
     registrar_respostas_da_pesquisa,
     relacao_do_avaliador,
@@ -738,7 +740,38 @@ def resultado_rota(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> dict:
-    return chamar(lambda: calcular_resultado_avaliacao(db, ciclo_id, avaliado_id))
+    return chamar(
+        lambda: calcular_resultado_avaliacao(db, usuario, ciclo_id, avaliado_id)
+    )
+
+
+@router.post("/relacionamentos/{relacionamento_id}/respostas")
+def registrar_resposta_avaliacao_rota(
+    relacionamento_id: str,
+    corpo: dict,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    nota = corpo.get("valor_numerico")
+    if nota is not None and not isinstance(nota, int):
+        raise HTTPException(status_code=422, detail="Nota inválida.")
+    resposta = chamar(
+        lambda: registrar_resposta_avaliacao(
+            db,
+            usuario,
+            relacionamento_id,
+            str(corpo.get("pergunta_id") or ""),
+            valor_numerico=nota,
+            valor_texto=corpo.get("valor_texto"),
+            opcao_id=corpo.get("opcao_id"),
+        )
+    )
+    return {
+        "id": resposta.id,
+        "relacionamento_id": resposta.relacionamento_id,
+        "pergunta_id": resposta.pergunta_id,
+        "valor_numerico": resposta.valor_numerico,
+    }
 
 
 @router.get("/responder/{token}/nota", response_model=NotaSaida)

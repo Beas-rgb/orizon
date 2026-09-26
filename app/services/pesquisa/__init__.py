@@ -31,6 +31,7 @@ from app.services.pesquisa.desempenho import (
     gerar_relacoes,
     listar_ciclos,
     listar_relacoes,
+    registrar_resposta_avaliacao,
     relacao_do_avaliador,
 )
 from app.services.pesquisa.midia import (
@@ -94,6 +95,7 @@ __all__ = [
     "perguntas_da_pesquisa",
     "perguntas_do_token",
     "publicar",
+    "registrar_resposta_avaliacao",
     "relacao_do_avaliador",
     "registrar_respostas",
     "registrar_respostas_da_pesquisa",
