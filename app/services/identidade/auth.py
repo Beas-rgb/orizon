@@ -168,21 +168,34 @@ def login(db: Session, email: str, senha: str) -> dict[str, str]:
     return tokens
 
 
-def refresh(db: Session, refresh_token: str) -> dict[str, str]:
+def refresh(
+    db: Session,
+    refresh_token: str,
+    *,
+    ip: str | None = None,
+) -> dict[str, str]:
+    """Três tokens inválidos no mesmo IP esperam 5 minutos. Sucesso zera."""
+    chave = f"refresh:ip:{ip or 'sem-ip'}"
+    _exigir_rate_publico(db, chave)
     sessao = db.scalar(
         select(Sessao).where(Sessao.token_hash == hash_token(refresh_token))
     )
-    if (
+    invalida = (
         sessao is None
         or sessao.revogado_em is not None
         or (_ciente(sessao.expira_em) or _agora()) <= _agora()
-    ):
-        raise ErroAuth(401, "Sessão inválida.")
-    usuario = db.get(Usuario, sessao.usuario_id)
-    if usuario is None or usuario.deleted_at is not None or not usuario.ativo:
+    )
+    if not invalida:
+        usuario = db.get(Usuario, sessao.usuario_id)
+        if usuario is None or usuario.deleted_at is not None or not usuario.ativo:
+            invalida = True
+    if invalida:
+        registrar_falha(db, chave)
+        db.commit()
         raise ErroAuth(401, "Sessão inválida.")
     sessao.revogado_em = _agora()
     tokens = _emitir_sessao(db, usuario)
+    limpar_falhas(db, chave)
     db.commit()
     return tokens
 

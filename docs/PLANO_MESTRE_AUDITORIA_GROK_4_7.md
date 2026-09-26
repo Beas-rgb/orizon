@@ -325,3 +325,45 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Staging separado de produção, e só então medir o fluxo real. Não subir o pool antes dessa medição.
+
+---
+
+DATA: 26/09/2026
+COMMIT: (este commit)
+OBJETIVO: o refresh inválido espera 5 minutos, como o login.
+
+MUDANÇAS:
+- Três tokens de refresh inválidos no mesmo IP gravam espera.
+- A quarta tentativa responde 429.
+- Um refresh que dá certo zera o contador daquele IP.
+
+PROBLEMA:
+- `refresh` aceitava ou rejeitava o token sem consultar `controle_acesso`. Dava para martelar tokens sem espera.
+
+CORREÇÃO:
+- A chave é `refresh:ip:{ip}`. O mecanismo é o do login. Sem biblioteca nova e sem Redis: ainda há um processo só.
+
+ARQUIVOS:
+- `app/services/identidade/auth.py`
+- `app/routers/auth.py`
+- `tests/test_rate_refresh.py`
+
+TESTES:
+- Quatro tokens inválidos: 401, 401, 401, 429.
+- Dois inválidos, um válido, e mais três inválidos continuam 401.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- Abuso no refresh espera 5 minutos. Renovar a sessão de verdade não trava o usuário.
+
+RISCOS RESTANTES:
+- Carga até 1.000, ZAP e o ensaio de 300 respostas de clima exigem staging. O pool segue 2/0.
+- Não existe segundo serviço no Render.
+
+O QUE NÃO FOI ALTERADO:
+- Argon2id, pool, CLIMA, slowapi e Redis. Login e upload já tinham o mesmo bloqueio.
+
+PRÓXIMO PASSO:
+- Nota 1–5 em radios e mídia só da pergunta visível.

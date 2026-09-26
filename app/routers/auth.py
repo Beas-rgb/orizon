@@ -62,8 +62,13 @@ def entrar(corpo: LoginEntrada, db: Session = Depends(get_db)) -> dict[str, str]
 
 
 @router.post("/refresh", response_model=TokensSaida)
-def renovar(corpo: RefreshEntrada, db: Session = Depends(get_db)) -> dict[str, str]:
-    return chamar(lambda: refresh(db, corpo.refresh_token))
+def renovar(
+    corpo: RefreshEntrada,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    ip = request.client.host if request.client else None
+    return chamar(lambda: refresh(db, corpo.refresh_token, ip=ip))
 
 
 @router.post("/sair", response_model=MensagemSaida)
