@@ -249,7 +249,7 @@ export function ProjetoDetalhePage() {
   const [pesquisasOk, setPesquisasOk] = useState(false);
   const [painel, setPainel] = useState<PainelItem[]>([]);
   const [painelTitulo, setPainelTitulo] = useState("");
-  const [arvore, setArvore] = useState<NoArvore[]>([]);
+  const [equipeTemMais, setEquipeTemMais] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -261,7 +261,7 @@ export function ProjetoDetalhePage() {
     Promise.all([
       api<Projeto>(`/projetos/${id}`),
       api<Pesquisa[]>(`/projetos/${id}/pesquisas`).catch(() => []),
-      api<Membro[]>(`/projetos/${id}/equipe`).catch(() => []),
+      api<Membro[]>(`/projetos/${id}/equipe?limite=100`).catch(() => []),
       api<Setor[]>(`/projetos/${id}/setores`).catch(() => []),
       api<Doc[]>(`/biblioteca?projeto_id=${id}`).catch(() => []),
     ])
@@ -269,6 +269,7 @@ export function ProjetoDetalhePage() {
         setProjeto(p);
         setPesquisas(pe);
         setEquipe(eq);
+        setEquipeTemMais(eq.length === 100);
         setSetores(se);
         setDocs(d);
       })
@@ -318,7 +319,7 @@ export function ProjetoDetalhePage() {
       setConviteMsg(resp.mensagem || "Convite enviado.");
       if (resp.link_primeiro_acesso) setLinkAcesso(resp.link_primeiro_acesso);
       form.reset();
-      setEquipe(await api<Membro[]>(`/projetos/${id}/equipe`));
+      await recarregarEquipe();
     } catch (exc) {
       setConviteMsg(exc instanceof Error ? exc.message : "Erro");
     }
@@ -338,7 +339,7 @@ export function ProjetoDetalhePage() {
       });
       setConviteMsg(resp.mensagem || "Convite reenviado.");
       if (resp.link_primeiro_acesso) setLinkAcesso(resp.link_primeiro_acesso);
-      setEquipe(await api<Membro[]>(`/projetos/${id}/equipe`));
+      await recarregarEquipe();
     } catch (exc) {
       setConviteMsg(exc instanceof Error ? exc.message : "Erro");
     }
@@ -404,9 +405,20 @@ export function ProjetoDetalhePage() {
 
   async function recarregarEquipe() {
     if (!id) return;
-    setEquipe(await api<Membro[]>(`/projetos/${id}/equipe`));
+    const pagina = await api<Membro[]>(`/projetos/${id}/equipe?limite=100`);
+    setEquipe(pagina);
+    setEquipeTemMais(pagina.length === 100);
     setArvore(await api<NoArvore[]>(`/projetos/${id}/arvore`));
     setSetores(await api<Setor[]>(`/projetos/${id}/setores`).catch(() => []));
+  }
+
+  async function maisEquipe() {
+    if (!id) return;
+    const pagina = await api<Membro[]>(
+      `/projetos/${id}/equipe?limite=100&deslocamento=${equipe.length}`,
+    );
+    setEquipe((atual) => [...atual, ...pagina]);
+    setEquipeTemMais(pagina.length === 100);
   }
 
   async function ligarPesquisas() {
@@ -544,6 +556,16 @@ export function ProjetoDetalhePage() {
               </table>
               {equipe.length === 0 ? (
                 <p className="text-gray-500 text-[13px] mt-2">Ninguém na equipe ainda.</p>
+              ) : null}
+              {equipeTemMais ? (
+                <button
+                  type="button"
+                  className="mt-2 text-[12px] font-bold"
+                  style={{ color: ACCENT }}
+                  onClick={() => void maisEquipe()}
+                >
+                  Carregar mais
+                </button>
               ) : null}
             </div>
             <form onSubmit={convidarFuncionario} className="grid sm:grid-cols-3 gap-2 items-end">

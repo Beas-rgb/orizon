@@ -327,19 +327,46 @@ def reenviar_convite(
     }
 
 
-def listar_equipe(db: Session, consultor: Usuario, projeto_id: str) -> list[dict]:
-    """Órgão e funcionários do trabalho. Sem token e sem senha."""
+def listar_equipe(
+    db: Session,
+    consultor: Usuario,
+    projeto_id: str,
+    *,
+    limite: int = 50,
+    deslocamento: int = 0,
+) -> list[dict]:
+    """Órgão e funcionários do trabalho. Sem token e sem senha.
+
+    Usuários saem numa leitura IN. A página corta a lista já montada:
+    convite pendente e vínculo aceito vêm de tabelas diferentes.
+    """
+    limite = max(1, min(limite, 100))
+    deslocamento = max(0, deslocamento)
     projeto = _projeto_da_consultora(db, consultor, projeto_id)
     itens: list[dict] = []
     vistos: set[str] = set()
-    vinculos = db.scalars(
-        select(ProjetoUsuario).where(ProjetoUsuario.projeto_id == projeto.id)
-    ).all()
+    vinculos = [
+        v
+        for v in db.scalars(
+            select(ProjetoUsuario).where(ProjetoUsuario.projeto_id == projeto.id)
+        ).all()
+        if v.papel in {"ORGAO", "FUNCIONARIO"}
+    ]
+    ids = [v.usuario_id for v in vinculos]
+    pessoas: dict[str, Usuario] = {}
+    if ids:
+        pessoas = {
+            u.id: u
+            for u in db.scalars(
+                select(Usuario).where(
+                    Usuario.id.in_(ids),
+                    Usuario.deleted_at.is_(None),
+                )
+            ).all()
+        }
     for vinculo in vinculos:
-        if vinculo.papel not in {"ORGAO", "FUNCIONARIO"}:
-            continue
-        pessoa = db.get(Usuario, vinculo.usuario_id)
-        if pessoa is None or pessoa.deleted_at is not None:
+        pessoa = pessoas.get(vinculo.usuario_id)
+        if pessoa is None:
             continue
         vistos.add(pessoa.email)
         itens.append(
@@ -377,7 +404,7 @@ def listar_equipe(db: Session, consultor: Usuario, projeto_id: str) -> list[dict
                 "convite_status": convite.status,
             }
         )
-    return itens
+    return itens[deslocamento : deslocamento + limite]
 
 
 def reenviar_convite_funcionario(

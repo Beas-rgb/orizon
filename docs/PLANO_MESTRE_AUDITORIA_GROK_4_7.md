@@ -155,7 +155,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 26/09/2026
-COMMIT: (este commit)
+COMMIT: 4c34bee
 OBJETIVO: reconciliar o plano de 26/09 com o código em `d7b0e8f`. Não reconstruir o que já existe.
 
 MUDANÇAS:
@@ -195,3 +195,45 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Paginar `listar_equipe` e trocar o `db.get` em loop por uma leitura `IN`.
+
+---
+
+DATA: 26/09/2026
+COMMIT: (este commit)
+OBJETIVO: a lista da equipe não consulta o banco uma pessoa por vez e cabe numa página.
+
+MUDANÇAS:
+- `listar_equipe` lê os usuários com `IN` e devolve no máximo 100 itens (`limite` e `deslocamento`).
+- A tela de participantes pede `limite=100` e oferece "Carregar mais".
+
+PROBLEMA:
+- Cada vínculo fazia `db.get`. Com 500 funcionários o número de queries crescia junto.
+
+CORREÇÃO:
+- Uma leitura dos usuários do projeto. A página é corte em memória porque convite pendente e pessoa aceita vêm de tabelas diferentes. O teto de 100 é o mesmo de projetos e pesquisas.
+
+ARQUIVOS:
+- `app/services/projeto.py`
+- `app/routers/projetos.py`
+- `frontend/src/pages/ProjetosPages.tsx`
+- `tests/test_listagens_lote.py`
+
+TESTES:
+- `limite=1` e a página seguinte não repetem o e-mail.
+- Na listagem cheia, a SQL de usuários usa `IN`. Consultas individuais de usuário ficam no máximo 2 (a sessão), não uma por funcionário.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- A equipe pagina e não faz N+1 de usuário.
+
+RISCOS RESTANTES:
+- Participantes da pesquisa e a árvore ainda buscam registro a registro.
+- Upload e geração de token ainda serão conferidos.
+
+O QUE NÃO FOI ALTERADO:
+- Quem pode ver a equipe (só a consultora dona). O órgão continua sem essa lista. CLIMA, painel e pool não mudaram.
+
+PRÓXIMO PASSO:
+- A mesma leitura em lote para participantes (exceto o agregado do CLIMA) e para a árvore, com contagem de queries.

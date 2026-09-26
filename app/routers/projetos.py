@@ -197,9 +197,15 @@ def equipe(
     projeto_id: str,
     consultor: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
+    limite: int = Query(50, ge=1, le=100),
+    deslocamento: int = Query(0, ge=0),
 ) -> list[EquipeSaida]:
     """Quem entra neste trabalho. Só a consultora dona. Sem token."""
-    itens = chamar(lambda: listar_equipe(db, consultor, projeto_id))
+    itens = chamar(
+        lambda: listar_equipe(
+            db, consultor, projeto_id, limite=limite, deslocamento=deslocamento
+        )
+    )
     return [EquipeSaida(**item) for item in itens]
 
 
