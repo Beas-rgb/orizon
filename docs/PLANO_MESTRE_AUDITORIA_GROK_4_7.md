@@ -114,7 +114,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 25/09/2026
-COMMIT: (este commit)
+COMMIT: 0cf1a65
 OBJETIVO: o superior da hierarquia tem de ser funcionário deste projeto.
 
 MUDANÇAS:
