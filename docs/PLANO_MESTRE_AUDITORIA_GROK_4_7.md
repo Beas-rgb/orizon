@@ -329,7 +329,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 26/09/2026
-COMMIT: (este commit)
+COMMIT: 4b57808
 OBJETIVO: o refresh inválido espera 5 minutos, como o login.
 
 MUDANÇAS:
@@ -367,3 +367,42 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Nota 1–5 em radios e mídia só da pergunta visível.
+
+---
+
+DATA: 26/09/2026
+COMMIT: (este commit)
+OBJETIVO: a nota de 1 a 5 é um grupo de radios e a mídia não acumula no navegador.
+
+MUDANÇAS:
+- `NOTA_5` virou cinco círculos numerados. Cada um é um `radio` com rótulo. O valor enviado continua o inteiro 1–5.
+- `NOTA_10` permanece no seletor.
+- A resposta baixa só a mídia da pergunta visível e revoga a URL anterior ao trocar.
+
+PROBLEMA:
+- A nota era um select. A página baixava a mídia de todas as perguntas de uma vez e segurava os blobs.
+
+CORREÇÃO:
+- Só a tela de resposta. O contrato da API não mudou.
+
+ARQUIVOS:
+- `frontend/src/pages/ResponderPage.tsx`
+
+TESTES:
+- TypeScript do frontend passou. Não há suíte de browser neste repositório.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- O funcionário escolhe 1–5 pelo teclado. Trocar de pergunta solta a mídia anterior.
+
+RISCOS RESTANTES:
+- O editor ainda pede opções separadas por `|`.
+- Carga de 1.000 continua sem staging.
+
+O QUE NÃO FOI ALTERADO:
+- Backend da resposta, escala 1–10 e o pool.
+
+PRÓXIMO PASSO:
+- Lista de opções com adicionar, editar, excluir, subir e descer.

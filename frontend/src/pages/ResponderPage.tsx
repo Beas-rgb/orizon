@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { api, tokenAtual, urlApi } from "../lib/api";
@@ -101,35 +101,47 @@ export function ResponderPage() {
       .finally(() => setCarregando(false));
   }, [pronto, usuario, token, pesquisaId, modoPesquisa, baseApi, caminhoRetorno, navigate]);
 
+  const midiaAtual = useRef("");
+
   useEffect(() => {
-    const atuais = perguntas.filter((p) => p.tem_midia);
-    if (!atuais.length || (!token && !pesquisaId)) return;
-    let cancelado = false;
-    const urls: string[] = [];
-    void (async () => {
-      const mapa: Record<string, string> = {};
-      for (const p of atuais) {
-        try {
-          const resp = await fetch(
-            urlApi(`${baseApi}/perguntas/${p.id}/midia`),
-            { headers: { Authorization: `Bearer ${tokenAtual()}` } },
-          );
-          if (!resp.ok) continue;
-          const blob = await resp.blob();
-          const url = URL.createObjectURL(blob);
-          urls.push(url);
-          mapa[p.id] = url;
-        } catch {
-          /* preview opcional */
-        }
+    const pergunta = perguntas[indice];
+    if (!pergunta?.tem_midia || (!token && !pesquisaId)) {
+      if (midiaAtual.current) {
+        URL.revokeObjectURL(midiaAtual.current);
+        midiaAtual.current = "";
       }
-      if (!cancelado) setMidias(mapa);
+      setMidias({});
+      return;
+    }
+    let cancelado = false;
+    void (async () => {
+      try {
+        const resp = await fetch(
+          urlApi(`${baseApi}/perguntas/${pergunta.id}/midia`),
+          { headers: { Authorization: `Bearer ${tokenAtual()}` } },
+        );
+        if (!resp.ok || cancelado) return;
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        if (cancelado) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        if (midiaAtual.current) URL.revokeObjectURL(midiaAtual.current);
+        midiaAtual.current = url;
+        setMidias({ [pergunta.id]: url });
+      } catch {
+        /* preview opcional */
+      }
     })();
     return () => {
       cancelado = true;
-      urls.forEach((u) => URL.revokeObjectURL(u));
+      if (midiaAtual.current) {
+        URL.revokeObjectURL(midiaAtual.current);
+        midiaAtual.current = "";
+      }
     };
-  }, [perguntas, token, pesquisaId, baseApi]);
+  }, [perguntas, indice, token, pesquisaId, baseApi]);
 
   const atual = perguntas[indice];
   const total = perguntas.length;
@@ -372,8 +384,35 @@ function CampoPergunta({
       />
     );
   }
-  if (pergunta.tipo === "NOTA_5" || pergunta.tipo === "NOTA_10") {
-    const max = pergunta.tipo === "NOTA_5" ? 5 : 10;
+  if (pergunta.tipo === "NOTA_5") {
+    const escolhida = valor == null ? "" : String(valor);
+    return (
+      <div className="flex gap-2" role="radiogroup" aria-label="Nota de 1 a 5">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <label
+            key={n}
+            className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-bold cursor-pointer"
+            style={{
+              background: escolhida === String(n) ? ACCENT : "rgba(255,255,255,0.7)",
+              color: escolhida === String(n) ? "#fff" : "#1f2937",
+              border: "1px solid rgba(29,95,175,0.25)",
+            }}
+          >
+            <input
+              type="radio"
+              name={pergunta.id}
+              value={n}
+              checked={escolhida === String(n)}
+              className="sr-only"
+              onChange={() => onChange(n)}
+            />
+            {n}
+          </label>
+        ))}
+      </div>
+    );
+  }
+  if (pergunta.tipo === "NOTA_10") {
     return (
       <select
         className={field}
@@ -381,7 +420,7 @@ function CampoPergunta({
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : "")}
       >
         <option value="">Selecione</option>
-        {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
           <option key={n} value={n}>
             {n}
           </option>
