@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import {
@@ -8,17 +8,58 @@ import {
   PrimeiroAcessoPage,
   RecuperarPage,
 } from "./pages/AuthPages";
-import { ConsultoraDashboard } from "./pages/ConsultoraDashboard";
-import { ConsultoraPesquisasPage } from "./pages/ConsultoraPesquisasPage";
-import { ConsultoraPesquisasTestePage } from "./pages/ConsultoraPesquisasTestePage";
-import { DevPainel, FuncionarioPainel, OrgaoPainel } from "./pages/Paineis";
-import { PesquisaEditorPage } from "./pages/PesquisaEditorPage";
-import {
-  NovoProjetoPage,
-  ProjetoDetalhePage,
-  ProjetosListaPage,
-} from "./pages/ProjetosPages";
-import { ResponderPage } from "./pages/ResponderPage";
+
+const ConsultoraDashboard = lazy(() =>
+  import("./pages/ConsultoraDashboard").then((m) => ({ default: m.ConsultoraDashboard })),
+);
+const ConsultoraPesquisasPage = lazy(() =>
+  import("./pages/ConsultoraPesquisasPage").then((m) => ({
+    default: m.ConsultoraPesquisasPage,
+  })),
+);
+const ConsultoraPesquisasTestePage = lazy(() =>
+  import("./pages/ConsultoraPesquisasTestePage").then((m) => ({
+    default: m.ConsultoraPesquisasTestePage,
+  })),
+);
+const DevPainel = lazy(() =>
+  import("./pages/Paineis").then((m) => ({ default: m.DevPainel })),
+);
+const FuncionarioPainel = lazy(() =>
+  import("./pages/Paineis").then((m) => ({ default: m.FuncionarioPainel })),
+);
+const OrgaoPainel = lazy(() =>
+  import("./pages/Paineis").then((m) => ({ default: m.OrgaoPainel })),
+);
+const PesquisaEditorPage = lazy(() =>
+  import("./pages/PesquisaEditorPage").then((m) => ({ default: m.PesquisaEditorPage })),
+);
+const NovoProjetoPage = lazy(() =>
+  import("./pages/ProjetosPages").then((m) => ({ default: m.NovoProjetoPage })),
+);
+const ProjetoDetalhePage = lazy(() =>
+  import("./pages/ProjetosPages").then((m) => ({ default: m.ProjetoDetalhePage })),
+);
+const ProjetosListaPage = lazy(() =>
+  import("./pages/ProjetosPages").then((m) => ({ default: m.ProjetosListaPage })),
+);
+const ResponderPage = lazy(() =>
+  import("./pages/ResponderPage").then((m) => ({ default: m.ResponderPage })),
+);
+
+function Espera({ children }: { children: ReactNode }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen page-bg flex items-center justify-center text-gray-500 text-sm">
+          Carregando…
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { pronto, usuario } = useAuth();
@@ -48,6 +89,7 @@ function HomeApp() {
  */
 export default function App() {
   return (
+    <Espera>
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/entrar" element={<LoginPage />} />
@@ -115,5 +157,6 @@ export default function App() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Espera>
   );
 }

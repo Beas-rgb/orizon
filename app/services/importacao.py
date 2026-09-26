@@ -324,6 +324,41 @@ def confirmar_importacao(
 
     criados = 0
     agora_ = agora()
+    emails = {linha.email for linha in linhas if linha.email}
+    emails.update(linha.superior_email for linha in linhas if linha.superior_email)
+    usuarios = {}
+    if emails:
+        usuarios = {
+            pessoa.email: pessoa
+            for pessoa in db.scalars(
+                select(Usuario).where(
+                    Usuario.email.in_(emails),
+                    Usuario.deleted_at.is_(None),
+                )
+            ).all()
+        }
+    ids = [pessoa.id for pessoa in usuarios.values()]
+    vinculos = set()
+    perfis = {}
+    if ids:
+        vinculos = set(
+            db.scalars(
+                select(ProjetoUsuario.usuario_id).where(
+                    ProjetoUsuario.projeto_id == projeto_id,
+                    ProjetoUsuario.usuario_id.in_(ids),
+                )
+            ).all()
+        )
+        perfis = {
+            perfil.usuario_id: perfil
+            for perfil in db.scalars(
+                select(PerfilFuncionario).where(
+                    PerfilFuncionario.projeto_id == projeto_id,
+                    PerfilFuncionario.usuario_id.in_(ids),
+                    PerfilFuncionario.deleted_at.is_(None),
+                )
+            ).all()
+        }
     for linha in linhas:
         if linha.erros:
             continue
@@ -360,12 +395,7 @@ def confirmar_importacao(
                 db.flush()
                 cargos[chave] = cargo
 
-        usuario = db.scalar(
-            select(Usuario).where(
-                Usuario.email == linha.email,
-                Usuario.deleted_at.is_(None),
-            )
-        )
+        usuario = usuarios.get(linha.email)
         if usuario is None:
             usuario = Usuario(
                 id=novo_id(),
@@ -381,13 +411,8 @@ def confirmar_importacao(
             )
             db.add(usuario)
             db.flush()
-        vinculo = db.scalar(
-            select(ProjetoUsuario).where(
-                ProjetoUsuario.projeto_id == projeto_id,
-                ProjetoUsuario.usuario_id == usuario.id,
-            )
-        )
-        if vinculo is None:
+            usuarios[usuario.email] = usuario
+        if usuario.id not in vinculos:
             db.add(
                 ProjetoUsuario(
                     id=novo_id(),
@@ -396,35 +421,23 @@ def confirmar_importacao(
                     papel="FUNCIONARIO",
                 )
             )
-        superior = None
-        if linha.superior_email:
-            superior = db.scalar(
-                select(Usuario).where(
-                    Usuario.email == linha.superior_email,
-                    Usuario.deleted_at.is_(None),
-                )
-            )
-        perfil = db.scalar(
-            select(PerfilFuncionario).where(
-                PerfilFuncionario.projeto_id == projeto_id,
-                PerfilFuncionario.usuario_id == usuario.id,
-                PerfilFuncionario.deleted_at.is_(None),
-            )
-        )
+            vinculos.add(usuario.id)
+        superior = usuarios.get(linha.superior_email) if linha.superior_email else None
+        perfil = perfis.get(usuario.id)
         if perfil is None:
-            db.add(
-                PerfilFuncionario(
-                    id=novo_id(),
-                    projeto_id=projeto_id,
-                    usuario_id=usuario.id,
-                    setor_id=setor.id if setor else None,
-                    cargo_id=cargo.id if cargo else None,
-                    superior_id=superior.id if superior else None,
-                    criado_em=agora_,
-                    atualizado_em=agora_,
-                    deleted_at=None,
-                )
+            perfil = PerfilFuncionario(
+                id=novo_id(),
+                projeto_id=projeto_id,
+                usuario_id=usuario.id,
+                setor_id=setor.id if setor else None,
+                cargo_id=cargo.id if cargo else None,
+                superior_id=superior.id if superior else None,
+                criado_em=agora_,
+                atualizado_em=agora_,
+                deleted_at=None,
             )
+            db.add(perfil)
+            perfis[usuario.id] = perfil
         else:
             perfil.setor_id = setor.id if setor else None
             perfil.cargo_id = cargo.id if cargo else None

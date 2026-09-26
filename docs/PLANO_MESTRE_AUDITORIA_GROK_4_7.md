@@ -487,3 +487,54 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Criar o staging no painel. Só então rodar o Locust, do menor concorrente para o maior, e decidir o pool com esse número.
+
+---
+
+DATA: 26/09/2026
+COMMIT: ver o commit `perf` deste envio
+OBJETIVO: menos consultas no servidor e menos JavaScript na primeira tela.
+
+MUDANÇAS:
+- Gerar relações lê as que já existem e só insere a chave nova. A segunda chamada devolve `criados: 0`.
+- A importação lê e-mails, vínculos e perfis com `IN`.
+- Publicar a pesquisa lê os participantes existentes de uma vez.
+- A lista de relações lê os nomes de uma vez.
+- As pesquisas do funcionário leem o status de uma vez.
+- O navegador carrega login e a entrada de imediato. Trabalho, editor, resposta e painéis só entram quando a rota abre.
+
+PROBLEMA:
+- Quinhentas pessoas geravam uma consulta por relação, por linha da planilha e por participante na publicação.
+- O navegador baixava o editor e a árvore mesmo em quem só ia entrar.
+
+CORREÇÃO:
+- Mapas em memória. Sem migration, sem índice e sem mudar o pool.
+
+ARQUIVOS:
+- `app/services/pesquisa/desempenho.py`
+- `app/services/pesquisa/crud.py`
+- `app/services/importacao.py`
+- `app/routers/pesquisas.py`
+- `frontend/src/App.tsx`
+- `web/app` (build copiado para o Render servir)
+- `tests/test_desempenho.py`
+
+TESTES:
+- A segunda geração de relações continua com uma linha e agora informa zero criados.
+- Importação, desempenho e minhas pesquisas seguiram verdes no recorte.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- O volume de consultas desses fluxos não acompanha mais o número de pessoas uma a uma.
+- A entrada do navegador passou de um arquivo de cerca de 531 KB (gzip 157 KB) para cerca de 291 KB (gzip 91 KB). Trabalho, editor e painéis ficam em arquivos à parte.
+
+RISCOS RESTANTES:
+- Carga de 1.000 e ajuste de pool continuam sem staging.
+- A tela de resposta continua no arquivo de entrada porque a página de cadastro também a importa.
+
+O QUE NÃO FOI ALTERADO:
+- Pool 2/0, plano do Render, plano do Neon, CLIMA, Argon2id e a unique das relações.
+
+PRÓXIMO PASSO:
+- Staging, se quiser medir carga.

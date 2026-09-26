@@ -210,11 +210,19 @@ def gerar_relacoes(
             subordinados.setdefault(perfil.superior_id, []).append(perfil.usuario_id)
 
     agora_ = agora()
+    existentes = {
+        (item.avaliador_id, item.avaliado_id, item.tipo_relacao)
+        for item in db.scalars(
+            select(AvaliacaoRelacionamento).where(
+                AvaliacaoRelacionamento.ciclo_id == ciclo.id,
+                AvaliacaoRelacionamento.deleted_at.is_(None),
+            )
+        ).all()
+    }
     criados = 0
     for funcionario in funcionarios:
         perfil = perfis.get(funcionario.id)
-        # AUTO: sempre.
-        _criar_relacao(
+        if _criar_relacao(
             db,
             ciclo.id,
             funcionario.id,
@@ -222,11 +230,11 @@ def gerar_relacoes(
             "AUTO",
             PESOS_PADRAO["AUTO"],
             agora_,
-        )
-        criados += 1
-        # SUPERIOR: só se houver superior.
+            existentes,
+        ):
+            criados += 1
         if perfil and perfil.superior_id:
-            _criar_relacao(
+            if _criar_relacao(
                 db,
                 ciclo.id,
                 perfil.superior_id,
@@ -234,11 +242,11 @@ def gerar_relacoes(
                 "SUPERIOR",
                 PESOS_PADRAO["SUPERIOR"],
                 agora_,
-            )
-            criados += 1
-        # SUBORDINADO: só se houver subordinados.
+                existentes,
+            ):
+                criados += 1
         for subordinado_id in subordinados.get(funcionario.id, []):
-            _criar_relacao(
+            if _criar_relacao(
                 db,
                 ciclo.id,
                 subordinado_id,
@@ -246,8 +254,9 @@ def gerar_relacoes(
                 "SUBORDINADO",
                 PESOS_PADRAO["SUBORDINADO"],
                 agora_,
-            )
-            criados += 1
+                existentes,
+            ):
+                criados += 1
     _auditar(db, "RELACOES_GERADAS", consultor.id)
     db.commit()
     return {"criados": criados, "funcionarios": len(funcionarios)}
@@ -261,19 +270,13 @@ def _criar_relacao(
     tipo: str,
     peso: float,
     agora_: datetime,
-) -> None:
-    """Cria se não existir. A unique impede duplicata."""
-    ja = db.scalar(
-        select(AvaliacaoRelacionamento).where(
-            AvaliacaoRelacionamento.ciclo_id == ciclo_id,
-            AvaliacaoRelacionamento.avaliador_id == avaliador_id,
-            AvaliacaoRelacionamento.avaliado_id == avaliado_id,
-            AvaliacaoRelacionamento.tipo_relacao == tipo,
-            AvaliacaoRelacionamento.deleted_at.is_(None),
-        )
-    )
-    if ja is not None:
-        return
+    existentes: set[tuple[str, str, str]],
+) -> bool:
+    """Inclui se a chave ainda não está no conjunto. A unique é a trava."""
+    chave = (avaliador_id, avaliado_id, tipo)
+    if chave in existentes:
+        return False
+    existentes.add(chave)
     db.add(
         AvaliacaoRelacionamento(
             id=novo_id(),
@@ -288,6 +291,7 @@ def _criar_relacao(
             deleted_at=None,
         )
     )
+    return True
 
 
 def listar_relacoes(

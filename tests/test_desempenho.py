@@ -151,7 +151,7 @@ def test_gerar_relacoes_idempotente(client, monkeypatch, db) -> None:
     primeiro = client.post(f"/ciclos/{ciclo['id']}/gerar-relacoes", headers=headers)
     segundo = client.post(f"/ciclos/{ciclo['id']}/gerar-relacoes", headers=headers)
     assert primeiro.json()["criados"] == 1
-    assert segundo.json()["criados"] == 1
+    assert segundo.json()["criados"] == 0
     relacoes = db.scalars(
         select(AvaliacaoRelacionamento).where(
             AvaliacaoRelacionamento.ciclo_id == ciclo["id"]

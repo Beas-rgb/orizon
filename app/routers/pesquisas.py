@@ -13,6 +13,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -702,12 +703,16 @@ def listar_relacoes_rota(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     itens = chamar(lambda: listar_relacoes(db, usuario, ciclo_id))
-    nomes: dict[str, str] = {}
-    for item in itens:
-        for uid in (item.avaliador_id, item.avaliado_id):
-            if uid not in nomes:
-                pessoa = db.get(Usuario, uid)
-                nomes[uid] = pessoa.nome if pessoa else ""
+    ids = {item.avaliador_id for item in itens}
+    ids.update(item.avaliado_id for item in itens)
+    nomes = {}
+    if ids:
+        nomes = {
+            pessoa.id: pessoa.nome
+            for pessoa in db.scalars(
+                select(Usuario).where(Usuario.id.in_(ids))
+            ).all()
+        }
     return [
         {
             "id": item.id,

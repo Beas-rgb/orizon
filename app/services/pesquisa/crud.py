@@ -523,22 +523,30 @@ def publicar(
 def _sincronizar_participantes(db: Session, pesquisa: Pesquisa) -> None:
     """Cria PENDENTE para cada FUNCIONÁRIO do projeto e garante 1 token de entrada."""
     agora_ = agora()
-    vinculos = db.scalars(
-        select(ProjetoUsuario).where(
-            ProjetoUsuario.projeto_id == pesquisa.projeto_id,
-            ProjetoUsuario.papel == "FUNCIONARIO",
-        )
-    ).all()
-    for vinculo in vinculos:
-        existe = db.scalar(
-            select(PesquisaParticipante.id).where(
-                PesquisaParticipante.pesquisa_id == pesquisa.id,
-                PesquisaParticipante.usuario_id == vinculo.usuario_id,
-                PesquisaParticipante.deleted_at.is_(None),
+    vinculos = list(
+        db.scalars(
+            select(ProjetoUsuario).where(
+                ProjetoUsuario.projeto_id == pesquisa.projeto_id,
+                ProjetoUsuario.papel == "FUNCIONARIO",
             )
+        ).all()
+    )
+    ids = [item.usuario_id for item in vinculos]
+    ja = set()
+    if ids:
+        ja = set(
+            db.scalars(
+                select(PesquisaParticipante.usuario_id).where(
+                    PesquisaParticipante.pesquisa_id == pesquisa.id,
+                    PesquisaParticipante.usuario_id.in_(ids),
+                    PesquisaParticipante.deleted_at.is_(None),
+                )
+            ).all()
         )
-        if existe is not None:
+    for vinculo in vinculos:
+        if vinculo.usuario_id in ja:
             continue
+        ja.add(vinculo.usuario_id)
         db.add(
             PesquisaParticipante(
                 id=novo_id(),
@@ -581,26 +589,32 @@ def listar_minhas_pesquisas(db: Session, usuario: Usuario) -> list[dict]:
     )
     if not projeto_ids:
         return []
-    pesquisas = db.scalars(
-        select(Pesquisa)
-        .where(
-            Pesquisa.projeto_id.in_(projeto_ids),
-            Pesquisa.status == "PUBLICADA",
-            Pesquisa.deleted_at.is_(None),
-            Pesquisa.bloqueada.is_(False),
-        )
-        .order_by(Pesquisa.publicada_em.desc())
-    ).all()
-    saida: list[dict] = []
-    for pesquisa in pesquisas:
-        participante = db.scalar(
+    pesquisas = list(
+        db.scalars(
+            select(Pesquisa)
+            .where(
+                Pesquisa.projeto_id.in_(projeto_ids),
+                Pesquisa.status == "PUBLICADA",
+                Pesquisa.deleted_at.is_(None),
+                Pesquisa.bloqueada.is_(False),
+            )
+            .order_by(Pesquisa.publicada_em.desc())
+        ).all()
+    )
+    ids_pesquisa = [item.id for item in pesquisas]
+    status_por_pesquisa = {}
+    if ids_pesquisa:
+        for participante in db.scalars(
             select(PesquisaParticipante).where(
-                PesquisaParticipante.pesquisa_id == pesquisa.id,
+                PesquisaParticipante.pesquisa_id.in_(ids_pesquisa),
                 PesquisaParticipante.usuario_id == usuario.id,
                 PesquisaParticipante.deleted_at.is_(None),
             )
-        )
-        status = participante.status if participante else "PENDENTE"
+        ).all():
+            status_por_pesquisa[participante.pesquisa_id] = participante.status
+    saida: list[dict] = []
+    for pesquisa in pesquisas:
+        status = status_por_pesquisa.get(pesquisa.id, "PENDENTE")
         prazo = _ciente(pesquisa.disponivel_ate)
         saida.append(
             {
