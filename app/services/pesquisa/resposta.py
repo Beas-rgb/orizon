@@ -37,12 +37,26 @@ def gerar_tokens(
     pesquisa_id: str,
     quantidade: int,
 ) -> list[str]:
+    from app.services.identidade.erros import (
+        _exigir_rate_publico,
+        limpar_falhas,
+        registrar_falha,
+    )
+
+    chave = f"tokens:{consultor.id}"
+    _exigir_rate_publico(db, chave)
     pesquisa = _pesquisa_viva(db, pesquisa_id)
     if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+        registrar_falha(db, chave)
+        db.commit()
         raise ErroAuth(404, "Pesquisa não encontrada.")
     if pesquisa.status != "PUBLICADA":
+        registrar_falha(db, chave)
+        db.commit()
         raise ErroAuth(422, "Publique a pesquisa antes de gerar o link.")
     if quantidade < 1 or quantidade > 500:
+        registrar_falha(db, chave)
+        db.commit()
         raise ErroAuth(
             422,
             "Gere até 500 links por vez. Pode repetir até cobrir todos.",
@@ -51,6 +65,7 @@ def gerar_tokens(
     for _ in range(quantidade):
         _, plain = _criar_token_resposta(db, pesquisa)
         links.append(plain)
+    limpar_falhas(db, chave)
     _auditar(db, "TOKENS_GERADOS", consultor.id)
     db.commit()
     return links

@@ -241,7 +241,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 26/09/2026
-COMMIT: (este commit)
+COMMIT: 2a294b9
 OBJETIVO: participantes e árvore deixam de buscar uma pessoa por nó.
 
 MUDANÇAS:
@@ -282,3 +282,46 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Se upload ou geração de token não tiver bloqueio, aplicar 3 falhas e 5 minutos de espera. Sucesso não pode contar como falha.
+
+---
+
+DATA: 26/09/2026
+COMMIT: (este commit)
+OBJETIVO: upload da biblioteca e geração de token usam o mesmo bloqueio do login.
+
+MUDANÇAS:
+- Três falhas seguidas (arquivo inválido, pesquisa ainda em rascunho, quantidade fora do limite) gravam espera de 5 minutos.
+- A quarta tentativa responde 429.
+- Um envio ou uma geração que dá certo zera o contador. Sucesso não conta como falha — o convite já tinha mostrado que isso trava a consultora no meio do trabalho.
+
+PROBLEMA:
+- Essas duas rotas não consultavam `controle_acesso`. Dava para repetir arquivo inválido ou pedido de token sem espera.
+
+CORREÇÃO:
+- A chave é `upload:{usuario}` e `tokens:{usuario}`. O mecanismo é o que o login já usa. Não criei outro limitador.
+
+ARQUIVOS:
+- `app/services/biblioteca.py`
+- `app/services/pesquisa/resposta.py`
+- `tests/test_rate_upload_token.py`
+
+TESTES:
+- Quatro pedidos de token numa pesquisa em rascunho: os três primeiros 422, o quarto 429.
+- Dois uploads inválidos, um texto válido (zera), três inválidos e o seguinte 429.
+
+MIGRATION:
+- Nenhuma. A tabela `controle_acesso` já existe.
+
+RESULTADO:
+- Abuso nessas rotas espera 5 minutos. Trabalho normal não trava no quarto arquivo válido.
+
+RISCOS RESTANTES:
+- Carga de 1.000 no fluxo login → resposta continua sem staging. Pool segue 2 e overflow 0.
+- Geração de relações ainda faz um select por vínculo. Não foi reescrita sem medição.
+- 10.000 e 50.000 simultâneos não foram medidos e não devem ser afirmados.
+
+O QUE NÃO FOI ALTERADO:
+- Login, convite, CLIMA, painel, pool e o teto de 500 linhas na importação. O upload de mídia da pergunta não entrou neste passo: o plano pedia biblioteca e token.
+
+PRÓXIMO PASSO:
+- Staging separado de produção, e só então medir o fluxo real. Não subir o pool antes dessa medição.

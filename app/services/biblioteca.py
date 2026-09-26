@@ -12,7 +12,6 @@ from app.core.tokens import novo_id
 from app.integrations.arquivos import ArquivoInvalido, guardar, ler
 from app.models.base import agora
 from app.models.documento import Documento
-from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.usuario import Usuario
 from app.services.auditoria import registrar as _auditar
 from app.services.identidade import ErroAuth
@@ -73,15 +72,32 @@ def enviar(
 ) -> Documento:
     if consultor.papel != "CONSULTOR":
         raise ErroAuth(403, "Só a consultora envia arquivo.")
+    from app.services.identidade.erros import (
+        _exigir_rate_publico,
+        limpar_falhas,
+        registrar_falha,
+    )
+
+    chave = f"upload:{consultor.id}"
+    _exigir_rate_publico(db, chave)
+
+    def falhou(status: int, detalhe: str) -> None:
+        registrar_falha(db, chave)
+        db.commit()
+        raise ErroAuth(status, detalhe)
+
     dona = papel_no_projeto(db, consultor, projeto_id) if projeto_id else None
     if projeto_id is not None and dona != "CONSULTOR":
-        raise ErroAuth(404, "Projeto não encontrado.")
-    camada_final, visivel = _resolver_camada(projeto_id, camada, visibilidade)
+        falhou(404, "Projeto não encontrado.")
+    try:
+        camada_final, visivel = _resolver_camada(projeto_id, camada, visibilidade)
+    except ErroAuth as exc:
+        falhou(exc.status, exc.detalhe)
     doc_id = novo_id()
     try:
         key, resumo = guardar(doc_id, conteudo, mime)
     except ArquivoInvalido as exc:
-        raise ErroAuth(422, str(exc)) from None
+        falhou(422, str(exc))
     doc = Documento(
         id=doc_id,
         consultor_id=consultor.id,
@@ -96,6 +112,7 @@ def enviar(
     )
     db.add(doc)
     _auditar(db, "DOCUMENTO_CRIADO", consultor.id)
+    limpar_falhas(db, chave)
     db.commit()
     return doc
 
