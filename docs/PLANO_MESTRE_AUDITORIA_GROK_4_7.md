@@ -371,7 +371,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 26/09/2026
-COMMIT: (este commit)
+COMMIT: 850a9f3
 OBJETIVO: a nota de 1 a 5 é um grupo de radios e a mídia não acumula no navegador.
 
 MUDANÇAS:
@@ -406,3 +406,41 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Lista de opções com adicionar, editar, excluir, subir e descer.
+
+---
+
+DATA: 26/09/2026
+COMMIT: (este commit)
+OBJETIVO: as opções da pergunta são uma lista, não um texto separado por barra.
+
+MUDANÇAS:
+- No editor, adicionar, editar, excluir, subir e descer cada opção.
+- Ao salvar a pergunta, a lista vai no campo `opcoes` que o backend já aceita.
+- Não há texto fixo do tipo Sim, Não ou Talvez na tela.
+
+PROBLEMA:
+- O campo único “separadas por |” escondia a ordem e obrigava a redigitar tudo.
+
+CORREÇÃO:
+- Só a tela. O schema da API não mudou. Sim/Não vazio no tipo SIM_NAO continua sendo preenchido pelo backend, não pela tela.
+
+ARQUIVOS:
+- `frontend/src/pages/PesquisaEditorPage.tsx`
+
+TESTES:
+- TypeScript do frontend passou.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- A consultora monta as opções sem concatenar texto.
+
+RISCOS RESTANTES:
+- Carga de 1.000 e ZAP continuam sem staging. O pool não muda.
+
+O QUE NÃO FOI ALTERADO:
+- Contrato de criação e edição da pergunta. Nota 1–10. Pool.
+
+PRÓXIMO PASSO:
+- Arquivo Locust que recusa produção e checagem local com Bandit e pip-audit. Sem rodar a matriz e sem ZAP.

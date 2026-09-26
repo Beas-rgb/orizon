@@ -108,6 +108,8 @@ export function PesquisaEditorPage() {
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
   const [links, setLinks] = useState<string[]>([]);
+  const [opcoesNovas, setOpcoesNovas] = useState<string[]>([]);
+  const [tipoNova, setTipoNova] = useState("NOTA_5");
   const [editando, setEditando] = useState<string | null>(null);
   const [arrasto, setArrasto] = useState<string | null>(null);
   const [midias, setMidias] = useState<Record<string, string>>({});
@@ -252,23 +254,20 @@ export function PesquisaEditorPage() {
     if (!pesquisa || pesquisa.status !== "RASCUNHO") return;
     setErro("");
     const form = evento.currentTarget;
-    const tipo = (form.elements.namedItem("tipo") as HTMLSelectElement).value;
+    const tipo = tipoNova;
     const texto = (form.elements.namedItem("texto") as HTMLInputElement).value;
-    const opcoesRaw = (form.elements.namedItem("opcoes") as HTMLInputElement)?.value || "";
-    const opcoes =
-      tipo === "CHECKBOX" || tipo === "MULTIPLA_ESCOLHA" || tipo === "SIM_NAO"
-        ? opcoesRaw
-            .split("|")
-            .map((t) => t.trim())
-            .filter(Boolean)
-            .map((t) => ({ texto: t }))
-        : [];
+    const precisaOpcao =
+      tipo === "CHECKBOX" || tipo === "MULTIPLA_ESCOLHA" || tipo === "SIM_NAO";
+    const opcoes = precisaOpcao
+      ? opcoesNovas.filter((t) => t.trim()).map((t) => ({ texto: t.trim() }))
+      : [];
     try {
       const criada = await api<Pergunta>(`/pesquisas/${pesquisaId}/perguntas`, {
         method: "POST",
         json: { texto, tipo, obrigatoria: true, opcoes },
       });
       setPerguntas((prev) => [...prev, criada].sort((a, b) => a.ordem - b.ordem));
+      setOpcoesNovas([]);
       form.reset();
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Erro");
@@ -286,6 +285,12 @@ export function PesquisaEditorPage() {
             texto: p.texto,
             tipo: p.tipo,
             obrigatoria: p.obrigatoria,
+            opcoes:
+              p.tipo === "CHECKBOX" ||
+              p.tipo === "MULTIPLA_ESCOLHA" ||
+              p.tipo === "SIM_NAO"
+                ? p.opcoes.map((o) => ({ texto: o.texto }))
+                : undefined,
           },
         },
       );
@@ -643,6 +648,28 @@ export function PesquisaEditorPage() {
                         )
                       }
                     />
+                    {p.tipo === "CHECKBOX" ||
+                    p.tipo === "MULTIPLA_ESCOLHA" ||
+                    p.tipo === "SIM_NAO" ? (
+                      <ListaOpcoes
+                        itens={p.opcoes.map((o) => o.texto)}
+                        onChange={(textos) =>
+                          setPerguntas((prev) =>
+                            prev.map((x) =>
+                              x.id === p.id
+                                ? {
+                                    ...x,
+                                    opcoes: textos.map((texto, i) => ({
+                                      id: x.opcoes[i]?.id || `local-${i}`,
+                                      texto,
+                                    })),
+                                  }
+                                : x,
+                            ),
+                          )
+                        }
+                      />
+                    ) : null}
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -744,7 +771,12 @@ export function PesquisaEditorPage() {
               </label>
               <label className="text-[12px] font-semibold text-gray-600">
                 Tipo
-                <select name="tipo" className={field} defaultValue="NOTA_5">
+                <select
+                  name="tipo"
+                  className={field}
+                  value={tipoNova}
+                  onChange={(e) => setTipoNova(e.target.value)}
+                >
                   <option value="NOTA_5">Nota 1–5</option>
                   <option value="NOTA_10">Nota 1–10</option>
                   <option value="TEXTO_LIVRE">Texto livre</option>
@@ -753,10 +785,13 @@ export function PesquisaEditorPage() {
                   <option value="CHECKBOX">Checkbox (várias)</option>
                 </select>
               </label>
-              <label className="text-[12px] font-semibold text-gray-600">
-                Opções (separadas por |)
-                <input name="opcoes" placeholder="Sim|Não|Talvez" className={field} />
-              </label>
+              {tipoNova === "CHECKBOX" ||
+              tipoNova === "MULTIPLA_ESCOLHA" ||
+              tipoNova === "SIM_NAO" ? (
+                <div className="sm:col-span-2">
+                  <ListaOpcoes itens={opcoesNovas} onChange={setOpcoesNovas} />
+                </div>
+              ) : null}
               <button
                 type="submit"
                 className="sm:col-span-2 rounded-xl py-2.5 text-white text-[13px] font-bold"
@@ -1176,5 +1211,88 @@ export function PesquisaEditorPage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+function ListaOpcoes({
+  itens,
+  onChange,
+}: {
+  itens: string[];
+  onChange: (itens: string[]) => void;
+}) {
+  const [rascunho, setRascunho] = useState("");
+
+  function mover(de: number, para: number) {
+    if (para < 0 || para >= itens.length) return;
+    const copia = [...itens];
+    const [item] = copia.splice(de, 1);
+    copia.splice(para, 0, item);
+    onChange(copia);
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-[12px] font-semibold text-gray-600">Opções</p>
+      <ul className="flex flex-col gap-1">
+        {itens.map((texto, i) => (
+          <li key={i} className="flex gap-1 items-center">
+            <input
+              className="flex-1 rounded-xl px-3 py-2 text-[13px] outline-none bg-white/70 border border-white/80"
+              value={texto}
+              onChange={(e) =>
+                onChange(itens.map((item, j) => (j === i ? e.target.value : item)))
+              }
+            />
+            <button
+              type="button"
+              className="text-[12px] font-bold px-2"
+              disabled={i === 0}
+              onClick={() => mover(i, i - 1)}
+              aria-label="Subir opção"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              className="text-[12px] font-bold px-2"
+              disabled={i === itens.length - 1}
+              onClick={() => mover(i, i + 1)}
+              aria-label="Descer opção"
+            >
+              ↓
+            </button>
+            <button
+              type="button"
+              className="text-[12px] font-bold text-[#A02828] px-2"
+              onClick={() => onChange(itens.filter((_, j) => j !== i))}
+            >
+              Excluir
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="flex gap-2">
+        <input
+          className="flex-1 rounded-xl px-3 py-2 text-[13px] outline-none bg-white/70 border border-white/80"
+          value={rascunho}
+          placeholder="Nova opção"
+          onChange={(e) => setRascunho(e.target.value)}
+        />
+        <button
+          type="button"
+          className="text-[12px] font-bold px-3 rounded-xl text-white"
+          style={{ background: "#0F766E" }}
+          onClick={() => {
+            const texto = rascunho.trim();
+            if (!texto) return;
+            onChange([...itens, texto]);
+            setRascunho("");
+          }}
+        >
+          Adicionar
+        </button>
+      </div>
+    </div>
   );
 }
