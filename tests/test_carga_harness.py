@@ -17,6 +17,23 @@ def test_recusar_producao_localhost() -> None:
     recusar_producao("http://localhost:8000/health")
 
 
+def test_locust_recusa_producao() -> None:
+    from scripts.locustfile import preparar_alvo
+
+    try:
+        preparar_alvo("https://orizon-api.onrender.com")
+    except SystemExit as exc:
+        assert "produção" in str(exc)
+    else:
+        raise AssertionError("deveria recusar produção")
+
+
+def test_locust_localhost_sem_staging() -> None:
+    from scripts.locustfile import preparar_alvo
+
+    assert preparar_alvo("http://127.0.0.1:8000").startswith("http://127.0.0.1:8000")
+
+
 def test_recusar_producao_render() -> None:
     try:
         recusar_producao("https://orizon-api.onrender.com/health")

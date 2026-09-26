@@ -410,7 +410,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 26/09/2026
-COMMIT: (este commit)
+COMMIT: 7033f22
 OBJETIVO: as opções da pergunta são uma lista, não um texto separado por barra.
 
 MUDANÇAS:
@@ -444,3 +444,46 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Arquivo Locust que recusa produção e checagem local com Bandit e pip-audit. Sem rodar a matriz e sem ZAP.
+
+---
+
+DATA: 26/09/2026
+COMMIT: (este commit)
+OBJETIVO: deixar o harness de carga e a checagem estática prontos, sem medir 1.000 e sem ZAP.
+
+MUDANÇAS:
+- `scripts/locustfile.py` descreve login, formulário, mídia da pergunta, resposta e nota. Host de produção aborta. Fora do localhost exige `HORIZON_AMBIENTE=staging`.
+- `scripts/security_check.py` roda Bandit e pip-audit. Não chama a API.
+
+PROBLEMA:
+- Não havia como recusar produção num fluxo completo, e não havia registro da checagem estática.
+
+CORREÇÃO:
+- A matriz 10 → 1.000 não foi executada. Não há staging. O pool segue 2/0.
+
+ARQUIVOS:
+- `scripts/locustfile.py`
+- `scripts/security_check.py`
+- `tests/test_carga_harness.py`
+
+TESTES:
+- `preparar_alvo` recusa `orizon-api.onrender.com` e aceita `127.0.0.1`.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- Checagem de 26/09, na máquina local:
+  - Bandit: 0 achados altos. Dois médios B310 em `urlopen` de CNPJ e SendGrid. As URLs são montadas no código para HTTPS desses serviços, não vêm do usuário. Aceito. Não trocar o cliente HTTP neste passo.
+  - pip-audit: `ecdsa` 0.19.2, PYSEC-2026-1325, dependência transitiva. Sem achado alto no Bandit. Não trocar a biblioteca de criptografia sem um teste que prove a troca. Fica como risco aberto, não como correção.
+  - ZAP não rodou.
+
+RISCOS RESTANTES:
+- 1.000 simultâneos, espera de pool, CPU/RAM e o ensaio de 300 respostas de clima só existem depois de um staging que não aponta para produção.
+- O aviso do `ecdsa` continua aberto.
+
+O QUE NÃO FOI ALTERADO:
+- Pool, Argon2id, Redis, slowapi, exportação de clima (não existe e não foi criada) e o Render de produção.
+
+PRÓXIMO PASSO:
+- Criar o staging no painel. Só então rodar o Locust, do menor concorrente para o maior, e decidir o pool com esse número.
