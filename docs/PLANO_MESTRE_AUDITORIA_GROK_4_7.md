@@ -286,7 +286,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 26/09/2026
-COMMIT: (este commit)
+COMMIT: 3c16f42
 OBJETIVO: upload da biblioteca e geração de token usam o mesmo bloqueio do login.
 
 MUDANÇAS:
