@@ -491,7 +491,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 26/09/2026
-COMMIT: ver o commit `perf` deste envio
+COMMIT: b12f9d7
 OBJETIVO: menos consultas no servidor e menos JavaScript na primeira tela.
 
 MUDANÇAS:
