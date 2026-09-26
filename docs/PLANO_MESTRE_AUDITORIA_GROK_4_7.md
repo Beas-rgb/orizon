@@ -151,3 +151,47 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Medir queries da geração de relações e da árvore antes de trocar o algoritmo. Não subir pool. Não declarar capacidade.
+
+---
+
+DATA: 26/09/2026
+COMMIT: (este commit)
+OBJETIVO: reconciliar o plano de 26/09 com o código em `d7b0e8f`. Não reconstruir o que já existe.
+
+MUDANÇAS:
+- Este registro. Nenhum comportamento de API neste commit.
+
+PROBLEMA:
+- O plano consolidado citava o commit `47d40a9`, 79 testes e 1 falha, e pedia para construir estrutura, importação e motor de avaliação. Isso já está no repositório. A suíte estava em 153 testes verdes.
+
+CORREÇÃO:
+- Não refazer Cargo, perfil, CSV, ciclo nem `avaliacao_respostas`.
+- Não trocar o `painel()` (já é `GROUP BY`) por `joinedload`.
+- Não subir `DB_POOL_SIZE` (segue 2, overflow 0).
+- O aviso de publicação já usa `vincular_engine`. O teste citado não é mais o bug aberto.
+- Login, primeiro acesso, recuperação, convite e resposta já têm bloqueio de 3 falhas / 5 minutos.
+- O teto de importação permanece 500 linhas: um órgão de 200–500 cabe; a linha 501 continua rejeitada.
+
+ARQUIVOS:
+- `docs/PLANO_MESTRE_AUDITORIA_GROK_4_7.md`
+
+TESTES:
+- Nenhum código novo. A suíte anterior permanece a prova do que já estava pronto.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- O próximo trabalho é só lista da equipe, participantes, árvore e o rate limit que ainda faltar em upload ou token.
+
+RISCOS RESTANTES:
+- `listar_equipe` e participantes ainda fazem `db.get` por pessoa e não paginam.
+- A árvore ainda busca usuário, cargo e setor dentro de cada nó.
+- Upload da biblioteca e geração de token de resposta ainda serão conferidos no passo do rate limit.
+- Carga de 1.000 no fluxo real exige staging. Não existe segundo serviço no Render neste repositório. Não medir em produção.
+
+O QUE NÃO FOI ALTERADO:
+- CLIMA, pool, painel, importação, cálculo de desempenho e hierarquia. O plano pedia reconstrução; a evidência diz que isso já funciona.
+
+PRÓXIMO PASSO:
+- Paginar `listar_equipe` e trocar o `db.get` em loop por uma leitura `IN`.
