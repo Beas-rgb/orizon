@@ -538,3 +538,44 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Staging, se quiser medir carga.
+
+---
+
+DATA: 28/09/2026
+COMMIT: neste envio de tela
+OBJETIVO: a consultora compara o desenho atual com o novo, no computador e no celular.
+
+MUDANÇAS:
+- A tela inicial da consultora ganhou o interruptor Atual / Novo. A escolha fica no navegador.
+- O desenho novo segue as imagens: menu e tabela no computador, barra inferior no celular.
+- A saudação usa o nome logado. Os números da tabela são amostra visual.
+
+PROBLEMA:
+- Não dava para olhar o desenho novo sem substituir o painel atual.
+
+CORREÇÃO:
+- Componente só da consultora. O casco de órgão, funcionário, projetos e editor permanece.
+
+ARQUIVOS:
+- `frontend/src/pages/ConsultoraDashboard.tsx`
+- `frontend/src/components/dashboard/InicioConsultoraNovo.tsx`
+- `web/app` (build copiado para o Render servir)
+
+TESTES:
+- Interruptor, filtro Encerrados, permanência no recarregar e a rota de Trabalhos conferidos no navegador local.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- A produção passa a oferecer os dois visuais na tela inicial da consultora.
+
+RISCOS RESTANTES:
+- Modelos, Resultados, Configurações e Mais não abrem tela nova.
+- Os números do desenho novo não vêm da API.
+
+O QUE NÃO FOI ALTERADO:
+- Pool 2/0, plano do Render, plano do Neon, CLIMA, Argon2id, login, resposta, órgão e funcionário.
+
+PRÓXIMO PASSO:
+- Se o desenho convencer, ligar a tabela aos projetos reais.

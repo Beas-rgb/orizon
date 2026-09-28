@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
+import {
+  gravarDesignConsultora,
+  InicioConsultoraNovo,
+  InterruptorDesign,
+  lerDesignConsultora,
+} from "../components/dashboard/InicioConsultoraNovo";
 import { JobHistory, type JobItem } from "../components/dashboard/JobHistory";
 import { MetricsPanel } from "../components/dashboard/MetricsPanel";
 import { QuickAccess } from "../components/dashboard/QuickAccess";
@@ -32,6 +38,12 @@ export function ConsultoraDashboard() {
   const { usuario } = useAuth();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [erro, setErro] = useState("");
+  const [design, setDesign] = useState(lerDesignConsultora);
+
+  function trocarDesign(valor: "atual" | "novo") {
+    setDesign(valor);
+    gravarDesignConsultora(valor);
+  }
 
   useEffect(() => {
     api<Projeto[]>("/projetos")
@@ -60,8 +72,20 @@ export function ConsultoraDashboard() {
     icon: "💼",
   }));
 
+  const interruptor = <InterruptorDesign valor={design} onChange={trocarDesign} />;
+
+  if (design === "novo") {
+    return (
+      <>
+        <InicioConsultoraNovo nome={usuario?.nome || "Consultora"} />
+        {interruptor}
+      </>
+    );
+  }
+
   return (
     <AppShell active="dashboard" searchHints={hints}>
+      {interruptor}
       {erro ? <p className="mb-4 text-[13px] text-[#A02828]">{erro}</p> : null}
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         <QuickAccess
