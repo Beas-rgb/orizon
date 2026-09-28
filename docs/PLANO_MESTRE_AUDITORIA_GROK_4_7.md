@@ -542,7 +542,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 28/09/2026
-COMMIT: neste envio de tela
+COMMIT: b31bd60
 OBJETIVO: a consultora compara o desenho atual com o novo, no computador e no celular.
 
 MUDANÇAS:
