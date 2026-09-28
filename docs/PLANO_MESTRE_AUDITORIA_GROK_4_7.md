@@ -583,7 +583,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 28/09/2026
-COMMIT: neste envio
+COMMIT: 9af00f2
 OBJETIVO: o desenho novo funciona de verdade e o azul-marinho vale no frontend inteiro.
 
 MUDANÇAS:
