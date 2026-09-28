@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
-export const ACCENT = "#1D5FAF";
-export const ACCENT_DARK = "#164A8A";
+export const ACCENT = "#1A3F8F";
+export const ACCENT_DARK = "#122C66";
 
 export const glassStyle: CSSProperties = {
   background: "rgba(255,255,255,0.45)",

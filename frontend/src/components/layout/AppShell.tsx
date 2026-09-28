@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
+import { useDesignTela } from "../../lib/designTela";
+import { CascaNova } from "./CascaNova";
+import { InterruptorDesign } from "./InterruptorDesign";
 import { Navbar } from "./Navbar";
 import { Sidebar, iconMap } from "./Sidebar";
 
@@ -18,6 +21,7 @@ const papelRotulo: Record<string, string> = {
 };
 
 export function AppShell({ children, active = "dashboard", searchHints }: Props) {
+  const [design] = useDesignTela();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [confirmarVolta, setConfirmarVolta] = useState(false);
   const { usuario, sair } = useAuth();
@@ -227,8 +231,51 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
               },
             ];
 
+  if (design === "novo") {
+    return (
+      <>
+        <CascaNova>{children}</CascaNova>
+        {confirmarVolta ? (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+            style={{ background: "rgba(20,30,50,0.28)" }}
+          >
+            <div className="w-full max-w-xs rounded-3xl bg-white p-5 shadow-xl">
+              <p className="text-[14px] font-bold text-gray-800">Voltar aos trabalhos?</p>
+              <p className="text-[12px] text-gray-500 mt-1 mb-4">
+                Você sai deste trabalho e volta para a lista.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="flex-1 rounded-xl py-2 text-[12px] font-bold text-gray-600"
+                  style={{ background: "rgba(0,0,0,0.06)" }}
+                  onClick={() => setConfirmarVolta(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 rounded-xl py-2 text-[12px] font-bold text-white"
+                  style={{ background: "#1A3F8F" }}
+                  onClick={() => {
+                    setConfirmarVolta(false);
+                    navigate("/projetos");
+                  }}
+                >
+                  Voltar
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen relative overflow-x-hidden page-bg">
+      <InterruptorDesign />
       <div
         className="absolute pointer-events-none"
         style={{
@@ -304,7 +351,7 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
               <button
                 type="button"
                 className="flex-1 rounded-xl py-2 text-[12px] font-bold text-white"
-                style={{ background: "#1D5FAF" }}
+                style={{ background: "#1A3F8F" }}
                 onClick={() => {
                   setConfirmarVolta(false);
                   navigate("/projetos");

@@ -560,7 +560,7 @@ export function PesquisaEditorPage() {
         <div className="rounded-2xl p-3 text-[12px] break-all mb-4" style={glassStyle}>
           <p className="font-bold mb-1">Link de resposta</p>
           {links.map((l) => (
-            <a key={l} href={l} className="block text-[#1D5FAF] font-semibold underline">
+            <a key={l} href={l} className="block text-[#1A3F8F] font-semibold underline">
               {l}
             </a>
           ))}
@@ -706,7 +706,7 @@ export function PesquisaEditorPage() {
                         <div className="flex gap-2 flex-wrap">
                           <button
                             type="button"
-                            className="text-[11px] font-bold text-[#1D5FAF]"
+                            className="text-[11px] font-bold text-[#1A3F8F]"
                             onClick={() => setEditando(p.id)}
                           >
                             Editar
@@ -832,7 +832,7 @@ export function PesquisaEditorPage() {
                       <p className="text-[13px] font-semibold">{p.nome}</p>
                       <p className="text-[11px] text-gray-500">{p.email}</p>
                     </div>
-                    <span className="text-[12px] font-bold text-[#1D5FAF]">{p.status}</span>
+                    <span className="text-[12px] font-bold text-[#1A3F8F]">{p.status}</span>
                   </li>
                 ))}
                 {participantes.length === 0 ? (
@@ -904,7 +904,7 @@ export function PesquisaEditorPage() {
           ) : null}
           <Link
             to={`/projetos/${projetoId}`}
-            className="inline-block mt-4 text-[12px] font-bold text-[#1D5FAF]"
+            className="inline-block mt-4 text-[12px] font-bold text-[#1A3F8F]"
           >
             Voltar ao trabalho
           </Link>

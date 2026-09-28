@@ -579,3 +579,42 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Se o desenho convencer, ligar a tabela aos projetos reais.
+
+---
+
+DATA: 28/09/2026
+COMMIT: neste envio
+OBJETIVO: o desenho novo funciona de verdade e o azul-marinho vale no frontend inteiro.
+
+MUDANÇAS:
+- A amostra parada saiu. O início da consultora lista os trabalhos da conta.
+- Login, órgão, funcionário, desenvolvimento, trabalhos, pesquisas, editor e resposta usam o mesmo marinho.
+- O menu novo marca o item com fundo azul claro e faixa marinho.
+
+PROBLEMA:
+- O botão e o menu do desenho novo estavam pretos, e os números da imagem não existiam na API.
+
+CORREÇÃO:
+- Cor `#1A3F8F` nos botões, links e casca. Sem migration.
+
+ARQUIVOS:
+- `frontend/src` das telas e da casca
+- `web/app` (build para o Render)
+
+TESTES:
+- `tsc` do frontend passou. A tela de entrar foi conferida no navegador local.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- A produção recebe o interruptor com dados reais e o marinho em todas as telas.
+
+RISCOS RESTANTES:
+- A tabela com contato, adesão e prazo das imagens não foi criada. Esses campos não existem na API.
+
+O QUE NÃO FOI ALTERADO:
+- Pool 2/0, plano do Render, plano do Neon, CLIMA e Argon2id.
+
+PRÓXIMO PASSO:
+- Staging, se quiser medir.

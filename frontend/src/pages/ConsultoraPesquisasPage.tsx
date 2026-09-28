@@ -174,12 +174,12 @@ export function ConsultoraPesquisasPage() {
             className="rounded-full px-3 py-1.5 text-[12px] font-semibold"
             style={{
               background:
-                aba === item.id ? "rgba(29,95,175,0.15)" : "rgba(255,255,255,0.55)",
+                aba === item.id ? "rgba(26,63,143,0.15)" : "rgba(255,255,255,0.55)",
               border:
                 aba === item.id
-                  ? "1px solid rgba(29,95,175,0.3)"
+                  ? "1px solid rgba(26,63,143,0.3)"
                   : "1px solid transparent",
-              color: aba === item.id ? "#1D5FAF" : "#4b5563",
+              color: aba === item.id ? "#1A3F8F" : "#4b5563",
             }}
           >
             {item.label}
@@ -361,7 +361,7 @@ export function ConsultoraPesquisasPage() {
       {aba === "organizacao" ? (
         <div className="rounded-3xl p-5" style={glassStyle}>
           <p className="text-[13px] text-gray-600">
-            Use <Link className="text-[#1D5FAF] font-semibold underline" to="/projetos">
+            Use <Link className="text-[#1A3F8F] font-semibold underline" to="/projetos">
               Trabalhos
             </Link>{" "}
             para abrir cada projeto, equipe e configuração. A listagem de pesquisas

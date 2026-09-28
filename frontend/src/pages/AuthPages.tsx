@@ -2,7 +2,9 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { InterruptorDesign } from "../components/layout/InterruptorDesign";
 import { api } from "../lib/api";
+import { useDesignTela } from "../lib/designTela";
 import { ACCENT, ACCENT_DARK } from "../lib/theme";
 import { consumirRetornoResponder } from "./ResponderPage";
 
@@ -15,7 +17,7 @@ function tokenDaUrl(): string {
 }
 
 const inputClass =
-  "mt-1.5 w-full rounded-xl px-3.5 py-3 text-[14px] text-gray-800 outline-none transition-[border,box-shadow] focus:border-[#1D5FAF]/55 focus:shadow-[0_0_0_3px_rgba(29,95,175,0.12)]";
+  "mt-1.5 w-full rounded-xl px-3.5 py-3 text-[14px] text-gray-800 outline-none transition-[border,box-shadow] focus:border-[#1A3F8F]/55 focus:shadow-[0_0_0_3px_rgba(26,63,143,0.12)]";
 
 const inputStyle = {
   background: "rgba(255,255,255,0.82)",
@@ -126,7 +128,7 @@ export function LoginPage() {
       sub="Use o e-mail da sua conta."
       rodape={
         <>
-          <Link to="/recuperar" className="text-[#1D5FAF] font-medium hover:underline">
+          <Link to="/recuperar" className="text-[#1A3F8F] font-medium hover:underline">
             Esqueci a senha
           </Link>
           <Link to="/primeiro-acesso" className="text-gray-500 hover:text-gray-700">
@@ -424,18 +426,21 @@ export function PrimeiroAcessoPage() {
 export function LandingPage() {
   const { pronto, usuario } = useAuth();
   const navigate = useNavigate();
+  const [design] = useDesignTela();
+  const novo = design === "novo";
 
   useEffect(() => {
     if (pronto && usuario) navigate("/inicio", { replace: true });
   }, [pronto, usuario, navigate]);
 
   return (
-    <div className="min-h-screen relative overflow-hidden page-bg">
+    <div className={`min-h-screen relative overflow-hidden ${novo ? "design-novo bg-[#f4f3ef]" : "page-bg"}`}>
+      <InterruptorDesign />
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 15% 20%, rgba(29,95,175,0.10), transparent 55%), radial-gradient(ellipse 50% 40% at 90% 80%, rgba(22,74,138,0.07), transparent 50%)",
+            "radial-gradient(ellipse 70% 50% at 15% 20%, rgba(26,63,143,0.10), transparent 55%), radial-gradient(ellipse 50% 40% at 90% 80%, rgba(22,74,138,0.07), transparent 50%)",
         }}
       />
 
@@ -475,7 +480,7 @@ export function LandingPage() {
           <Link
             to="/entrar"
             className="inline-flex justify-center px-7 py-3.5 rounded-xl text-white text-[14px] font-semibold"
-            style={{ background: ACCENT }}
+            style={{ background: novo ? "#1A3F8F" : ACCENT }}
           >
             Entrar
           </Link>
@@ -493,7 +498,7 @@ export function LandingPage() {
 
         <p className="mt-8 text-[13px] text-gray-500">
           Consultora sem conta?{" "}
-          <Link to="/cadastro" className="font-medium text-[#1D5FAF] hover:underline">
+          <Link to="/cadastro" className="font-medium text-[#1A3F8F] hover:underline">
             Pedir acesso
           </Link>
         </p>
@@ -513,22 +518,27 @@ function AuthLayout({
   children: ReactNode;
   rodape?: ReactNode;
 }) {
+  const [design] = useDesignTela();
+  const novo = design === "novo";
   return (
-    <div className="min-h-screen page-bg flex flex-col">
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 60% 45% at 50% 0%, rgba(29,95,175,0.08), transparent 60%)",
-        }}
-      />
+    <div className={`min-h-screen flex flex-col ${novo ? "design-novo bg-[#f4f3ef]" : "page-bg"}`}>
+      <InterruptorDesign />
+      {novo ? null : (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 45% at 50% 0%, rgba(26,63,143,0.08), transparent 60%)",
+          }}
+        />
+      )}
       <header className="relative z-10 px-6 sm:px-10 py-6 max-w-lg mx-auto w-full">
         <Link to="/" className="inline-flex items-center gap-2.5">
           <span
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[11px] font-bold"
-            style={{ background: ACCENT_DARK }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold"
+            style={{ background: novo ? "#1A3F8F" : ACCENT_DARK }}
           >
-            OR
+            {novo ? "O" : "OR"}
           </span>
           <span className="text-[14px] font-semibold text-gray-900">Orizon</span>
         </Link>
@@ -542,12 +552,16 @@ function AuthLayout({
           <p className="mt-2 text-[14px] text-gray-500 leading-relaxed">{sub}</p>
 
           <div
-            className="mt-8 rounded-2xl p-6 sm:p-7"
-            style={{
-              background: "rgba(255,255,255,0.72)",
-              border: "1px solid rgba(255,255,255,0.85)",
-              boxShadow: "0 12px 40px rgba(15, 35, 70, 0.06)",
-            }}
+            className={`mt-8 p-6 sm:p-7 ${novo ? "rounded-[24px] bg-white ring-1 ring-black/[0.05]" : "rounded-2xl"}`}
+            style={
+              novo
+                ? undefined
+                : {
+                    background: "rgba(255,255,255,0.72)",
+                    border: "1px solid rgba(255,255,255,0.85)",
+                    boxShadow: "0 12px 40px rgba(15, 35, 70, 0.06)",
+                  }
+            }
           >
             {children}
           </div>

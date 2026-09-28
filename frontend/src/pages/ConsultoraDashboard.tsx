@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
-import {
-  gravarDesignConsultora,
-  InicioConsultoraNovo,
-  InterruptorDesign,
-  lerDesignConsultora,
-} from "../components/dashboard/InicioConsultoraNovo";
+import { InicioConsultoraNovo } from "../components/dashboard/InicioConsultoraNovo";
 import { JobHistory, type JobItem } from "../components/dashboard/JobHistory";
 import { MetricsPanel } from "../components/dashboard/MetricsPanel";
 import { QuickAccess } from "../components/dashboard/QuickAccess";
 import { SmartBriefing } from "../components/dashboard/SmartBriefing";
 import { AppShell } from "../components/layout/AppShell";
 import { api } from "../lib/api";
+import { useDesignTela } from "../lib/designTela";
 
 type Projeto = {
   id: string;
@@ -38,12 +34,7 @@ export function ConsultoraDashboard() {
   const { usuario } = useAuth();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [erro, setErro] = useState("");
-  const [design, setDesign] = useState(lerDesignConsultora);
-
-  function trocarDesign(valor: "atual" | "novo") {
-    setDesign(valor);
-    gravarDesignConsultora(valor);
-  }
+  const [design] = useDesignTela();
 
   useEffect(() => {
     api<Projeto[]>("/projetos")
@@ -72,20 +63,20 @@ export function ConsultoraDashboard() {
     icon: "💼",
   }));
 
-  const interruptor = <InterruptorDesign valor={design} onChange={trocarDesign} />;
-
   if (design === "novo") {
     return (
-      <>
-        <InicioConsultoraNovo nome={usuario?.nome || "Consultora"} />
-        {interruptor}
-      </>
+      <AppShell active="dashboard" searchHints={hints}>
+        <InicioConsultoraNovo
+          nome={usuario?.nome || "Consultora"}
+          projetos={projetos}
+          erro={erro}
+        />
+      </AppShell>
     );
   }
 
   return (
     <AppShell active="dashboard" searchHints={hints}>
-      {interruptor}
       {erro ? <p className="mb-4 text-[13px] text-[#A02828]">{erro}</p> : null}
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         <QuickAccess

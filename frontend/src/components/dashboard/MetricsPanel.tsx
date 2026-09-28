@@ -8,9 +8,9 @@ const metrics = [
   {
     key: "iniciados" as const,
     label: "Iniciados",
-    color: "#1D5FAF",
-    bg: "rgba(29,95,175,0.10)",
-    border: "rgba(29,95,175,0.20)",
+    color: "#1A3F8F",
+    bg: "rgba(26,63,143,0.10)",
+    border: "rgba(26,63,143,0.20)",
     tag: "INI",
   },
   {

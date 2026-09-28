@@ -57,8 +57,8 @@ export function Navbar({
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
             style={{
-              background: `linear-gradient(135deg, ${ACCENT}, #164A8A)`,
-              boxShadow: "0 2px 8px rgba(29,95,175,0.30)",
+              background: `linear-gradient(135deg, ${ACCENT}, #122C66)`,
+              boxShadow: "0 2px 8px rgba(26,63,143,0.30)",
             }}
           >
             <span className="text-white text-xs font-bold">OR</span>
@@ -76,10 +76,10 @@ export function Navbar({
           style={{
             background: searchFocused ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.55)",
             border: searchFocused
-              ? "1px solid rgba(29,95,175,0.35)"
+              ? "1px solid rgba(26,63,143,0.35)"
               : "1px solid rgba(255,255,255,0.6)",
             boxShadow: searchFocused
-              ? "0 0 0 3px rgba(29,95,175,0.10), 0 4px 16px rgba(0,0,0,0.08)"
+              ? "0 0 0 3px rgba(26,63,143,0.10), 0 4px 16px rgba(0,0,0,0.08)"
               : "0 1px 6px rgba(0,0,0,0.05)",
           }}
         >
@@ -183,8 +183,8 @@ export function Navbar({
             <div
               className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-bold"
               style={{
-                background: `linear-gradient(135deg, ${ACCENT}, #164A8A)`,
-                boxShadow: "0 2px 6px rgba(29,95,175,0.28)",
+                background: `linear-gradient(135deg, ${ACCENT}, #122C66)`,
+                boxShadow: "0 2px 6px rgba(26,63,143,0.28)",
               }}
             >
               {iniciais(nome).slice(0, 1)}
@@ -207,7 +207,7 @@ export function Navbar({
                   <div className="flex items-center gap-3 p-2 mb-2">
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
-                      style={{ background: `linear-gradient(135deg, ${ACCENT}, #164A8A)` }}
+                      style={{ background: `linear-gradient(135deg, ${ACCENT}, #122C66)` }}
                     >
                       {iniciais(nome).slice(0, 1)}
                     </div>

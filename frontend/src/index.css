@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --hz-accent: #1d5faf;
-  --hz-accent-dark: #164a8a;
+  --hz-accent: #1a3f8f;
+  --hz-accent-dark: #122c66;
   --hz-ok: #1e7a4a;
   --hz-warn: #a07020;
   --hz-danger: #a02828;
@@ -94,4 +94,9 @@ textarea {
   .hz-table-wrap table {
     min-width: 540px;
   }
+}
+
+.design-novo button[type="submit"] {
+  background: #1a3f8f !important;
+  border-radius: 999px !important;
 }

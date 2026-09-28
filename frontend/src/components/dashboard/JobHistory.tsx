@@ -26,9 +26,9 @@ const statusConfig = {
   },
   iniciado: {
     label: "Iniciado",
-    color: "#1D5FAF",
-    bg: "rgba(29,95,175,0.12)",
-    border: "rgba(29,95,175,0.22)",
+    color: "#1A3F8F",
+    bg: "rgba(26,63,143,0.12)",
+    border: "rgba(26,63,143,0.22)",
   },
 };
 
@@ -45,7 +45,7 @@ export function JobHistory({ jobs }: { jobs: JobItem[] }) {
         <button
           type="button"
           onClick={() => navigate("/projetos")}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-white/50 text-[12px] font-semibold text-[#1D5FAF]"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-white/50 text-[12px] font-semibold text-[#1A3F8F]"
         >
           Ver todos <ChevronRight size={13} />
         </button>

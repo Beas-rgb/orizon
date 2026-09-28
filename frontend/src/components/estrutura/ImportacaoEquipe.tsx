@@ -108,7 +108,7 @@ export function ImportacaoEquipe({
         <p className="text-[11px] text-gray-500">Selecionado: {arquivoNome}</p>
       ) : null}
       {previa ? (
-        <div className="rounded-2xl p-4" style={{ background: "rgba(29,95,175,0.06)" }}>
+        <div className="rounded-2xl p-4" style={{ background: "rgba(26,63,143,0.06)" }}>
           <p className="text-[13px] font-bold text-gray-800 mb-2">
             Prévia{arquivoNome ? ` · ${arquivoNome}` : ""}
           </p>

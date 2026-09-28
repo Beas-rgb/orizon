@@ -56,7 +56,7 @@ export function SmartBriefing({ nome, priority, indicators }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         <div
           className="rounded-2xl p-4 flex flex-col justify-between"
-          style={{ background: "rgba(29,95,175,0.08)", border: "1px solid rgba(29,95,175,0.18)" }}
+          style={{ background: "rgba(26,63,143,0.08)", border: "1px solid rgba(26,63,143,0.18)" }}
         >
           <div>
             <div className="flex items-center gap-2 mb-3">

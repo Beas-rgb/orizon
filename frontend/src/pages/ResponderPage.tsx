@@ -271,7 +271,7 @@ export function ResponderPage() {
         {ok ? <p className="text-[#1E7A4A] text-[13px] mb-3">{ok}</p> : null}
 
         {enviado ? (
-          <Link to="/inicio" className="text-[13px] font-bold text-[#1D5FAF]">
+          <Link to="/inicio" className="text-[13px] font-bold text-[#1A3F8F]">
             Voltar ao início
           </Link>
         ) : total === 0 ? (
@@ -395,7 +395,7 @@ function CampoPergunta({
             style={{
               background: escolhida === String(n) ? ACCENT : "rgba(255,255,255,0.7)",
               color: escolhida === String(n) ? "#fff" : "#1f2937",
-              border: "1px solid rgba(29,95,175,0.25)",
+              border: "1px solid rgba(26,63,143,0.25)",
             }}
           >
             <input

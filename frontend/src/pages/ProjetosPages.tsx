@@ -45,34 +45,30 @@ export function ProjetosListaPage() {
         </div>
         <Link
           to="/projetos/novo"
-          className="px-4 py-2.5 rounded-2xl text-white text-[13px] font-bold"
-          style={{ background: `linear-gradient(135deg, ${ACCENT}, #164A8A)` }}
+          className="px-4 py-2.5 rounded-xl text-white text-[13px] font-bold"
+          style={{ background: ACCENT }}
         >
-          Novo projeto
+          Novo trabalho
         </Link>
       </div>
       {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
-      <div className="rounded-3xl p-4 sm:p-5" style={glassStyle}>
-        <ul className="flex flex-col gap-2">
+      <div className="rounded-[24px] bg-white p-4 ring-1 ring-black/[0.05]">
+        <ul className="flex flex-col">
           {projetos.map((p) => (
-            <li key={p.id}>
+            <li key={p.id} className="border-b border-black/[0.05] last:border-0">
               <Link
                 to={`/projetos/${p.id}`}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-3 rounded-2xl hover:bg-white/60"
-                style={{
-                  background: "rgba(255,255,255,0.55)",
-                  border: "1px solid rgba(255,255,255,0.65)",
-                }}
+                className="flex items-center justify-between gap-3 py-3"
               >
-                <div>
-                  <p className="text-[13px] font-semibold text-gray-800">
+                <div className="min-w-0">
+                  <p className="text-[14px] font-semibold text-[#1c1c1c]">
                     {p.vinculo_titulo || nomeCliente(p)}
                   </p>
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-[12px] text-[#6d6d6d]">
                     {nomeCliente(p)} · {p.rotulo}
                   </p>
                 </div>
-                <span className="text-[11px] font-bold text-[#1D5FAF]">{p.estado}</span>
+                <span className="shrink-0 text-[12px] font-semibold text-[#1A3F8F]">{p.estado}</span>
               </Link>
             </li>
           ))}
@@ -182,7 +178,7 @@ export function NovoProjetoPage() {
         <button
           type="submit"
           className="rounded-2xl py-3 text-white text-[14px] font-bold mt-2"
-          style={{ background: `linear-gradient(135deg, ${ACCENT}, #164A8A)` }}
+          style={{ background: `linear-gradient(135deg, ${ACCENT}, #122C66)` }}
         >
           Criar projeto
         </button>
@@ -466,8 +462,8 @@ export function ProjetoDetalhePage() {
         <div
           className="rounded-2xl p-4 mb-4 text-[12px] break-all"
           style={{
-            background: "rgba(29,95,175,0.08)",
-            border: "1px solid rgba(29,95,175,0.2)",
+            background: "rgba(26,63,143,0.08)",
+            border: "1px solid rgba(26,63,143,0.2)",
           }}
         >
           <p className="font-bold text-gray-800 mb-1">Link de primeiro acesso (modo local)</p>
@@ -475,7 +471,7 @@ export function ProjetoDetalhePage() {
             E-mail ainda não está no ar. Copie o link e abra em aba anônima para
             definir a senha do órgão/funcionário.
           </p>
-          <a className="text-[#1D5FAF] font-semibold underline" href={linkAcesso}>
+          <a className="text-[#1A3F8F] font-semibold underline" href={linkAcesso}>
             {linkAcesso}
           </a>
         </div>
@@ -534,7 +530,7 @@ export function ProjetoDetalhePage() {
                         {m.situacao === "PENDENTE" && m.papel === "FUNCIONARIO" ? (
                           <button
                             type="button"
-                            className="text-[#1D5FAF] font-bold underline"
+                            className="text-[#1A3F8F] font-bold underline"
                             onClick={() => void reenviarConviteFuncionario(m.email)}
                           >
                             Reenviar
@@ -542,7 +538,7 @@ export function ProjetoDetalhePage() {
                         ) : m.situacao === "PENDENTE" && m.papel === "ORGAO" ? (
                           <button
                             type="button"
-                            className="text-[#1D5FAF] font-bold underline"
+                            className="text-[#1A3F8F] font-bold underline"
                             onClick={() => void reenviarConviteOrgao()}
                           >
                             Reenviar
@@ -609,7 +605,7 @@ export function ProjetoDetalhePage() {
                 <li
                   key={s.id}
                   className="px-3 py-1.5 rounded-xl text-[12px] font-semibold"
-                  style={{ background: "rgba(29,95,175,0.10)", color: ACCENT }}
+                  style={{ background: "rgba(26,63,143,0.10)", color: ACCENT }}
                 >
                   {s.nome}
                 </li>
@@ -629,7 +625,7 @@ export function ProjetoDetalhePage() {
             {!pesquisasOk ? (
               <div className="rounded-2xl p-3 text-[12px] text-gray-700" style={{ background: "rgba(160,112,32,0.1)" }}>
                 Pesquisas desligadas neste trabalho.{" "}
-                <button type="button" className="font-bold text-[#1D5FAF] underline" onClick={() => void ligarPesquisas()}>
+                <button type="button" className="font-bold text-[#1A3F8F] underline" onClick={() => void ligarPesquisas()}>
                   Ligar agora
                 </button>
               </div>
@@ -650,7 +646,7 @@ export function ProjetoDetalhePage() {
                   <Link
                     to={`/projetos/${id}/pesquisas/${p.id}`}
                     className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                    style={{ background: "#164A8A" }}
+                    style={{ background: "#122C66" }}
                   >
                     Abrir edição
                   </Link>
@@ -815,7 +811,7 @@ export function ProjetoDetalhePage() {
                 <li
                   key={s.id}
                   className="px-3 py-1.5 rounded-xl text-[12px] font-semibold"
-                  style={{ background: "rgba(29,95,175,0.10)", color: ACCENT }}
+                  style={{ background: "rgba(26,63,143,0.10)", color: ACCENT }}
                 >
                   {s.nome}
                 </li>
@@ -835,10 +831,10 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div
       className="rounded-2xl p-4"
-      style={{ background: "rgba(29,95,175,0.08)", border: "1px solid rgba(29,95,175,0.18)" }}
+      style={{ background: "rgba(26,63,143,0.08)", border: "1px solid rgba(26,63,143,0.18)" }}
     >
       <p className="text-[11px] text-gray-500">{label}</p>
-      <p className="text-[28px] font-extrabold text-[#1D5FAF]">{value}</p>
+      <p className="text-[28px] font-extrabold text-[#1A3F8F]">{value}</p>
     </div>
   );
 }

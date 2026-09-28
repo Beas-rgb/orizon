@@ -98,10 +98,10 @@ export function OrgaoPainel() {
                   className="w-full text-left p-3 rounded-2xl"
                   style={{
                     background:
-                      ativo === p.id ? "rgba(29,95,175,0.12)" : "rgba(255,255,255,0.55)",
+                      ativo === p.id ? "rgba(26,63,143,0.12)" : "rgba(255,255,255,0.55)",
                     border:
                       ativo === p.id
-                        ? "1px solid rgba(29,95,175,0.22)"
+                        ? "1px solid rgba(26,63,143,0.22)"
                         : "1px solid rgba(255,255,255,0.65)",
                   }}
                 >
@@ -143,9 +143,9 @@ export function OrgaoPainel() {
                     style={{
                       background:
                         abaPesq === id
-                          ? "rgba(29,95,175,0.15)"
+                          ? "rgba(26,63,143,0.15)"
                           : "rgba(255,255,255,0.5)",
-                      color: abaPesq === id ? "#1D5FAF" : "#6b7280",
+                      color: abaPesq === id ? "#1A3F8F" : "#6b7280",
                     }}
                   >
                     {label}
@@ -470,8 +470,8 @@ export function DevPainel() {
         <div
           className="rounded-2xl p-4 mb-5 text-[12px] break-all"
           style={{
-            background: "rgba(29,95,175,0.08)",
-            border: "1px solid rgba(29,95,175,0.2)",
+            background: "rgba(26,63,143,0.08)",
+            border: "1px solid rgba(26,63,143,0.2)",
           }}
         >
           <p className="font-bold text-gray-800 mb-1">Link de primeiro acesso (só para o TI)</p>
@@ -479,7 +479,7 @@ export function DevPainel() {
             Senha nunca vem por e-mail. Abra o link ou copie o código após{" "}
             <code className="text-[11px]">?t=</code> em /primeiro-acesso.
           </p>
-          <a className="text-[#1D5FAF] font-semibold underline" href={linkAcesso}>
+          <a className="text-[#1A3F8F] font-semibold underline" href={linkAcesso}>
             {linkAcesso}
           </a>
           <p className="mt-2 text-gray-500">
@@ -584,7 +584,7 @@ export function DevPainel() {
             <li>
               Crie conta em{" "}
               <a
-                className="text-[#1D5FAF] underline"
+                className="text-[#1A3F8F] underline"
                 href="https://sendgrid.com"
                 target="_blank"
                 rel="noreferrer"
@@ -613,7 +613,7 @@ export function DevPainel() {
             <li>
               Confira{" "}
               <a
-                className="text-[#1D5FAF] underline break-all"
+                className="text-[#1A3F8F] underline break-all"
                 href="https://orizon-api.onrender.com/health/email"
                 target="_blank"
                 rel="noreferrer"
