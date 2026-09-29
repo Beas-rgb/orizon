@@ -257,7 +257,7 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
                 <button
                   type="button"
                   className="flex-1 rounded-xl py-2 text-[12px] font-bold text-white"
-                  style={{ background: "#1A3F8F" }}
+                  style={{ background: "#171717" }}
                   onClick={() => {
                     setConfirmarVolta(false);
                     navigate("/projetos");
@@ -351,7 +351,7 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
               <button
                 type="button"
                 className="flex-1 rounded-xl py-2 text-[12px] font-bold text-white"
-                style={{ background: "#1A3F8F" }}
+                style={{ background: "#1D5FAF" }}
                 onClick={() => {
                   setConfirmarVolta(false);
                   navigate("/projetos");

@@ -108,7 +108,7 @@ export function InicioConsultoraNovo({
           <button
             type="button"
             onClick={() => navigate("/projetos/novo")}
-            className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-[#1A3F8F] px-4 py-2.5 text-[14px] font-semibold text-white"
+            className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-[#171717] px-4 py-2.5 text-[14px] font-semibold text-white"
           >
             <Plus size={16} />
             <span className="hidden min-[900px]:inline">Novo trabalho</span>

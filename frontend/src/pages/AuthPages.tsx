@@ -17,7 +17,7 @@ function tokenDaUrl(): string {
 }
 
 const inputClass =
-  "mt-1.5 w-full rounded-xl px-3.5 py-3 text-[14px] text-gray-800 outline-none transition-[border,box-shadow] focus:border-[#1A3F8F]/55 focus:shadow-[0_0_0_3px_rgba(26,63,143,0.12)]";
+  "mt-1.5 w-full rounded-xl px-3.5 py-3 text-[14px] text-gray-800 outline-none transition-[border,box-shadow] focus:border-[#1D5FAF]/55 focus:shadow-[0_0_0_3px_rgba(29,95,175,0.12)]";
 
 const inputStyle = {
   background: "rgba(255,255,255,0.82)",
@@ -128,7 +128,7 @@ export function LoginPage() {
       sub="Use o e-mail da sua conta."
       rodape={
         <>
-          <Link to="/recuperar" className="text-[#1A3F8F] font-medium hover:underline">
+          <Link to="/recuperar" className="text-[#1D5FAF] font-medium hover:underline">
             Esqueci a senha
           </Link>
           <Link to="/primeiro-acesso" className="text-gray-500 hover:text-gray-700">
@@ -155,7 +155,7 @@ export function LoginPage() {
           type="submit"
           disabled={carregando}
           className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold disabled:opacity-60 mt-1"
-          style={{ background: ACCENT }}
+          style={{ background: "#171717" }}
         >
           {carregando ? "Entrando…" : "Entrar"}
         </button>
@@ -224,7 +224,7 @@ export function CadastroPage() {
           type="submit"
           disabled={carregando}
           className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold disabled:opacity-60 mt-1"
-          style={{ background: ACCENT }}
+          style={{ background: "#171717" }}
         >
           {carregando ? "Enviando…" : "Enviar pedido"}
         </button>
@@ -304,7 +304,7 @@ export function RecuperarPage() {
           <button
             type="submit"
             className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold mt-1"
-            style={{ background: ACCENT }}
+            style={{ background: "#171717" }}
           >
             Salvar senha
           </button>
@@ -340,7 +340,7 @@ export function RecuperarPage() {
         <button
           type="submit"
           className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold mt-1"
-          style={{ background: ACCENT }}
+          style={{ background: "#171717" }}
         >
           Enviar instruções
         </button>
@@ -413,7 +413,7 @@ export function PrimeiroAcessoPage() {
         <button
           type="submit"
           className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold mt-1"
-          style={{ background: ACCENT }}
+          style={{ background: "#171717" }}
         >
           Continuar
         </button>
@@ -440,7 +440,7 @@ export function LandingPage() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 15% 20%, rgba(26,63,143,0.10), transparent 55%), radial-gradient(ellipse 50% 40% at 90% 80%, rgba(22,74,138,0.07), transparent 50%)",
+            "radial-gradient(ellipse 70% 50% at 15% 20%, rgba(29,95,175,0.10), transparent 55%), radial-gradient(ellipse 50% 40% at 90% 80%, rgba(22,74,138,0.07), transparent 50%)",
         }}
       />
 
@@ -448,7 +448,7 @@ export function LandingPage() {
         <Link to="/" className="flex items-center gap-2.5">
           <span
             className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[12px] font-bold tracking-wide"
-            style={{ background: ACCENT }}
+            style={{ background: "#171717" }}
           >
             OR
           </span>
@@ -480,7 +480,7 @@ export function LandingPage() {
           <Link
             to="/entrar"
             className="inline-flex justify-center px-7 py-3.5 rounded-xl text-white text-[14px] font-semibold"
-            style={{ background: novo ? "#1A3F8F" : ACCENT }}
+            style={{ background: novo ? "#171717" : ACCENT }}
           >
             Entrar
           </Link>
@@ -498,7 +498,7 @@ export function LandingPage() {
 
         <p className="mt-8 text-[13px] text-gray-500">
           Consultora sem conta?{" "}
-          <Link to="/cadastro" className="font-medium text-[#1A3F8F] hover:underline">
+          <Link to="/cadastro" className="font-medium text-[#1D5FAF] hover:underline">
             Pedir acesso
           </Link>
         </p>
@@ -528,7 +528,7 @@ function AuthLayout({
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 60% 45% at 50% 0%, rgba(26,63,143,0.08), transparent 60%)",
+              "radial-gradient(ellipse 60% 45% at 50% 0%, rgba(29,95,175,0.08), transparent 60%)",
           }}
         />
       )}
@@ -536,7 +536,7 @@ function AuthLayout({
         <Link to="/" className="inline-flex items-center gap-2.5">
           <span
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold"
-            style={{ background: novo ? "#1A3F8F" : ACCENT_DARK }}
+            style={{ background: novo ? "#171717" : ACCENT_DARK }}
           >
             {novo ? "O" : "OR"}
           </span>

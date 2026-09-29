@@ -251,7 +251,7 @@ export function ResponderPage() {
           <Link
             to="/inicio"
             className="inline-block rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
-            style={{ background: ACCENT }}
+            style={{ background: "#171717" }}
           >
             Ir ao meu painel
           </Link>
@@ -271,7 +271,7 @@ export function ResponderPage() {
         {ok ? <p className="text-[#1E7A4A] text-[13px] mb-3">{ok}</p> : null}
 
         {enviado ? (
-          <Link to="/inicio" className="text-[13px] font-bold text-[#1A3F8F]">
+          <Link to="/inicio" className="text-[13px] font-bold text-[#1D5FAF]">
             Voltar ao início
           </Link>
         ) : total === 0 ? (
@@ -341,7 +341,7 @@ export function ResponderPage() {
                   type="button"
                   onClick={() => setIndice((i) => Math.min(total - 1, i + 1))}
                   className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
-                  style={{ background: ACCENT }}
+                  style={{ background: "#171717" }}
                 >
                   Próxima
                 </button>
@@ -395,7 +395,7 @@ function CampoPergunta({
             style={{
               background: escolhida === String(n) ? ACCENT : "rgba(255,255,255,0.7)",
               color: escolhida === String(n) ? "#fff" : "#1f2937",
-              border: "1px solid rgba(26,63,143,0.25)",
+              border: "1px solid rgba(29,95,175,0.25)",
             }}
           >
             <input

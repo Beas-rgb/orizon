@@ -8,9 +8,9 @@ const actions = [
     icon: Plus,
     label: "Novo Trabalho",
     description: "Criar projeto",
-    color: "#1A3F8F",
-    bg: "rgba(26,63,143,0.10)",
-    border: "rgba(26,63,143,0.20)",
+    color: "#1D5FAF",
+    bg: "rgba(29,95,175,0.10)",
+    border: "rgba(29,95,175,0.20)",
     to: "/projetos/novo",
   },
   {
@@ -84,11 +84,11 @@ export function QuickAccess({
               <div
                 className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                 style={{
-                  background: "rgba(26,63,143,0.09)",
-                  border: "1px solid rgba(26,63,143,0.16)",
+                  background: "rgba(29,95,175,0.09)",
+                  border: "1px solid rgba(29,95,175,0.16)",
                 }}
               >
-                <span className="text-[14px] font-extrabold text-[#1A3F8F]">{s.value}</span>
+                <span className="text-[14px] font-extrabold text-[#1D5FAF]">{s.value}</span>
               </div>
               <div>
                 <p className="text-gray-500 text-[10px]">{s.label}</p>

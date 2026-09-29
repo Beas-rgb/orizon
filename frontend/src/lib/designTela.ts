@@ -8,7 +8,7 @@ const ouvintes = new Set<() => void>();
 
 export function lerDesignTela(): DesignTela {
   try {
-    return localStorage.getItem(CHAVE) === "novo" ? "novo" : "atual";
+    return localStorage.getItem(CHAVE) === "atual" ? "atual" : "novo";
   } catch {
     return "atual";
   }

@@ -160,7 +160,7 @@ export function ArvoreOrganizacional({
         <button
           type="button"
           className="text-[12px] font-bold px-3 py-2 rounded-xl"
-          style={{ background: "rgba(26,63,143,0.10)", color: ACCENT }}
+          style={{ background: "rgba(29,95,175,0.10)", color: ACCENT }}
           onClick={() => setManual(new Set(idsVisiveis(visivel)))}
         >
           Expandir tudo

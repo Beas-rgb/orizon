@@ -20,7 +20,7 @@ export function InterruptorDesign() {
           aria-pressed={valor === opcao}
           onClick={() => escolher(opcao)}
           className={`rounded-full px-3 py-1.5 text-[12px] font-semibold capitalize ${
-            valor === opcao ? "bg-[#1A3F8F] text-white" : "text-[#5c5c5c]"
+            valor === opcao ? "bg-[#171717] text-white" : "text-[#5c5c5c]"
           }`}
         >
           {opcao}

@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../../lib/api";
-import { ACCENT } from "../../lib/theme";
 import type { PreviaImportacao } from "./tipos";
 
 const MODELO_CSV = [
@@ -86,7 +85,7 @@ export function ImportacaoEquipe({
           type="button"
           onClick={baixarModelo}
           className="text-[12px] font-bold underline"
-          style={{ color: ACCENT }}
+          style={{ color: "#171717" }}
         >
           Baixar modelo CSV
         </button>
@@ -99,7 +98,7 @@ export function ImportacaoEquipe({
         <button
           type="submit"
           className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-          style={{ background: ACCENT }}
+          style={{ background: "#171717" }}
         >
           Ver prévia
         </button>
@@ -108,7 +107,7 @@ export function ImportacaoEquipe({
         <p className="text-[11px] text-gray-500">Selecionado: {arquivoNome}</p>
       ) : null}
       {previa ? (
-        <div className="rounded-2xl p-4" style={{ background: "rgba(26,63,143,0.06)" }}>
+        <div className="rounded-2xl p-4" style={{ background: "rgba(29,95,175,0.06)" }}>
           <p className="text-[13px] font-bold text-gray-800 mb-2">
             Prévia{arquivoNome ? ` · ${arquivoNome}` : ""}
           </p>

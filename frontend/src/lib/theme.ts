@@ -1,14 +1,12 @@
 import type { CSSProperties } from "react";
 
-export const ACCENT = "#1A3F8F";
-export const ACCENT_DARK = "#122C66";
+export const ACCENT = "#1D5FAF";
+export const ACCENT_DARK = "#164A8A";
 
 export const glassStyle: CSSProperties = {
-  background: "rgba(255,255,255,0.45)",
-  backdropFilter: "blur(28px) saturate(160%)",
-  WebkitBackdropFilter: "blur(28px) saturate(160%)",
-  border: "1px solid rgba(255,255,255,0.6)",
-  boxShadow: "0 6px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.75)",
+  background: "#ffffff",
+  border: "1px solid rgba(0,0,0,0.06)",
+  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
 };
 
 export const dropdownStyle: CSSProperties = {

@@ -17,7 +17,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { ACCENT } from "../../lib/theme";
 
 type Item = {
   icon: typeof LayoutDashboard;
@@ -73,8 +72,8 @@ export function Sidebar({ open, onClose, nome, papelLabel, sections, manterAbert
                 <div
                   className="w-9 h-9 rounded-2xl flex items-center justify-center"
                   style={{
-                    background: `linear-gradient(135deg, ${ACCENT}, #122C66)`,
-                    boxShadow: "0 3px 10px rgba(26,63,143,0.30)",
+                    background: "#171717",
+                    boxShadow: "0 3px 10px rgba(29,95,175,0.30)",
                   }}
                 >
                   <span className="text-white text-sm font-bold">OR</span>
@@ -107,25 +106,25 @@ export function Sidebar({ open, onClose, nome, papelLabel, sections, manterAbert
                       }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl mb-0.5 text-left group"
                       style={{
-                        background: item.active ? "rgba(26,63,143,0.12)" : "transparent",
+                        background: item.active ? "rgba(29,95,175,0.12)" : "transparent",
                         border: item.active
-                          ? "1px solid rgba(26,63,143,0.22)"
+                          ? "1px solid rgba(29,95,175,0.22)"
                           : "1px solid transparent",
                       }}
                     >
                       <div
                         className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                         style={{
-                          background: item.active ? "rgba(26,63,143,0.16)" : "rgba(0,0,0,0.05)",
+                          background: item.active ? "rgba(29,95,175,0.16)" : "rgba(0,0,0,0.05)",
                         }}
                       >
-                        <item.icon size={15} style={{ color: item.active ? ACCENT : "#6b7280" }} />
+                        <item.icon size={15} style={{ color: item.active ? "#171717" : "#6b7280" }} />
                       </div>
                       <span
                         className="flex-1 text-[13px]"
                         style={{
                           fontWeight: item.active ? 700 : 400,
-                          color: item.active ? ACCENT : "#4b5563",
+                          color: item.active ? "#171717" : "#4b5563",
                         }}
                       >
                         {item.label}
@@ -134,8 +133,8 @@ export function Sidebar({ open, onClose, nome, papelLabel, sections, manterAbert
                         <span
                           className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
                           style={{
-                            background: item.active ? "rgba(26,63,143,0.16)" : "rgba(0,0,0,0.07)",
-                            color: item.active ? ACCENT : "#6b7280",
+                            background: item.active ? "rgba(29,95,175,0.16)" : "rgba(0,0,0,0.07)",
+                            color: item.active ? "#171717" : "#6b7280",
                           }}
                         >
                           {item.badge}
@@ -161,7 +160,7 @@ export function Sidebar({ open, onClose, nome, papelLabel, sections, manterAbert
               >
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
-                  style={{ background: `linear-gradient(135deg, ${ACCENT}, #122C66)` }}
+                  style={{ background: "#171717" }}
                 >
                   {nome.slice(0, 1).toUpperCase()}
                 </div>

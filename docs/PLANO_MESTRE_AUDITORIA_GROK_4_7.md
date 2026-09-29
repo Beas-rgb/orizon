@@ -618,3 +618,40 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Staging, se quiser medir.
+
+---
+
+DATA: 28/09/2026
+COMMIT: neste envio
+OBJETIVO: no desenho novo, as telas que já existiam continuam abrindo.
+
+MUDANÇAS:
+- O menu novo da consultora abre início, trabalhos, novo trabalho e pesquisas.
+- Dentro de um trabalho abre visão geral, estrutura, participantes, pesquisas, resultados, histórico, biblioteca e configurações.
+- O órgão abre ativas, agendadas, encerradas e histórico.
+- Cartões brancos e botão preto nas telas do sistema. Cor só informa estado e progresso.
+
+PROBLEMA:
+- O menu novo escondia as abas do trabalho e do órgão.
+
+CORREÇÃO:
+- Os mesmos caminhos do menu antigo, na casca nova.
+
+ARQUIVOS:
+- `frontend/src/components/layout/CascaNova.tsx` e as telas do frontend
+- `web/app`
+
+TESTES:
+- `tsc` do frontend passou.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- Quem escolhe Novo percorre o produto pelas rotas que já funcionam.
+
+O QUE NÃO FOI ALTERADO:
+- Pool 2/0, plano do Render, plano do Neon, CLIMA e Argon2id.
+
+PRÓXIMO PASSO:
+- Staging, se quiser medir.

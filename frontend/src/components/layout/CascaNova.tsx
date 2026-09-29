@@ -1,10 +1,18 @@
 import { useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  Archive,
+  ArrowLeft,
+  BarChart2,
   Briefcase,
   ClipboardList,
+  Clock,
   Home,
   LogOut,
+  Plus,
+  Settings,
+  Star,
+  Users,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import { InterruptorDesign } from "./InterruptorDesign";
@@ -23,29 +31,148 @@ function iniciais(nome: string) {
   return `${partes[0][0]}${partes[partes.length - 1][0]}`.toUpperCase();
 }
 
-type Atalho = { rotulo: string; caminho: string; icone: ReactNode };
+type Atalho = { rotulo: string; caminho: string; icone: ReactNode; marcado: boolean };
 
 export function CascaNova({ children }: { children: ReactNode }) {
   const { usuario, sair } = useAuth();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const [menuAberto, setMenuAberto] = useState(true);
   const nome = usuario?.nome || "Usuário";
   const painel = usuario?.painel || "";
   const papel = ROTULO[painel] || "Horizon";
+  const partes = pathname.split("/").filter(Boolean);
+  const trabalhoId =
+    partes[0] === "projetos" && partes[1] && partes[1] !== "novo" ? partes[1] : null;
+  const aba = new URLSearchParams(search).get("aba") || "";
 
-  const atalhos: Atalho[] = [{ rotulo: "Início", caminho: "/inicio", icone: <Home size={16} /> }];
-  if (painel === "consultora") {
-    atalhos.push(
-      { rotulo: "Trabalhos", caminho: "/projetos", icone: <Briefcase size={16} /> },
-      { rotulo: "Pesquisas", caminho: "/consultora/pesquisas", icone: <ClipboardList size={16} /> },
-    );
-  }
-
-  function ativo(caminho: string) {
-    if (caminho === "/inicio") return pathname === "/inicio";
-    return pathname === caminho || pathname.startsWith(`${caminho}/`);
-  }
+  const atalhos: Atalho[] = trabalhoId
+    ? [
+        { rotulo: "Início", caminho: "/inicio", icone: <Home size={16} />, marcado: false },
+        {
+          rotulo: "Visão geral",
+          caminho: `/projetos/${trabalhoId}?aba=visao`,
+          icone: <Briefcase size={16} />,
+          marcado: aba === "" || aba === "visao",
+        },
+        {
+          rotulo: "Estrutura",
+          caminho: `/projetos/${trabalhoId}?aba=estrutura`,
+          icone: <Star size={16} />,
+          marcado: aba === "estrutura",
+        },
+        {
+          rotulo: "Participantes",
+          caminho: `/projetos/${trabalhoId}?aba=participantes`,
+          icone: <Users size={16} />,
+          marcado: aba === "participantes",
+        },
+        {
+          rotulo: "Pesquisas",
+          caminho: `/projetos/${trabalhoId}?aba=pesquisas`,
+          icone: <ClipboardList size={16} />,
+          marcado: aba === "pesquisas" || partes[2] === "pesquisas",
+        },
+        {
+          rotulo: "Resultados",
+          caminho: `/projetos/${trabalhoId}?aba=resultados`,
+          icone: <BarChart2 size={16} />,
+          marcado: aba === "resultados",
+        },
+        {
+          rotulo: "Histórico",
+          caminho: `/projetos/${trabalhoId}?aba=historico`,
+          icone: <Clock size={16} />,
+          marcado: aba === "historico",
+        },
+        {
+          rotulo: "Biblioteca",
+          caminho: `/projetos/${trabalhoId}?aba=biblioteca`,
+          icone: <Archive size={16} />,
+          marcado: aba === "biblioteca",
+        },
+        {
+          rotulo: "Configurações",
+          caminho: `/projetos/${trabalhoId}?aba=config`,
+          icone: <Settings size={16} />,
+          marcado: aba === "config",
+        },
+        {
+          rotulo: "Voltar aos trabalhos",
+          caminho: "/projetos",
+          icone: <ArrowLeft size={16} />,
+          marcado: false,
+        },
+      ]
+    : painel === "orgao"
+      ? [
+          { rotulo: "Início", caminho: "/inicio", icone: <Home size={16} />, marcado: aba === "" },
+          {
+            rotulo: "Meus trabalhos",
+            caminho: "/inicio?aba=trabalhos",
+            icone: <Briefcase size={16} />,
+            marcado: aba === "trabalhos",
+          },
+          {
+            rotulo: "Ativas",
+            caminho: "/inicio?aba=ativas",
+            icone: <ClipboardList size={16} />,
+            marcado: aba === "ativas",
+          },
+          {
+            rotulo: "Agendadas",
+            caminho: "/inicio?aba=agendadas",
+            icone: <Clock size={16} />,
+            marcado: aba === "agendadas",
+          },
+          {
+            rotulo: "Encerradas",
+            caminho: "/inicio?aba=encerradas",
+            icone: <Archive size={16} />,
+            marcado: aba === "encerradas",
+          },
+          {
+            rotulo: "Histórico",
+            caminho: "/inicio?aba=historico",
+            icone: <BarChart2 size={16} />,
+            marcado: aba === "historico",
+          },
+        ]
+      : painel === "consultora"
+        ? [
+            {
+              rotulo: "Início",
+              caminho: "/inicio",
+              icone: <Home size={16} />,
+              marcado: pathname === "/inicio",
+            },
+            {
+              rotulo: "Trabalhos",
+              caminho: "/projetos",
+              icone: <Briefcase size={16} />,
+              marcado: pathname === "/projetos",
+            },
+            {
+              rotulo: "Novo trabalho",
+              caminho: "/projetos/novo",
+              icone: <Plus size={16} />,
+              marcado: pathname === "/projetos/novo",
+            },
+            {
+              rotulo: "Pesquisas",
+              caminho: "/consultora/pesquisas",
+              icone: <ClipboardList size={16} />,
+              marcado: pathname.startsWith("/consultora/pesquisas"),
+            },
+          ]
+        : [
+            {
+              rotulo: "Início",
+              caminho: "/inicio",
+              icone: <Home size={16} />,
+              marcado: pathname === "/inicio",
+            },
+          ];
 
   async function encerrar() {
     await sair();
@@ -61,7 +188,7 @@ export function CascaNova({ children }: { children: ReactNode }) {
           }`}
         >
           <div className="flex items-center gap-2 px-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A3F8F] text-[12px] font-semibold text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#171717] text-[12px] font-semibold text-white">
               O
             </span>
             {menuAberto ? (
@@ -80,8 +207,8 @@ export function CascaNova({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => navigate(item.caminho)}
                 className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] ${
-                  ativo(item.caminho)
-                    ? "border-l-2 border-[#1A3F8F] bg-[#E6EDF8] font-semibold text-[#1A3F8F]"
+                  item.marcado
+                    ? "border-l-2 border-[#171717] bg-[#f3f2ee] font-semibold text-[#171717]"
                     : "border-l-2 border-transparent text-[#3a3a3a]"
                 }`}
               >
@@ -91,7 +218,7 @@ export function CascaNova({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <div className="mt-auto flex items-center gap-2 px-2 pt-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1A3F8F] text-[12px] font-semibold text-white">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#171717] text-[12px] font-semibold text-white">
               {iniciais(nome)}
             </span>
             {menuAberto ? (
@@ -120,7 +247,7 @@ export function CascaNova({ children }: { children: ReactNode }) {
         <div className="min-w-0 flex-1 pb-28 min-[900px]:pb-10">
           <header className="flex items-center justify-between px-4 pt-4 min-[900px]:hidden">
             <span className="flex items-center gap-2 font-semibold">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A3F8F] text-[12px] text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#171717] text-[12px] text-white">
                 O
               </span>
               Orizon
@@ -133,7 +260,7 @@ export function CascaNova({ children }: { children: ReactNode }) {
         </div>
       </div>
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-black/[0.06] bg-[#f7f6f3] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] min-[900px]:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex gap-1 overflow-x-auto border-t border-black/[0.06] bg-[#f7f6f3] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] min-[900px]:hidden"
         aria-label="Atalhos"
       >
         {atalhos.map((item) => (
@@ -141,8 +268,8 @@ export function CascaNova({ children }: { children: ReactNode }) {
             key={item.caminho}
             type="button"
             onClick={() => navigate(item.caminho)}
-            className={`flex min-w-0 flex-col items-center gap-1 px-2 text-[11px] ${
-              ativo(item.caminho) ? "font-semibold text-[#1A3F8F]" : "text-[#8a8a8a]"
+            className={`flex shrink-0 flex-col items-center gap-1 px-2 text-[11px] ${
+              item.marcado ? "font-semibold text-[#171717]" : "text-[#8a8a8a]"
             }`}
           >
             {item.icone}

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { api } from "../lib/api";
-import { ACCENT, glassStyle } from "../lib/theme";
+import { glassStyle } from "../lib/theme";
 
 type Aba = "visao" | "pesquisas" | "modelos" | "organizacao";
 
@@ -159,7 +159,7 @@ export function ConsultoraPesquisasPage() {
           type="button"
           onClick={() => setMostrarNova(true)}
           className="rounded-xl px-4 py-2 text-white text-[13px] font-bold"
-          style={{ background: ACCENT }}
+          style={{ background: "#171717" }}
         >
           + Nova pesquisa
         </button>
@@ -174,12 +174,12 @@ export function ConsultoraPesquisasPage() {
             className="rounded-full px-3 py-1.5 text-[12px] font-semibold"
             style={{
               background:
-                aba === item.id ? "rgba(26,63,143,0.15)" : "rgba(255,255,255,0.55)",
+                aba === item.id ? "rgba(29,95,175,0.15)" : "rgba(255,255,255,0.55)",
               border:
                 aba === item.id
-                  ? "1px solid rgba(26,63,143,0.3)"
+                  ? "1px solid rgba(29,95,175,0.3)"
                   : "1px solid transparent",
-              color: aba === item.id ? "#1A3F8F" : "#4b5563",
+              color: aba === item.id ? "#1D5FAF" : "#4b5563",
             }}
           >
             {item.label}
@@ -241,7 +241,7 @@ export function ConsultoraPesquisasPage() {
             <button
               type="submit"
               className="rounded-xl px-4 py-2 text-white text-[13px] font-bold"
-              style={{ background: ACCENT }}
+              style={{ background: "#171717" }}
             >
               Criar
             </button>
@@ -361,7 +361,7 @@ export function ConsultoraPesquisasPage() {
       {aba === "organizacao" ? (
         <div className="rounded-3xl p-5" style={glassStyle}>
           <p className="text-[13px] text-gray-600">
-            Use <Link className="text-[#1A3F8F] font-semibold underline" to="/projetos">
+            Use <Link className="text-[#1D5FAF] font-semibold underline" to="/projetos">
               Trabalhos
             </Link>{" "}
             para abrir cada projeto, equipe e configuração. A listagem de pesquisas

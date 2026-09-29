@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --hz-accent: #1a3f8f;
-  --hz-accent-dark: #122c66;
+  --hz-accent: #1d5faf;
+  --hz-accent-dark: #164a8a;
   --hz-ok: #1e7a4a;
   --hz-warn: #a07020;
   --hz-danger: #a02828;
@@ -53,7 +53,7 @@ textarea {
 }
 
 .page-bg {
-  background: linear-gradient(165deg, #f4f6f9 0%, #eef2f7 45%, #f2f4f8 100%);
+  background: #f4f3ef;
 }
 
 /* Mobile: área segura + toques */
@@ -97,6 +97,6 @@ textarea {
 }
 
 .design-novo button[type="submit"] {
-  background: #1a3f8f !important;
+  background: #171717 !important;
   border-radius: 999px !important;
 }

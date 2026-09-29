@@ -46,7 +46,7 @@ export function ProjetosListaPage() {
         <Link
           to="/projetos/novo"
           className="px-4 py-2.5 rounded-xl text-white text-[13px] font-bold"
-          style={{ background: ACCENT }}
+          style={{ background: "#171717" }}
         >
           Novo trabalho
         </Link>
@@ -68,7 +68,7 @@ export function ProjetosListaPage() {
                     {nomeCliente(p)} · {p.rotulo}
                   </p>
                 </div>
-                <span className="shrink-0 text-[12px] font-semibold text-[#1A3F8F]">{p.estado}</span>
+                <span className="shrink-0 text-[12px] font-semibold text-[#1D5FAF]">{p.estado}</span>
               </Link>
             </li>
           ))}
@@ -178,7 +178,7 @@ export function NovoProjetoPage() {
         <button
           type="submit"
           className="rounded-2xl py-3 text-white text-[14px] font-bold mt-2"
-          style={{ background: `linear-gradient(135deg, ${ACCENT}, #122C66)` }}
+          style={{ background: "#171717" }}
         >
           Criar projeto
         </button>
@@ -462,8 +462,8 @@ export function ProjetoDetalhePage() {
         <div
           className="rounded-2xl p-4 mb-4 text-[12px] break-all"
           style={{
-            background: "rgba(26,63,143,0.08)",
-            border: "1px solid rgba(26,63,143,0.2)",
+            background: "rgba(29,95,175,0.08)",
+            border: "1px solid rgba(29,95,175,0.2)",
           }}
         >
           <p className="font-bold text-gray-800 mb-1">Link de primeiro acesso (modo local)</p>
@@ -471,7 +471,7 @@ export function ProjetoDetalhePage() {
             E-mail ainda não está no ar. Copie o link e abra em aba anônima para
             definir a senha do órgão/funcionário.
           </p>
-          <a className="text-[#1A3F8F] font-semibold underline" href={linkAcesso}>
+          <a className="text-[#1D5FAF] font-semibold underline" href={linkAcesso}>
             {linkAcesso}
           </a>
         </div>
@@ -530,7 +530,7 @@ export function ProjetoDetalhePage() {
                         {m.situacao === "PENDENTE" && m.papel === "FUNCIONARIO" ? (
                           <button
                             type="button"
-                            className="text-[#1A3F8F] font-bold underline"
+                            className="text-[#1D5FAF] font-bold underline"
                             onClick={() => void reenviarConviteFuncionario(m.email)}
                           >
                             Reenviar
@@ -538,7 +538,7 @@ export function ProjetoDetalhePage() {
                         ) : m.situacao === "PENDENTE" && m.papel === "ORGAO" ? (
                           <button
                             type="button"
-                            className="text-[#1A3F8F] font-bold underline"
+                            className="text-[#1D5FAF] font-bold underline"
                             onClick={() => void reenviarConviteOrgao()}
                           >
                             Reenviar
@@ -577,7 +577,7 @@ export function ProjetoDetalhePage() {
               <button
                 type="submit"
                 className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-                style={{ background: ACCENT }}
+                style={{ background: "#171717" }}
               >
                 Convidar funcionário
               </button>
@@ -605,7 +605,7 @@ export function ProjetoDetalhePage() {
                 <li
                   key={s.id}
                   className="px-3 py-1.5 rounded-xl text-[12px] font-semibold"
-                  style={{ background: "rgba(26,63,143,0.10)", color: ACCENT }}
+                  style={{ background: "rgba(29,95,175,0.10)", color: ACCENT }}
                 >
                   {s.nome}
                 </li>
@@ -625,7 +625,7 @@ export function ProjetoDetalhePage() {
             {!pesquisasOk ? (
               <div className="rounded-2xl p-3 text-[12px] text-gray-700" style={{ background: "rgba(160,112,32,0.1)" }}>
                 Pesquisas desligadas neste trabalho.{" "}
-                <button type="button" className="font-bold text-[#1A3F8F] underline" onClick={() => void ligarPesquisas()}>
+                <button type="button" className="font-bold text-[#1D5FAF] underline" onClick={() => void ligarPesquisas()}>
                   Ligar agora
                 </button>
               </div>
@@ -646,7 +646,7 @@ export function ProjetoDetalhePage() {
                   <Link
                     to={`/projetos/${id}/pesquisas/${p.id}`}
                     className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                    style={{ background: "#122C66" }}
+                    style={{ background: "#164A8A" }}
                   >
                     Abrir edição
                   </Link>
@@ -684,7 +684,7 @@ export function ProjetoDetalhePage() {
               <button
                 type="submit"
                 className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-                style={{ background: ACCENT }}
+                style={{ background: "#171717" }}
               >
                 Criar e abrir edição
               </button>
@@ -706,7 +706,7 @@ export function ProjetoDetalhePage() {
                     <button
                       type="button"
                       className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                      style={{ background: ACCENT }}
+                      style={{ background: "#171717" }}
                       onClick={() => void verResultado(p)}
                     >
                       Ver consolidado
@@ -781,7 +781,7 @@ export function ProjetoDetalhePage() {
               <button
                 type="submit"
                 className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-                style={{ background: ACCENT }}
+                style={{ background: "#171717" }}
               >
                 Enviar arquivo
               </button>
@@ -800,7 +800,7 @@ export function ProjetoDetalhePage() {
                 type="button"
                 onClick={() => void ligarPesquisas()}
                 className="self-start rounded-xl py-2 px-4 text-white text-[13px] font-bold"
-                style={{ background: ACCENT }}
+                style={{ background: "#171717" }}
               >
                 Ligar pesquisas
               </button>
@@ -811,7 +811,7 @@ export function ProjetoDetalhePage() {
                 <li
                   key={s.id}
                   className="px-3 py-1.5 rounded-xl text-[12px] font-semibold"
-                  style={{ background: "rgba(26,63,143,0.10)", color: ACCENT }}
+                  style={{ background: "rgba(29,95,175,0.10)", color: ACCENT }}
                 >
                   {s.nome}
                 </li>
@@ -831,10 +831,10 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div
       className="rounded-2xl p-4"
-      style={{ background: "rgba(26,63,143,0.08)", border: "1px solid rgba(26,63,143,0.18)" }}
+      style={{ background: "rgba(29,95,175,0.08)", border: "1px solid rgba(29,95,175,0.18)" }}
     >
       <p className="text-[11px] text-gray-500">{label}</p>
-      <p className="text-[28px] font-extrabold text-[#1A3F8F]">{value}</p>
+      <p className="text-[28px] font-extrabold text-[#1D5FAF]">{value}</p>
     </div>
   );
 }
