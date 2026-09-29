@@ -622,7 +622,7 @@ PRÓXIMO PASSO:
 ---
 
 DATA: 28/09/2026
-COMMIT: neste envio
+COMMIT: 3e2fb64
 OBJETIVO: no desenho novo, as telas que já existiam continuam abrindo.
 
 MUDANÇAS:
