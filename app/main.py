@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.core.config import conferir_producao, settings
 from app.core.database import SessionLocal, check_db, get_engine
@@ -58,6 +59,7 @@ def inicio() -> RedirectResponse:
 
 
 app.add_middleware(LogAcesso)
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(auth_router)
 app.include_router(dev_router)
 app.include_router(notificacoes_router)
