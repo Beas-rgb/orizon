@@ -169,6 +169,21 @@ def entregar_email(
     )
     db.add(entrega)
     db.flush()
+    from app.integrations.email import destino_sintetico
+    from app.models.usuario import Usuario as ModeloUsuario
+
+    if destino_sintetico(destino):
+        entrega.status = "FALHA"
+        entrega.erro = "Destino sintético bloqueado."
+        entrega.atualizado_em = agora()
+        return entrega
+    if usuario_id:
+        alvo = db.get(ModeloUsuario, usuario_id)
+        if alvo is not None and getattr(alvo, "tipo_conta", "NORMAL") == "SINTETICO":
+            entrega.status = "FALHA"
+            entrega.erro = "Usuário sintético bloqueado."
+            entrega.atualizado_em = agora()
+            return entrega
     if tarefas is not None:
         tarefas.add_task(
             _completar_entrega_email,

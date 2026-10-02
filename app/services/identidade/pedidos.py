@@ -126,6 +126,7 @@ def listar_consultores(db: Session, usuario: Usuario) -> list[Usuario]:
             .where(
                 Usuario.papel == "CONSULTOR",
                 Usuario.deleted_at.is_(None),
+                Usuario.tipo_conta == "NORMAL",
             )
             .order_by(Usuario.nome)
         ).all()

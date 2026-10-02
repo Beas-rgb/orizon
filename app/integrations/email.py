@@ -20,6 +20,11 @@ from app.core.config import settings
 OUTBOX = Path("data/outbox")
 
 
+def destino_sintetico(destino: str) -> bool:
+    """E-mails de laboratório nunca saem para a rede."""
+    return destino.strip().lower().endswith(".invalid")
+
+
 class EmailNaoEnviado(Exception):
     pass
 
@@ -95,6 +100,8 @@ class CaixaEmail:
         corpo: str,
         categoria: str = "Horizon",
     ) -> ResultadoEmail:
+        if destino_sintetico(destino):
+            raise EmailNaoEnviado("Destino sintético bloqueado.")
         self.mensagens.append(
             {"destino": destino, "assunto": assunto, "corpo": corpo}
         )
