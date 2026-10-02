@@ -77,6 +77,22 @@ app.include_router(projetos_router)
 app.include_router(biblioteca_router)
 app.include_router(pesquisas_router)
 
+
+def incluir_lab_se_ligado() -> bool:
+    """Monta /lab/* só com ENABLE_LAB. Em produção o boot já recusa o flag."""
+    if not settings.enable_lab:
+        return False
+    for rota in app.routes:
+        if getattr(rota, "path", "").startswith("/lab"):
+            return True
+    from app.routers.lab import router as lab_router
+
+    app.include_router(lab_router)
+    return True
+
+
+incluir_lab_se_ligado()
+
 # Frontend único: React em /app (SPA com fallback).
 _react_dist = Path(__file__).resolve().parent.parent / "web" / "app"
 
