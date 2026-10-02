@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -10,9 +10,16 @@ class Sessao(Base):
     """Refresh token. Só o hash é guardado. Trocar a senha revoga as sessões."""
 
     __tablename__ = "sessoes"
+    __table_args__ = (
+        Index(
+            "ix_sessoes_usuario_aberta",
+            "usuario_id",
+            postgresql_where=text("revogado_em IS NULL"),
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    usuario_id: Mapped[str] = mapped_column(ForeignKey("usuarios.id"), index=True)
+    usuario_id: Mapped[str] = mapped_column(ForeignKey("usuarios.id"))
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expira_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revogado_em: Mapped[datetime | None] = mapped_column(
