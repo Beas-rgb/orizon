@@ -7,13 +7,15 @@ from app.core.database import get_db
 from app.core.lab import exigir_lab
 from app.models.usuario import Usuario
 from app.routers._erro import chamar
-from app.schemas.lab import CenarioCriar, CenarioSaida
+from app.schemas.lab import CenarioCriar, CenarioSaida, RespostasLabEntrada
 from app.services.lab import (
     cenario_saida,
     executar_criacao,
+    executar_respostas,
     listar_cenarios,
     obter_cenario,
     solicitar_cenario,
+    solicitar_respostas,
 )
 
 router = APIRouter(prefix="/lab", tags=["lab"])
@@ -57,6 +59,39 @@ def post_cenario(
         )
     )
     background.add_task(executar_criacao, linha.id, corpo.com_senha)
+    return CenarioSaida(**cenario_saida(linha))
+
+
+@router.post(
+    "/cenarios/{cenario_id}/respostas",
+    response_model=CenarioSaida,
+    status_code=202,
+)
+def post_respostas(
+    cenario_id: str,
+    corpo: RespostasLabEntrada,
+    background: BackgroundTasks,
+    dono: Usuario = Depends(exigir_lab),
+    db: Session = Depends(get_db),
+) -> CenarioSaida:
+    linha = chamar(
+        lambda: solicitar_respostas(
+            db,
+            dono,
+            cenario_id,
+            corpo.perfil,
+            corpo.taxa,
+            corpo.seed,
+        )
+    )
+    seed = corpo.seed if corpo.seed is not None else linha.seed
+    background.add_task(
+        executar_respostas,
+        linha.id,
+        corpo.perfil,
+        corpo.taxa,
+        seed,
+    )
     return CenarioSaida(**cenario_saida(linha))
 
 

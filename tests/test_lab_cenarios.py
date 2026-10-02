@@ -33,7 +33,9 @@ def test_cnpj_sintetico_tem_digitos_validos() -> None:
     numero = cnpj_sintetico(7, "cenario1")
     assert len(numero) == 14
     digitos = [int(c) for c in numero]
-    assert digito_cnpj(digitos[:12], [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]) == digitos[12]
+    assert digito_cnpj(
+        digitos[:12], [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    ) == digitos[12]
     assert (
         digito_cnpj(digitos[:13], [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2])
         == digitos[13]

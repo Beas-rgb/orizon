@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -26,8 +26,8 @@ from app.services.lab.geradores import (
     montar_linhas,
     perguntas_clima,
 )
-from app.services.projeto import IA_SUSPENSA, garantir_rotulos
 from app.services.pesquisa.crud import adicionar_pergunta, criar_pesquisa, publicar
+from app.services.projeto import IA_SUSPENSA, garantir_rotulos
 
 LOTE = 500
 LIMITE_CRIACOES_HORA = 6
