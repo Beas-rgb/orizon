@@ -55,9 +55,13 @@ def cadastrar_inicial(
 
 
 @router.post("/login", response_model=TokensSaida)
-def entrar(corpo: LoginEntrada, db: Session = Depends(get_db)) -> dict[str, str]:
+def entrar(
+    corpo: LoginEntrada,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
     """Login. 3 senhas erradas no mesmo e-mail bloqueiam por 5 minutos."""
-    return chamar(lambda: login(db, corpo.email, corpo.senha))
+    return chamar(lambda: login(db, corpo.email, corpo.senha, ip=_ip(request)))
 
 
 @router.post("/refresh", response_model=TokensSaida)
@@ -66,7 +70,7 @@ def renovar(
     request: Request,
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    ip = request.client.host if request.client else None
+    ip = _ip(request)
     return chamar(lambda: refresh(db, corpo.refresh_token, ip=ip))
 
 

@@ -70,9 +70,10 @@ def segundos_bloqueio(db: Session, chave: str) -> int:
     return int(restante)
 
 
-def registrar_falha(db: Session, chave: str) -> bool:
-    """Soma 1. Na terceira, grava espera de 5 minutos. Devolve True se bloqueou."""
+def registrar_falha(db: Session, chave: str, limite: int | None = None) -> bool:
+    """Soma 1. No teto, grava espera de 5 minutos. Devolve True se bloqueou."""
     agora = _agora()
+    teto = settings.login_max_tentativas if limite is None else limite
     linha = db.get(ControleAcesso, chave)
     if linha is None:
         linha = ControleAcesso(
@@ -87,11 +88,11 @@ def registrar_falha(db: Session, chave: str) -> bool:
         return True
     linha.tentativas += 1
     linha.atualizado_em = agora
-    if linha.tentativas >= settings.login_max_tentativas:
+    if linha.tentativas >= teto:
         linha.bloqueado_ate = agora + timedelta(
             minutes=settings.login_espera_minutos
         )
-        linha.tentativas = settings.login_max_tentativas
+        linha.tentativas = teto
         return True
     return False
 

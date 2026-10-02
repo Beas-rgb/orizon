@@ -140,10 +140,18 @@ def bootstrap(db: Session, nome: str, email: str, senha: str) -> dict[str, str]:
     return tokens
 
 
-def login(db: Session, email: str, senha: str) -> dict[str, str]:
+def login(
+    db: Session,
+    email: str,
+    senha: str,
+    ip: str | None = None,
+) -> dict[str, object]:
     endereco = email_acesso(email)
     chave = f"login:{endereco}"
-    if segundos_bloqueio(db, chave) > 0:
+    chave_ip = f"login:ip:{ip}" if ip else ""
+    if segundos_bloqueio(db, chave) > 0 or (
+        chave_ip and segundos_bloqueio(db, chave_ip) > 0
+    ):
         _auditar(db, "LOGIN_BLOQUEADO", None)
         db.commit()
         raise ErroAuth(429, MSG_ESPERA)
@@ -159,6 +167,11 @@ def login(db: Session, email: str, senha: str) -> dict[str, str]:
     confere = senha_confere(senha, hash_guardado or _hash_dummy())
     if uid is None or not ativo or not hash_guardado or not confere:
         bloqueou = registrar_falha(db, chave)
+        bloqueou_ip = False
+        if chave_ip:
+            bloqueou_ip = registrar_falha(
+                db, chave_ip, settings.login_ip_max_falhas
+            )
         if uid is not None:
             falho = db.get(Usuario, uid)
             if falho is not None:
@@ -170,7 +183,7 @@ def login(db: Session, email: str, senha: str) -> dict[str, str]:
                     )
         _auditar(db, "LOGIN_FALHA", uid)
         db.commit()
-        if bloqueou:
+        if bloqueou or bloqueou_ip:
             raise ErroAuth(429, MSG_ESPERA)
         raise ErroAuth(401, MSG_CREDENCIAL)
 
