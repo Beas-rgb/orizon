@@ -5,7 +5,7 @@ Autorização: login, primeiro acesso, recuperar e redefinir são públicos
 Nenhuma rota devolve senha, hash ou token de e-mail.
 """
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.core.cliente import ip_do_cliente
@@ -58,10 +58,24 @@ def cadastrar_inicial(
 def entrar(
     corpo: LoginEntrada,
     request: Request,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """Login. 3 senhas erradas no mesmo e-mail bloqueiam por 5 minutos."""
-    return chamar(lambda: login(db, corpo.email, corpo.senha, ip=_ip(request)))
+    tokens = chamar(lambda: login(db, corpo.email, corpo.senha, ip=_ip(request)))
+    background.add_task(_limpar_as_vezes)
+    return tokens
+
+
+def _limpar_as_vezes() -> None:
+    from app.core.database import SessionLocal, get_engine
+    from app.services.manutencao import tentar_limpar
+
+    get_engine()
+    if SessionLocal is None:
+        return
+    with SessionLocal() as sessao:
+        tentar_limpar(sessao)
 
 
 @router.post("/refresh", response_model=TokensSaida)

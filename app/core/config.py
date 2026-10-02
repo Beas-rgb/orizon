@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     auth_hash_timeout_s: float = 20
     trusted_proxy_hops: int = 0
     login_ip_max_falhas: int = 30
+    retencao_auditoria_dias: int = 365
+    manutencao_probabilidade: float = 0.02
     import_max_linhas: int = 5000
     import_max_bytes: int = 3 * 1024 * 1024
 

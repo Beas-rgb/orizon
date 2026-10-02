@@ -20,6 +20,7 @@ from app.services.identidade import (
     reenviar_primeiro_acesso_consultora,
     testar_email_ti,
 )
+from app.services.manutencao import limpar_tabelas
 
 router = APIRouter(tags=["dev"])
 
@@ -181,3 +182,17 @@ def diagnostico_ip(
         "cf-connecting-ip": request.headers.get("cf-connecting-ip"),
         "ip": ip_do_cliente(request),
     }
+
+
+@router.post("/dev/manutencao/limpar")
+def limpar(
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    if usuario.papel != "TI":
+        raise HTTPException(status_code=404, detail="Não encontrado.")
+    from app.models.base import agora
+
+    saida = limpar_tabelas(db, agora())
+    db.commit()
+    return saida
