@@ -10,6 +10,10 @@ export const TIMEOUT_HEALTH_MS = 8000;
 
 let visitaAquecida = false;
 
+export function reiniciarAquecimento() {
+  visitaAquecida = false;
+}
+
 export function estadoDoServidor(decorridoMs: number, ok: boolean): EstadoServidor {
   if (ok) return "pronto";
   if (decorridoMs >= LIMITE_MS) return "falha";
