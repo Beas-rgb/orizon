@@ -1,0 +1,13 @@
+---
+description: Regras de design do Horizon (frontend)
+globs: frontend/src/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+1. Cores, espaços, raios e sombras vêm de tokens CSS (--hz-*). Hex solto em componente é erro (o build falha: scripts/checar_hex.mjs).
+2. Componente reutilizável entra em src/ui/. Tela não recria botão, cartão, tabela, campo ou estado.
+3. Toda tela tem 4 estados: carregando (esqueleto), vazio, erro, sem permissão. Telas de API também tratam "servidor acordando".
+4. Logo só via <Logo/>. Nome da marca: "Horizon". Texto em pt-BR.
+5. Sem dado fictício. Número agregado de CLIMA respeita K >= 5.
+6. Mobile 375 px sem rolagem lateral; alvo de toque >= 44 px; respeitar prefers-reduced-motion.
+7. A página coordena; o componente apresenta; regra de negócio e autorização ficam no backend.
+8. Toda tela nova declara para quais papéis existe (consultora, orgao, funcionario, dev).

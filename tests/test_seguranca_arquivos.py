@@ -6,6 +6,8 @@ Duas coisas são cobertas aqui:
    Content-Type declarado pelo navegador.
 """
 
+from pathlib import Path
+
 from app.integrations.cnpj import DadosCnpj
 from tests.contas import abrir_consultora
 
@@ -46,6 +48,28 @@ def test_spa_continua_servindo_a_tela(client) -> None:
     resposta = client.get("/app/login")
     assert resposta.status_code == 200
     assert b"<div id=\"root\"" in resposta.content
+    assert "no-store" in resposta.headers["cache-control"]
+
+
+def test_asset_com_hash_fica_em_cache(client) -> None:
+    assets = list(Path("web/app/assets").glob("*.js"))
+    assert assets
+    resposta = client.get(f"/app/assets/{assets[0].name}")
+    assert resposta.status_code == 200
+    assert "immutable" in resposta.headers["cache-control"]
+
+
+def test_cors_nao_libera_dominio_fixo_de_pages(client) -> None:
+    resposta = client.options(
+        "/health",
+        headers={
+            "Origin": "https://orizon-a0u.pages.dev",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert resposta.headers.get("access-control-allow-origin") != (
+        "https://orizon-a0u.pages.dev"
+    )
 
 
 def _consultora_com_projeto(client, monkeypatch) -> tuple[dict[str, str], str]:

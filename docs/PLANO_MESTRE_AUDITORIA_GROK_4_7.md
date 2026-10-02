@@ -8,8 +8,9 @@ Data de abertura: 25/09/2026.
 
 - CLIMA corta o elo: a resposta vai para um token novo e `participante.token_id` fica nulo. K=5. Arquivo: `app/services/pesquisa/resposta.py`.
 - Hierarquia vem de `superior_id`. Ciclo A→A e A→B→A já eram rejeitados. Sem árvore persistida.
-- Logout revoga o refresh. Troca de senha revoga sessões. Pool do Render permanece 2.
-- Não declarar suporte a 10.000 ou 20.000 simultâneos. A carga atual mede só `/health`.
+- Logout revoga o refresh. Troca de senha revoga sessões.
+- Pool do Render: 5 conexões e 5 de reserva, espera de 10 segundos. Esgotar o pool responde 503. As entradas antigas deste arquivo que citam pool 2/0 descrevem o estado daquela data.
+- Não declarar suporte a 10.000 ou 20.000 simultâneos. Tempos de índice no Neon não foram medidos.
 
 ## Fila por prioridade
 
@@ -655,3 +656,95 @@ O QUE NÃO FOI ALTERADO:
 
 PRÓXIMO PASSO:
 - Staging, se quiser medir.
+
+---
+
+DATA: 01/10/2026
+COMMIT: ainda local
+OBJETIVO: a sessão sobrevive quando a API dorme ou a rede cai.
+
+MUDANÇAS:
+- Só resposta 401 apaga o token. Rede e 5xx mantêm a sessão e tentam de novo em 4 segundos.
+- Arquivo em `/app/assets/` ganha cache de um ano. O HTML da tela continua sem cache.
+- O domínio fixo `orizon-a0u.pages.dev` saiu do CORS. Vale o que estiver em `CORS_ORIGINS`.
+
+PROBLEMA:
+- Qualquer falha em `/auth/eu` mandava a pessoa para a entrada, inclusive a API acordando.
+
+CORREÇÃO:
+- O erro da API agora carrega o status HTTP.
+
+ARQUIVOS:
+- `frontend/src/lib/api.ts`
+- `frontend/src/lib/sessaoEstado.ts`
+- `frontend/src/auth/AuthContext.tsx`
+- `app/main.py`
+- `tests/test_seguranca_arquivos.py`
+
+TESTES:
+- 401 encerra; 503 e falta de rede não encerram.
+- Oito testes do SPA passaram, inclusive cache do asset e o domínio fixo fora do CORS.
+- `tsc` do frontend passou.
+
+MIGRATION:
+- Nenhuma.
+
+RESULTADO:
+- Quem já entrou não perde a sessão só porque o Render dormiu.
+
+RISCOS RESTANTES:
+- A primeira abertura ainda espera a API, porque a tela continua no mesmo serviço Free.
+- O refresh automático do acesso continua na Fase 2.
+
+O QUE NÃO FOI ALTERADO:
+- Pool 2/0, plano do Render, plano do Neon, Argon2, índices e o e-mail da resposta.
+
+PRÓXIMO PASSO:
+- Fase 2, se quiser o acesso renovar sozinho. Pages, se quiser a entrada abrir com a API dormindo.
+
+---
+
+DATA: 01/10/2026
+COMMIT: 9e4bd4c até 3e5b6a8
+OBJETIVO: registrar o que as fases 1, 2 e 3 passam a fazer neste deploy.
+
+MUDANÇAS:
+- A sessão só acaba com 401. Rede e 5xx mantêm o token. O acesso renova sozinho, uma vez por vez, cerca de 60 segundos antes de vencer.
+- O login devolve a conta, solta a conexão do banco antes do hash e limita hashes e tentativas por IP. A senha continua Argon2id com os mesmos parâmetros. O token passou a PyJWT.
+- Cada request autenticado lê sessão e usuário numa consulta só.
+- A imagem sobe a migration só quando a revisão mudou, com trava no Postgres, e o `uvicorn` limita a concorrência.
+- Índices novos: vínculo por usuário, sessão aberta, setor por projeto e, com a árvore, superior vivo. Migrations `0018` e `0019`. As antigas não foram editadas.
+- A importação aceita até 5.000 linhas num único commit. A árvore inteira vai até 1.000 nós. Acima disso só as raízes, e os filhos vêm sob demanda.
+- A limpeza apaga em lotes o que já venceu. Auditoria fica 365 dias, salvo `RETENCAO_AUDITORIA_DIAS`.
+- O CI compara model e migration num Postgres 16.
+
+PROBLEMA:
+- O plano vivo ainda dizia pool 2/0 e o Dockerfile novo dependia de um módulo que não estava no git.
+
+CORREÇÃO:
+- O estado vivo deste arquivo acompanha o pool 5/5. O boot da imagem inclui `app/core/migracao.py`.
+
+ARQUIVOS:
+- `docs/PLANO_MESTRE_AUDITORIA_GROK_4_7.md`, `docs/DATA_MODEL.md`, `docs/MIGRATIONS.md`, `docs/PERFORMANCE.md`, `docs/SECURITY.md`
+- `Dockerfile`, `app/core/migracao.py`, `app/core/deps.py`, `render.yaml`
+
+TESTES:
+- Identidade, manutenção, pool, boot leve e consulta de `/auth/eu` passaram no SQLite desta máquina.
+- O teste de drift e o de 100 respostas simultâneas só rodam onde existe `TEST_DATABASE_URL_PG`. Aqui não rodaram.
+
+MIGRATION:
+- `0018_indices_quentes` e `0019` do índice de superior. O startup aplica o head.
+
+RESULTADO:
+- O que sobe é o código das fases 1 a 3, sem número de capacidade.
+
+RISCOS RESTANTES:
+- A tela publicada em `web/app` é a do desenho novo. Fonte local e o aviso de API acordando estão no fonte do frontend e ainda não foram copiados para `web/app`.
+- Cada resposta ainda manda e-mail síncrono. Isso é a Fase 4, que não entrou neste deploy.
+- Sem medição no Render e no Neon não há tempo de índice nem taxa de respostas.
+
+O QUE NÃO FOI ALTERADO:
+- CLIMA continua com token anônimo e K=5. Plano Free do Render e do Neon. Nenhuma migration de 0001 a 0017 foi reescrita.
+
+PRÓXIMO PASSO:
+- Fase 4, respostas em rajada, só depois de conferir este deploy.

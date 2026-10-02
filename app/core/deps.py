@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -10,6 +11,13 @@ from app.models.sessao import Sessao
 from app.models.usuario import Usuario
 
 _bearer = HTTPBearer(auto_error=False)
+
+
+def _expirada(sessao: Sessao, agora: datetime) -> bool:
+    expira = sessao.expira_em
+    if expira.tzinfo is None:
+        expira = expira.replace(tzinfo=UTC)
+    return expira <= agora
 
 
 def usuario_atual(
@@ -22,21 +30,23 @@ def usuario_atual(
         dados = ler_access_token(credencial.credentials)
     except (ValueError, RuntimeError):
         raise HTTPException(status_code=401, detail="Não autenticado.") from None
-    sessao = db.get(Sessao, dados["sid"])
     agora = datetime.now(UTC)
-    if (
-        sessao is None
-        or sessao.usuario_id != dados["sub"]
-        or sessao.revogado_em is not None
-        or (
-            sessao.expira_em.replace(tzinfo=UTC)
-            if sessao.expira_em.tzinfo is None
-            else sessao.expira_em
+    par = db.execute(
+        select(Sessao, Usuario)
+        .join(Usuario, Usuario.id == Sessao.usuario_id)
+        .where(
+            Sessao.id == dados["sid"],
+            Sessao.usuario_id == dados["sub"],
         )
-        <= agora
-    ):
+    ).first()
+    if par is None:
         raise HTTPException(status_code=401, detail="Não autenticado.")
-    usuario = db.get(Usuario, dados["sub"])
-    if usuario is None or usuario.deleted_at is not None or not usuario.ativo:
+    sessao, usuario = par
+    if (
+        sessao.revogado_em is not None
+        or _expirada(sessao, agora)
+        or usuario.deleted_at is not None
+        or not usuario.ativo
+    ):
         raise HTTPException(status_code=401, detail="Não autenticado.")
     return usuario
