@@ -30,3 +30,16 @@ Vazia até a Fase 9. Nenhum número daqui é capacidade do Render nem do Neon.
 
 Os tempos de índice no Neon não foram medidos. O que os testes de SQLite cobrem é o comportamento: importação recusa a linha 5001, a árvore devolve filhos sob demanda e a limpeza apaga só a sessão vencida. O pool do processo passou a 5 conexões mais 5 de overflow, com espera de 10 segundos. Esgotar o pool responde 503 com `Retry-After: 3`.
 
+## Resposta em rajada (Fase 4)
+
+Medido no SQLite dos testes. Não é tempo de Render nem de Neon.
+
+| | Antes (referência da fase, não recontada aqui) | Depois (teste desta máquina) |
+|---|---|---|
+| Comandos SQL, 1 pergunta | 31 | no máximo 20 (`tests/test_resposta_orcamento.py` passou) |
+| Commits no sucesso | 2 | 1 |
+| E-mails no request | 1 | 0 |
+| Tempo no Neon | não medido | não medido |
+
+O limite do envio conta só falha do usuário, não o IP e não o sucesso. Se o `commit` estoura, a API responde 503 e não deixa participante `RESPONDIDA` nem linha em `respostas`. O navegador reenvia até 5 vezes com espera aleatória. A prova de 100 usuários em 20 threads existe e foi pulada aqui: não há `TEST_DATABASE_URL_PG`. Ela roda no CI.
+
