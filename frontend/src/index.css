@@ -6,7 +6,7 @@
   --hz-ok: #1e7a4a;
   --hz-warn: #a07020;
   --hz-danger: #a02828;
-  --hz-font: "DM Sans", system-ui, sans-serif;
+  --hz-font: "DM Sans Variable", "DM Sans", system-ui, sans-serif;
   font-family: var(--hz-font);
   color: #1f2937;
   background: #eef1f5;
