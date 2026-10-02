@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     import_max_linhas: int = 5000
     import_max_bytes: int = 3 * 1024 * 1024
 
+    # Laboratório: desligado por padrão. Em produção o boot recusa ENABLE_LAB=true.
+    enable_lab: bool = False
+    lab_max_participantes: int = 1000
+    lab_limite_banco_mb: int = 400
+    lab_tokens_permitidos: bool = False
+
     app_public_url: str = "http://127.0.0.1:8000/app"
 
     # Origens do front, separadas por vírgula. Sem isto o navegador
@@ -109,6 +115,10 @@ def conferir_producao() -> None:
     if len(settings.jwt_secret.strip()) < 32:
         raise RuntimeError(
             "JWT_SECRET em produção deve ter pelo menos 32 caracteres."
+        )
+    if settings.enable_lab:
+        raise RuntimeError(
+            "ENABLE_LAB não pode ficar ligado em produção."
         )
 
 

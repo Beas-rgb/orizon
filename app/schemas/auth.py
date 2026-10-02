@@ -44,6 +44,8 @@ class UsuarioSaida(BaseModel):
     email: str
     papel: str
     painel: str
+    tipo_conta: str | None = None
+    lab_habilitado: bool = False
 
 
 class TokensSaida(BaseModel):

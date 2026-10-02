@@ -96,12 +96,17 @@ def encerrar(corpo: RefreshEntrada, db: Session = Depends(get_db)) -> MensagemSa
 
 @router.get("/eu", response_model=UsuarioSaida)
 def eu(usuario: Usuario = Depends(usuario_atual)) -> UsuarioSaida:
+    from app.core.config import settings
+
+    tipo = getattr(usuario, "tipo_conta", None) or "NORMAL"
     return UsuarioSaida(
         id=usuario.id,
         nome=usuario.nome,
         email=usuario.email,
         papel=usuario.papel,
         painel=painel_de(usuario.papel),
+        tipo_conta=tipo,
+        lab_habilitado=tipo == "TESTE" and settings.enable_lab,
     )
 
 

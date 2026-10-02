@@ -40,6 +40,19 @@ from .erros import (
 )
 
 
+def _usuario_saida(usuario: Usuario) -> dict[str, object]:
+    tipo = getattr(usuario, "tipo_conta", None) or "NORMAL"
+    return {
+        "id": usuario.id,
+        "nome": usuario.nome,
+        "email": usuario.email,
+        "papel": usuario.papel,
+        "painel": painel_de(usuario.papel),
+        "tipo_conta": tipo,
+        "lab_habilitado": tipo == "TESTE" and settings.enable_lab,
+    }
+
+
 def _emitir_sessao(db: Session, usuario: Usuario) -> dict[str, object]:
     sessao_id = novo_id()
     cru, token_hash, expira = criar_refresh_token(usuario.id)
@@ -62,13 +75,7 @@ def _emitir_sessao(db: Session, usuario: Usuario) -> dict[str, object]:
         "refresh_token": cru,
         "token_type": "bearer",
         "painel": painel,
-        "usuario": {
-            "id": usuario.id,
-            "nome": usuario.nome,
-            "email": usuario.email,
-            "papel": usuario.papel,
-            "painel": painel,
-        },
+        "usuario": _usuario_saida(usuario),
     }
 
 

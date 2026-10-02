@@ -447,6 +447,7 @@ def confirmar_importacao(
                     "email": linha.email,
                     "senha_hash": None,
                     "papel": "FUNCIONARIO",
+                    "tipo_conta": "NORMAL",
                     "ativo": False,
                     "tentativas_falhas": 0,
                     "criado_em": agora_,

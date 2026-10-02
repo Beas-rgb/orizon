@@ -15,6 +15,7 @@ from app.models.desempenho import (
 )
 from app.models.documento import Documento
 from app.models.estrutura import Cargo, PerfilFuncionario
+from app.models.lab import CenarioLab
 from app.models.organizacao import Organizacao
 from app.models.projeto import Projeto, ProjetoUsuario, RotuloProjeto
 from app.models.sessao import Sessao
@@ -28,6 +29,7 @@ __all__ = [
     "Base",
     "Cargo",
     "CicloAvaliacao",
+    "CenarioLab",
     "ConfiguracaoProjeto",
     "ControleAcesso",
     "Convite",
