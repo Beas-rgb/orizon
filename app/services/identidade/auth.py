@@ -5,7 +5,7 @@ from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.security import hash_senha, senha_confere
+from app.core.security import hash_senha, precisa_rehash, senha_confere
 from app.core.tokens import (
     criar_access_token,
     criar_refresh_token,
@@ -159,6 +159,8 @@ def login(db: Session, email: str, senha: str) -> dict[str, str]:
         raise ErroAuth(401, MSG_CREDENCIAL)
 
     limpar_falhas(db, chave)
+    if precisa_rehash(hash_guardado):
+        usuario.senha_hash = hash_senha(senha)
     usuario.tentativas_falhas = 0
     usuario.bloqueado_ate = None
     usuario.atualizado_em = _agora()

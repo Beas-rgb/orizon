@@ -1,16 +1,21 @@
 """Senha com Argon2id.
 
-A senha nunca fica no banco em texto puro. O que se guarda é um hash:
-um texto irreversível gerado a partir da senha. Na entrada, o sistema
-compara a senha digitada com o hash — não recupera a senha antiga.
-
-Argon2id atrasa tentativa em massa (força bruta). Ainda assim, login
-vai ter limite de tentativas na rota, quando ela existir.
+A senha nunca fica no banco em texto puro. O que se guarda é um hash.
+Na entrada, o sistema compara a senha digitada com o hash.
 """
 
-from passlib.context import CryptContext
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 
-_pwd = CryptContext(schemes=["argon2"], deprecated="auto")
+from app.core.config import settings
+
+
+def _hasher() -> PasswordHasher:
+    return PasswordHasher(
+        time_cost=settings.argon2_time_cost,
+        memory_cost=settings.argon2_memory_kib,
+        parallelism=settings.argon2_parallelism,
+    )
 
 
 def senha_aceita(senha: str) -> str | None:
@@ -32,11 +37,24 @@ def hash_senha(senha: str) -> str:
     """Gera o hash. Nunca logar o valor de `senha` nem o retorno."""
     if not senha or not senha.strip():
         raise ValueError("senha vazia")
-    return _pwd.hash(senha)
+    return _hasher().hash(senha)
 
 
 def senha_confere(senha: str, senha_hash: str) -> bool:
     """True só se a senha digitada corresponde ao hash guardado."""
     if not senha or not senha_hash:
         return False
-    return _pwd.verify(senha, senha_hash)
+    try:
+        return _hasher().verify(senha_hash, senha)
+    except (VerifyMismatchError, InvalidHashError, VerificationError):
+        return False
+
+
+def precisa_rehash(senha_hash: str) -> bool:
+    """True quando o hash antigo não usa os parâmetros atuais."""
+    if not senha_hash:
+        return False
+    try:
+        return _hasher().check_needs_rehash(senha_hash)
+    except (InvalidHashError, VerificationError):
+        return False

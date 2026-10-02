@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     )
 
     database_url: str = ""
+    database_url_direct: str = ""
     app_env: str = "development"
 
     # Neon: poucas conexões simultâneas. Sem overflow para não estourar a cota.
@@ -26,6 +27,11 @@ class Settings(BaseSettings):
     # Força bruta: 3 erros e a chave espera 5 minutos. Gravado no banco.
     login_max_tentativas: int = 3
     login_espera_minutos: int = 5
+
+    # Argon2id. O padrão é o que o passlib gerava (m=64 MiB, t=3, p=4).
+    argon2_memory_kib: int = 65536
+    argon2_time_cost: int = 3
+    argon2_parallelism: int = 4
 
     app_public_url: str = "http://127.0.0.1:8000/app"
 
