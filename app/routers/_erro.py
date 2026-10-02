@@ -1,17 +1,21 @@
 """Helper de rota: ErroAuth do service → HTTPException."""
 
 from collections.abc import Callable
-from typing import TypeVar
 
 from fastapi import HTTPException
 
 from app.services.identidade import ErroAuth
 
-T = TypeVar("T")
 
-
-def chamar(acao: Callable[[], T]) -> T:
+def chamar[T](acao: Callable[[], T]) -> T:
     try:
         return acao()
     except ErroAuth as exc:
-        raise HTTPException(status_code=exc.status, detail=exc.detalhe) from None
+        headers = None
+        if exc.retry_after is not None:
+            headers = {"Retry-After": str(exc.retry_after)}
+        raise HTTPException(
+            status_code=exc.status,
+            detail=exc.detalhe,
+            headers=headers,
+        ) from None

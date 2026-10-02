@@ -7,7 +7,17 @@ Na entrada, o sistema compara a senha digitada com o hash.
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 
+from app.core.concorrencia import MSG_OCUPADO, SistemaOcupado, limite_hash
 from app.core.config import settings
+
+
+def _rodar_hash(funcao):
+    try:
+        return limite_hash.executar(funcao)
+    except SistemaOcupado:
+        from app.services.identidade.erros import ErroAuth
+
+        raise ErroAuth(503, MSG_OCUPADO, retry_after=5) from None
 
 
 def _hasher() -> PasswordHasher:
@@ -37,17 +47,21 @@ def hash_senha(senha: str) -> str:
     """Gera o hash. Nunca logar o valor de `senha` nem o retorno."""
     if not senha or not senha.strip():
         raise ValueError("senha vazia")
-    return _hasher().hash(senha)
+    return _rodar_hash(lambda: _hasher().hash(senha))
 
 
 def senha_confere(senha: str, senha_hash: str) -> bool:
     """True só se a senha digitada corresponde ao hash guardado."""
     if not senha or not senha_hash:
         return False
-    try:
-        return _hasher().verify(senha_hash, senha)
-    except (VerifyMismatchError, InvalidHashError, VerificationError):
-        return False
+
+    def _verificar() -> bool:
+        try:
+            return _hasher().verify(senha_hash, senha)
+        except (VerifyMismatchError, InvalidHashError, VerificationError):
+            return False
+
+    return _rodar_hash(_verificar)
 
 
 def precisa_rehash(senha_hash: str) -> bool:

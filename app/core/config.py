@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     argon2_time_cost: int = 3
     argon2_parallelism: int = 4
 
+    auth_hash_max_concurrency: int = 2
+    auth_hash_max_fila: int = 18
+    auth_hash_timeout_s: float = 20
+
     app_public_url: str = "http://127.0.0.1:8000/app"
 
     # Origens do front, separadas por vírgula. Sem isto o navegador

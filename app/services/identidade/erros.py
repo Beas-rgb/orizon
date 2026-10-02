@@ -22,9 +22,15 @@ MSG_TOKEN = "Token inválido ou expirado."
 
 
 class ErroAuth(Exception):
-    def __init__(self, status: int, detalhe: str) -> None:
+    def __init__(
+        self,
+        status: int,
+        detalhe: str,
+        retry_after: int | None = None,
+    ) -> None:
         self.status = status
         self.detalhe = detalhe
+        self.retry_after = retry_after
 
 
 def _agora() -> datetime:
