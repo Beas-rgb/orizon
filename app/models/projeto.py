@@ -24,7 +24,7 @@ class Projeto(IdTempo, Base):
     __tablename__ = "projetos"
 
     organizacao_id: Mapped[str] = mapped_column(ForeignKey("organizacoes.id"))
-    consultor_id: Mapped[str] = mapped_column(ForeignKey("usuarios.id"))
+    consultor_id: Mapped[str] = mapped_column(ForeignKey("usuarios.id"), index=True)
     rotulo_id: Mapped[str] = mapped_column(ForeignKey("rotulos_projeto.id"))
     estado: Mapped[str] = mapped_column(String(32), default="ABERTO")
     vinculo_tipo: Mapped[str] = mapped_column(String(32))

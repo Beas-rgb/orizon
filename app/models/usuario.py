@@ -13,7 +13,7 @@ class Usuario(IdTempo, Base):
     __tablename__ = "usuarios"
 
     nome: Mapped[str] = mapped_column(String(160))
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True)
     telefone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     senha_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     papel: Mapped[str] = mapped_column(String(32))

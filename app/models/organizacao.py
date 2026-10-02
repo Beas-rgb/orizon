@@ -11,7 +11,7 @@ class Organizacao(IdTempo, Base):
 
     __tablename__ = "organizacoes"
 
-    cnpj: Mapped[str] = mapped_column(String(14), unique=True, index=True)
+    cnpj: Mapped[str] = mapped_column(String(14), unique=True)
     razao_social: Mapped[str] = mapped_column(String(200))
     nome_fantasia: Mapped[str | None] = mapped_column(String(200), nullable=True)
     municipio: Mapped[str | None] = mapped_column(String(120), nullable=True)

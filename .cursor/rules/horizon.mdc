@@ -15,3 +15,14 @@ alwaysApply: true
 - Registrar auditoria (logs_auditoria) nas ações relevantes, sem dados sensíveis.
 - Econômico com a cota de IA: nível mais barato confiável; avisar antes de tarefas que merecem modelo premium; contexto enxuto (@arquivo específico); uma fase por vez, conforme roadmap em docs/HORIZON_CONTEXTO_IA.md.
 - Produto nesta etapa: consultora aplica pesquisa, funcionário responde e vê a própria nota, órgão consulta o resultado. Não copiar OKR/feedback do Yespper agora.
+
+## Plano v4 (30/09/2026)
+- Siga docs/plano/00_PLANO_MESTRE.md e o arquivo da fase atual. Uma tarefa por vez, um commit por tarefa.
+- Hospedagem atual: Render Free + Neon Free. Sem ping de manutenção. Sem plano pago.
+- Nunca afirmar capacidade ("aguenta N usuários") sem relatório da Fase 9.
+- Banco: Alembic; índices só com EXPLAIN; host -pooler no app, host direto na migração.
+- E-mail e qualquer chamada externa NUNCA dentro de transação aberta nem do request de resposta.
+- Marca: "Horizon". Ao buscar "Orizon" use grep PCRE: (?<![Hh])[Oo]rizon  (Horizon contém "orizon").
+- Frontend: tokens em src/styles; componentes em src/ui; sem hex solto; 4 estados por tela; pt-BR.
+- Fatos do plano que não conferem com o código: parar e relatar.
+- Toda mudança de model acompanha migration no mesmo commit.

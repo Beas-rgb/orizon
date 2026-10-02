@@ -4,6 +4,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     SmallInteger,
     String,
     Text,
@@ -18,6 +19,9 @@ class Pesquisa(Base):
     """Pesquisa do projeto. Clima não revela quem respondeu."""
 
     __tablename__ = "pesquisas"
+    __table_args__ = (
+        Index("ix_pesquisas_projeto_status", "projeto_id", "status"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     projeto_id: Mapped[str] = mapped_column(String(36), index=True)
@@ -199,6 +203,10 @@ class TemplateOpcao(Base):
 
 class Resposta(Base):
     __tablename__ = "respostas"
+    __table_args__ = (
+        Index("ix_respostas_pergunta_id", "pergunta_id"),
+        Index("ix_respostas_opcao_id", "opcao_id"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     token_id: Mapped[str] = mapped_column(ForeignKey("tokens_resposta.id"), index=True)
