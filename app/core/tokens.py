@@ -10,7 +10,8 @@ import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError
 
 from app.core.config import settings
 
@@ -62,8 +63,13 @@ def ler_access_token(token: str) -> dict[str, str]:
     if not settings.jwt_secret:
         raise RuntimeError("JWT_SECRET não configurado")
     try:
-        dados = jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITMO])
-    except JWTError as exc:
+        dados = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[ALGORITMO],
+            options={"require": ["exp", "sub", "sid"]},
+        )
+    except PyJWTError as exc:
         raise ValueError("token inválido") from exc
     if dados.get("typ") != "access" or not dados.get("sub") or not dados.get("sid"):
         raise ValueError("token inválido")
