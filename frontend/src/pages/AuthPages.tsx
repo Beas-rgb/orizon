@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { InterruptorDesign } from "../components/layout/InterruptorDesign";
+import { FaixaServidor } from "../components/estado/FaixaServidor";
 import { api } from "../lib/api";
 import { useDesignTela } from "../lib/designTela";
 import { ACCENT, ACCENT_DARK } from "../lib/theme";
@@ -436,6 +437,7 @@ export function LandingPage() {
   return (
     <div className={`min-h-screen relative overflow-hidden ${novo ? "design-novo bg-[#f4f3ef]" : "page-bg"}`}>
       <InterruptorDesign />
+      <FaixaServidor />
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -523,6 +525,7 @@ function AuthLayout({
   return (
     <div className={`min-h-screen flex flex-col ${novo ? "design-novo bg-[#f4f3ef]" : "page-bg"}`}>
       <InterruptorDesign />
+      <FaixaServidor />
       {novo ? null : (
         <div
           className="pointer-events-none absolute inset-0"

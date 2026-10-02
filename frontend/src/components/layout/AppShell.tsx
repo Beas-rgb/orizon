@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { useDesignTela } from "../../lib/designTela";
 import { CascaNova } from "./CascaNova";
 import { InterruptorDesign } from "./InterruptorDesign";
+import { AvisoAcordando } from "../estado/AvisoAcordando";
 import { Navbar } from "./Navbar";
 import { Sidebar, iconMap } from "./Sidebar";
 
@@ -24,7 +25,7 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
   const [design] = useDesignTela();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [confirmarVolta, setConfirmarVolta] = useState(false);
-  const { usuario, sair } = useAuth();
+  const { usuario, sair, conexao } = useAuth();
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
   const nome = usuario?.nome || "Usuário";
@@ -234,7 +235,10 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
   if (design === "novo") {
     return (
       <>
-        <CascaNova>{children}</CascaNova>
+        <CascaNova>
+          {conexao === "instavel" ? <AvisoAcordando /> : null}
+          {children}
+        </CascaNova>
         {confirmarVolta ? (
           <div
             className="fixed inset-0 z-[60] flex items-center justify-center px-4"
@@ -276,6 +280,7 @@ export function AppShell({ children, active = "dashboard", searchHints }: Props)
   return (
     <div className="min-h-screen relative overflow-x-hidden page-bg">
       <InterruptorDesign />
+      {conexao === "instavel" ? <AvisoAcordando /> : null}
       <div
         className="absolute pointer-events-none"
         style={{
