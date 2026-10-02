@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { api, tokenAtual, urlApi } from "../lib/api";
+import { enviarComRetry } from "../lib/fila";
 import { ACCENT, glassStyle } from "../lib/theme";
 
 const RETORNO_KEY = "horizon_responder_retorno";
@@ -62,6 +63,11 @@ export function ResponderPage() {
   const [enviado, setEnviado] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [respostas, setRespostas] = useState<Record<string, unknown>>({});
+  const [enviando, setEnviando] = useState(false);
+  const [reenviando, setReenviando] = useState(false);
+  const [esgotou, setEsgotou] = useState(false);
+  const rascunhoLido = useRef(false);
+  const chaveRascunho = `horizon_rascunho_${pesquisaId || token || "avulsa"}`;
   const [midias, setMidias] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -100,6 +106,24 @@ export function ResponderPage() {
       })
       .finally(() => setCarregando(false));
   }, [pronto, usuario, token, pesquisaId, modoPesquisa, baseApi, caminhoRetorno, navigate]);
+
+  useEffect(() => {
+    if (!perguntas.length || rascunhoLido.current) return;
+    rascunhoLido.current = true;
+    const cru = sessionStorage.getItem(chaveRascunho);
+    if (!cru) return;
+    try {
+      const dados = JSON.parse(cru) as Record<string, unknown>;
+      if (dados && typeof dados === "object") setRespostas(dados);
+    } catch {
+      sessionStorage.removeItem(chaveRascunho);
+    }
+  }, [perguntas, chaveRascunho]);
+
+  useEffect(() => {
+    if (!rascunhoLido.current) return;
+    sessionStorage.setItem(chaveRascunho, JSON.stringify(respostas));
+  }, [respostas, chaveRascunho]);
 
   const midiaAtual = useRef("");
 
@@ -171,8 +195,9 @@ export function ResponderPage() {
     return null;
   }
 
-  async function enviar(evento: FormEvent) {
-    evento.preventDefault();
+  async function enviar(evento?: FormEvent) {
+    evento?.preventDefault();
+    if (enviando) return;
     if (!modoPesquisa && !token) return;
     const falta = validarObrigatorias();
     if (falta) {
@@ -181,6 +206,9 @@ export function ResponderPage() {
     }
     setErro("");
     setOk("");
+    setEsgotou(false);
+    setReenviando(false);
+    setEnviando(true);
     const payload: {
       pergunta_id: string;
       valor_texto?: string | null;
@@ -219,18 +247,29 @@ export function ResponderPage() {
 
     try {
       const destino = modoPesquisa ? `${baseApi}/responder` : baseApi;
-      const saida = await api<NotaSaida>(destino, {
-        method: "POST",
-        json: { respostas: payload },
-      });
+      const saida = await enviarComRetry(
+        () =>
+          api<NotaSaida>(destino, {
+            method: "POST",
+            json: { respostas: payload },
+          }),
+        { max: 5, aoEsperar: () => setReenviando(true) },
+      );
+      sessionStorage.removeItem(chaveRascunho);
       setEnviado(true);
-      if (saida.tipo === "DESEMPENHO" && saida.nota != null) {
-        setOk(`${saida.mensagem} Sua nota: ${saida.nota}.`);
+      if (saida.jaRegistrada) {
+        setOk("Resposta já registrada.");
+      } else if (saida.valor?.tipo === "DESEMPENHO" && saida.valor.nota != null) {
+        setOk(`${saida.valor.mensagem} Sua nota: ${saida.valor.nota}.`);
       } else {
-        setOk(saida.mensagem || "Resposta registrada.");
+        setOk(saida.valor?.mensagem || "Resposta registrada.");
       }
     } catch (exc) {
+      setEsgotou(true);
       setErro(exc instanceof Error ? exc.message : "Erro ao enviar");
+    } finally {
+      setEnviando(false);
+      setReenviando(false);
     }
   }
 
@@ -329,7 +368,7 @@ export function ResponderPage() {
             <div className="flex flex-wrap gap-2 justify-between mt-2">
               <button
                 type="button"
-                disabled={indice === 0}
+                disabled={indice === 0 || enviando}
                 onClick={() => setIndice((i) => Math.max(0, i - 1))}
                 className="rounded-xl px-4 py-2.5 text-[13px] font-bold disabled:opacity-40"
                 style={{ background: "rgba(255,255,255,0.7)" }}
@@ -339,6 +378,7 @@ export function ResponderPage() {
               {indice < total - 1 ? (
                 <button
                   type="button"
+                  disabled={enviando}
                   onClick={() => setIndice((i) => Math.min(total - 1, i + 1))}
                   className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
                   style={{ background: "#171717" }}
@@ -348,13 +388,29 @@ export function ResponderPage() {
               ) : (
                 <button
                   type="submit"
-                  className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
+                  disabled={enviando}
+                  className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold disabled:opacity-40"
                   style={{ background: "#1E7A4A" }}
                 >
-                  Enviar respostas
+                  {enviando ? "Enviando…" : "Enviar respostas"}
                 </button>
               )}
             </div>
+            {reenviando ? (
+              <p className="text-[13px] text-gray-600" role="status">
+                Estamos recebendo muitas respostas. Reenviando automaticamente…
+              </p>
+            ) : null}
+            {esgotou && !enviando ? (
+              <button
+                type="button"
+                onClick={() => void enviar()}
+                className="rounded-xl px-4 py-2.5 text-[13px] font-bold"
+                style={{ background: "rgba(255,255,255,0.7)" }}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
           </form>
         )}
       </div>

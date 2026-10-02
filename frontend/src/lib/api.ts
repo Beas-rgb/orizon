@@ -128,6 +128,11 @@ export async function api<T = unknown>(caminho: string, opcoes: ApiOpcoes = {}):
     await renovarSessao();
     return api<T>(caminho, { ...opcoes, jaRepetiu: true });
   }
-  if (!resposta.ok) throw new ApiErro(resposta.status, textoErro(corpo), false);
+  if (!resposta.ok) {
+    const erro = new ApiErro(resposta.status, textoErro(corpo), false);
+    const espera = Number(resposta.headers.get("retry-after"));
+    if (Number.isFinite(espera) && espera >= 0) erro.retryAfter = espera;
+    throw erro;
+  }
   return corpo as T;
 }

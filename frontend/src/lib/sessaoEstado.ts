@@ -1,12 +1,14 @@
 export class ApiErro extends Error {
   status: number;
   rede: boolean;
+  retryAfter: number | null;
 
   constructor(status: number, mensagem: string, rede = false) {
     super(mensagem);
     this.name = "ApiErro";
     this.status = status;
     this.rede = rede;
+    this.retryAfter = null;
   }
 }
 
