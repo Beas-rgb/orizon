@@ -1,6 +1,5 @@
-from pathlib import Path
-
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,10 +42,11 @@ _origens = [
     for origem in settings.cors_origins.split(",")
     if origem.strip()
 ]
+_regex = settings.cors_origin_regex.strip()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origens,
-    allow_origin_regex=r"https://([a-z0-9-]+\.)?orizon-a0u\.pages\.dev",
+    allow_origin_regex=_regex or None,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
@@ -95,7 +95,10 @@ def spa_react(caminho: str = "") -> FileResponse:
     if caminho and "." in caminho.split("/")[-1]:
         arquivo = _arquivo_do_build(caminho)
         if arquivo is not None and arquivo.is_file():
-            return FileResponse(arquivo)
+            headers = {}
+            if caminho.startswith("assets/"):
+                headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            return FileResponse(arquivo, headers=headers)
         raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
     return FileResponse(
         _react_dist / "index.html",

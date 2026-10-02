@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     # Origens do front, separadas por vírgula. Sem isto o navegador
     # bloqueia a tela hospedada de chamar a API (CORS).
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # Regex opcional. Vazio = nenhuma. O domínio do Pages fica no painel, não no código.
+    cors_origin_regex: str = ""
 
     smtp_host: str = ""
     smtp_port: int = 587

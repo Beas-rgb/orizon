@@ -21,6 +21,8 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
+      - key: CORS_ORIGIN_REGEX
+        sync: false
       # E-mail: SendGrid (HTTPS) preferido no plano free. Preencha no painel.
       - key: SENDGRID_API_KEY
         sync: false

@@ -5,9 +5,11 @@ import { AuthProvider } from "./auth/AuthContext";
 import App from "./App";
 import "./index.css";
 
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <BrowserRouter basename="/app">
+    <BrowserRouter basename={base === "/" ? "" : base}>
       <AuthProvider>
         <App />
       </AuthProvider>

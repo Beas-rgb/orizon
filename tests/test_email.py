@@ -212,3 +212,26 @@ def test_erro_entrega_seguro_nao_vaza_segredo() -> None:
     rede = _erro_entrega_seguro(Exception("[Errno 101] Network is unreachable"))
     assert "SendGrid" in rede
     assert "587" in rede
+
+
+def test_link_publico_com_e_sem_app(monkeypatch) -> None:
+    from app.core.config import url_publica
+    from app.services.identidade.convites import _link_com_token
+
+    monkeypatch.delenv("RENDER_EXTERNAL_URL", raising=False)
+    monkeypatch.setattr(settings, "app_public_url", "https://orizon-api.onrender.com/app")
+    assert url_publica() == "https://orizon-api.onrender.com/app"
+    assert (
+        _link_com_token("primeiro-acesso", "abc")
+        == "https://orizon-api.onrender.com/app/primeiro-acesso?t=abc"
+    )
+    base = url_publica().rstrip("/")
+    assert f"{base}/responder/tok" == "https://orizon-api.onrender.com/app/responder/tok"
+
+    monkeypatch.setattr(settings, "app_public_url", "https://horizon.pages.dev")
+    assert url_publica() == "https://horizon.pages.dev"
+    assert _link_com_token("primeiro-acesso", "abc") == (
+        "https://horizon.pages.dev/primeiro-acesso?t=abc"
+    )
+    base = url_publica().rstrip("/")
+    assert f"{base}/responder/tok" == "https://horizon.pages.dev/responder/tok"
