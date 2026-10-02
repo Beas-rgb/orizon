@@ -76,6 +76,7 @@ type ApiOpcoes = RequestInit & {
   json?: unknown;
   formData?: FormData;
   timeoutMs?: number;
+  jaRepetiu?: boolean;
 };
 
 export async function api<T = unknown>(caminho: string, opcoes: ApiOpcoes = {}): Promise<T> {
@@ -93,7 +94,8 @@ export async function api<T = unknown>(caminho: string, opcoes: ApiOpcoes = {}):
   const acesso = tokenAtual();
   if (acesso) headers.Authorization = `Bearer ${acesso}`;
 
-  const { json: _json, formData: _fd, timeoutMs = 30_000, signal, ...rest } = opcoes;
+  const { json: _json, formData: _fd, timeoutMs = 30_000, signal, jaRepetiu, ...rest } =
+    opcoes;
   const controle = new AbortController();
   const prazo = setTimeout(() => controle.abort(), timeoutMs);
   if (signal) {
@@ -115,6 +117,17 @@ export async function api<T = unknown>(caminho: string, opcoes: ApiOpcoes = {}):
   }
   if (resposta.status === 204) return null as T;
   const corpo = await resposta.json().catch(() => ({}));
+  const refresh = sessionStorage.getItem("horizon_refresh") || "";
+  if (
+    resposta.status === 401 &&
+    !jaRepetiu &&
+    refresh &&
+    !caminho.startsWith("/auth/")
+  ) {
+    const { renovarSessao } = await import("./sessao");
+    await renovarSessao();
+    return api<T>(caminho, { ...opcoes, jaRepetiu: true });
+  }
   if (!resposta.ok) throw new ApiErro(resposta.status, textoErro(corpo), false);
   return corpo as T;
 }

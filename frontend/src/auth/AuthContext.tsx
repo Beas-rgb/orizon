@@ -22,6 +22,7 @@ import {
   type Painel,
 } from "../lib/api";
 import { usuarioVeioNoLogin } from "../lib/sessaoEntrada";
+import { avisoSessaoExpirada, expiraEmMs, liberarRefresh, renovarSessao } from "../lib/sessao";
 
 type Usuario = { id: string; nome: string; email: string; painel: Painel };
 
@@ -109,11 +110,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     montado.current = true;
     void recarregar();
+    const expirou = () => {
+      setUsuario(null);
+      setConexao("ok");
+      avisoSessaoExpirada();
+      const base = import.meta.env.BASE_URL || "/";
+      window.location.assign(`${base}entrar`);
+    };
+    const renovou = (evento: Event) => {
+      const usuarioNovo = (evento as CustomEvent<Usuario | undefined>).detail;
+      if (usuarioNovo?.id) setUsuario(usuarioNovo);
+    };
+    window.addEventListener("horizon:sessao-expirada", expirou);
+    window.addEventListener("horizon:sessao-renovada", renovou);
     return () => {
       montado.current = false;
       if (esperaId.current !== null) window.clearTimeout(esperaId.current);
+      window.removeEventListener("horizon:sessao-expirada", expirou);
+      window.removeEventListener("horizon:sessao-renovada", renovou);
     };
   }, [recarregar]);
+
+  useEffect(() => {
+    const token = tokenAtual();
+    const expira = expiraEmMs(token);
+    const renovarSePerto = () => {
+      const falta = expiraEmMs(tokenAtual());
+      if (falta !== null && falta - Date.now() < 60_000) {
+        void renovarSessao().catch(() => undefined);
+      }
+    };
+    const espera =
+      expira === null ? 0 : window.setTimeout(renovarSePerto, Math.max(expira - Date.now() - 60_000, 0));
+    document.addEventListener("visibilitychange", renovarSePerto);
+    return () => {
+      if (espera) window.clearTimeout(espera);
+      document.removeEventListener("visibilitychange", renovarSePerto);
+    };
+  }, [usuario]);
 
   const entrarComTokens = useCallback(
     async (dados: {
@@ -123,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       usuario?: Usuario | null;
     }) => {
       guardarSessao(dados);
+      liberarRefresh();
       if (usuarioVeioNoLogin(dados) && dados.usuario) {
         setUsuario(dados.usuario);
         setConexao("ok");

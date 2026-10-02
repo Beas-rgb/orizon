@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { InterruptorDesign } from "../components/layout/InterruptorDesign";
 import { FaixaServidor } from "../components/estado/FaixaServidor";
+import { lerAvisoSessao } from "../lib/sessao";
 import { api } from "../lib/api";
 import { useDesignTela } from "../lib/designTela";
 import { ACCENT, ACCENT_DARK } from "../lib/theme";
@@ -78,7 +79,7 @@ function nextDaUrl(): string | null {
 }
 
 export function LoginPage() {
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState(() => lerAvisoSessao());
   const [carregando, setCarregando] = useState(false);
   const { entrarComTokens, usuario, pronto } = useAuth();
   const navigate = useNavigate();
