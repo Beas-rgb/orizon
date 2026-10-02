@@ -11,10 +11,12 @@ from app.schemas.lab import CenarioCriar, CenarioSaida, RespostasLabEntrada
 from app.services.lab import (
     cenario_saida,
     executar_criacao,
+    executar_exclusao,
     executar_respostas,
     listar_cenarios,
     obter_cenario,
     solicitar_cenario,
+    solicitar_exclusao,
     solicitar_respostas,
 )
 
@@ -92,6 +94,25 @@ def post_respostas(
         corpo.taxa,
         seed,
     )
+    return CenarioSaida(**cenario_saida(linha))
+
+
+@router.delete(
+    "/cenarios/{cenario_id}",
+    response_model=CenarioSaida,
+    status_code=202,
+)
+def delete_cenario(
+    cenario_id: str,
+    confirmo: str,
+    background: BackgroundTasks,
+    dono: Usuario = Depends(exigir_lab),
+    db: Session = Depends(get_db),
+) -> CenarioSaida:
+    linha = chamar(
+        lambda: solicitar_exclusao(db, dono, cenario_id, confirmo)
+    )
+    background.add_task(executar_exclusao, linha.id, dono.id)
     return CenarioSaida(**cenario_saida(linha))
 
 
