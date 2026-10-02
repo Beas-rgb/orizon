@@ -36,3 +36,7 @@ def test_login_solta_a_conexao_durante_o_hash(client, monkeypatch, db) -> None:
         event.remove(engine, "checkin", checkin)
     assert resposta.status_code == 200
     assert visto["em_uso"] == 0
+    usuario = resposta.json()["usuario"]
+    assert usuario["email"] == "solta@horizon.dev"
+    assert "senha" not in usuario
+    assert "senha_hash" not in usuario

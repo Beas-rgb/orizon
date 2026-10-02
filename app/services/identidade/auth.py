@@ -40,7 +40,7 @@ from .erros import (
 )
 
 
-def _emitir_sessao(db: Session, usuario: Usuario) -> dict[str, str]:
+def _emitir_sessao(db: Session, usuario: Usuario) -> dict[str, object]:
     sessao_id = novo_id()
     cru, token_hash, expira = criar_refresh_token(usuario.id)
     db.add(
@@ -56,11 +56,19 @@ def _emitir_sessao(db: Session, usuario: Usuario) -> dict[str, str]:
     access = criar_access_token(
         usuario.id, usuario.papel, sessao_id=sessao_id
     )
+    painel = painel_de(usuario.papel)
     return {
         "access_token": access,
         "refresh_token": cru,
         "token_type": "bearer",
-        "painel": painel_de(usuario.papel),
+        "painel": painel,
+        "usuario": {
+            "id": usuario.id,
+            "nome": usuario.nome,
+            "email": usuario.email,
+            "papel": usuario.papel,
+            "painel": painel,
+        },
     }
 
 

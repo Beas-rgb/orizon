@@ -2,6 +2,7 @@ import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiErro, esperaReconexaoMs, sessaoEncerrada } from "./sessaoEstado";
+import { usuarioVeioNoLogin } from "./sessaoEntrada";
 import {
   ATRASO_AVISO_MS,
   LIMITE_MS,
@@ -10,6 +11,13 @@ import {
   useServidor,
 } from "./servidor";
 
+describe("login", () => {
+  it("não busca /auth/eu quando o usuário já veio", () => {
+    expect(usuarioVeioNoLogin({ usuario: { id: "1" } })).toBe(true);
+    expect(usuarioVeioNoLogin({})).toBe(false);
+    expect(usuarioVeioNoLogin({ usuario: null })).toBe(false);
+  });
+});
 describe("ApiErro", () => {
   it("separa 401, 500 e rede e preserva a mensagem", () => {
     const acesso = new ApiErro(401, "Sessão inválida.", false);

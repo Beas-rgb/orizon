@@ -38,19 +38,20 @@ class RefreshEntrada(BaseModel):
     refresh_token: str = Field(min_length=10, max_length=200)
 
 
-class TokensSaida(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    painel: str
-
-
 class UsuarioSaida(BaseModel):
     id: str
     nome: str
     email: str
     papel: str
     painel: str
+
+
+class TokensSaida(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    painel: str
+    usuario: UsuarioSaida | None = None
 
 
 class MensagemSaida(BaseModel):

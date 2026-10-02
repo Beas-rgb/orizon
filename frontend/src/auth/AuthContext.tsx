@@ -21,6 +21,7 @@ import {
   tokenAtual,
   type Painel,
 } from "../lib/api";
+import { usuarioVeioNoLogin } from "../lib/sessaoEntrada";
 
 type Usuario = { id: string; nome: string; email: string; painel: Painel };
 
@@ -33,6 +34,7 @@ type AuthCtx = {
     access_token: string;
     refresh_token?: string;
     painel?: string;
+    usuario?: Usuario | null;
   }) => Promise<void>;
   sair: () => Promise<void>;
 };
@@ -114,8 +116,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [recarregar]);
 
   const entrarComTokens = useCallback(
-    async (dados: { access_token: string; refresh_token?: string; painel?: string }) => {
+    async (dados: {
+      access_token: string;
+      refresh_token?: string;
+      painel?: string;
+      usuario?: Usuario | null;
+    }) => {
       guardarSessao(dados);
+      if (usuarioVeioNoLogin(dados) && dados.usuario) {
+        setUsuario(dados.usuario);
+        setConexao("ok");
+        setPronto(true);
+        return;
+      }
       setPronto(false);
       await recarregar();
     },
