@@ -25,3 +25,8 @@ Estimativa do plano, não medida neste Free: 16 logins ao mesmo tempo, com 64 Mi
 ## Carga
 
 Vazia até a Fase 9. Nenhum número daqui é capacidade do Render nem do Neon.
+
+## Banco desta fase
+
+Os tempos de índice no Neon não foram medidos. O que os testes de SQLite cobrem é o comportamento: importação recusa a linha 5001, a árvore devolve filhos sob demanda e a limpeza apaga só a sessão vencida. O pool do processo passou a 5 conexões mais 5 de overflow, com espera de 10 segundos. Esgotar o pool responde 503 com `Retry-After: 3`.
+
