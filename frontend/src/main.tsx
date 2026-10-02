@@ -5,6 +5,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import App from "./App";
 import "./index.css";
 import "./dm-sans-latin.css";
+import "./montserrat-latin-500.css";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
