@@ -250,7 +250,7 @@ def test_importacao_limite_linhas(client, monkeypatch) -> None:
             "setor": "RH",
             "superior_email": "",
         }
-        for i in range(501)
+        for i in range(5001)
     ]
     conteudo = _csv(linhas)
     resp = client.post(
@@ -259,7 +259,7 @@ def test_importacao_limite_linhas(client, monkeypatch) -> None:
         files={"arquivo": ("funcionarios.csv", conteudo, "text/csv")},
     )
     assert resp.status_code == 422
-    assert "500" in resp.json()["detail"]
+    assert "5000" in resp.json()["detail"]
 
 
 def test_importacao_ciclo_hierarquia(client, monkeypatch) -> None:

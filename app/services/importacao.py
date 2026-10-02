@@ -11,9 +11,10 @@ import io
 import re
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.tokens import novo_id
 from app.models.base import agora
 from app.models.estrutura import Cargo, PerfilFuncionario
@@ -22,8 +23,13 @@ from app.models.setor import Setor
 from app.models.usuario import Usuario
 from app.services.identidade import ErroAuth, email_acesso
 
-LIMITE_LINHAS = 500
-LIMITE_BYTES = 2 * 1024 * 1024
+
+def _limite_linhas() -> int:
+    return settings.import_max_linhas
+
+
+def _limite_bytes() -> int:
+    return settings.import_max_bytes
 COLUNAS_MINIMAS = {"nome", "email"}
 COLUNAS_OPCIONAIS = {"cargo", "setor", "superior_email"}
 
@@ -56,7 +62,7 @@ class PreviaImportacao:
 
 
 def _ler_csv(conteudo: bytes) -> list[dict[str, str]]:
-    if len(conteudo) > LIMITE_BYTES:
+    if len(conteudo) > _limite_bytes():
         raise ImportacaoInvalida("Arquivo maior que 2 MB.")
     try:
         texto = conteudo.decode("utf-8-sig")
@@ -71,14 +77,14 @@ def _ler_csv(conteudo: bytes) -> list[dict[str, str]]:
         raise ImportacaoInvalida("Não encontrei cabeçalho no CSV.")
     linhas = []
     for i, linha in enumerate(leitor):
-        if i >= LIMITE_LINHAS:
-            raise ImportacaoInvalida(f"Máximo de {LIMITE_LINHAS} linhas.")
+        if i >= _limite_linhas():
+            raise ImportacaoInvalida(f"Máximo de {_limite_linhas()} linhas.")
         linhas.append({k.strip().lower(): (v or "").strip() for k, v in linha.items()})
     return linhas
 
 
 def _ler_xlsx(conteudo: bytes) -> list[dict[str, str]]:
-    if len(conteudo) > LIMITE_BYTES:
+    if len(conteudo) > _limite_bytes():
         raise ImportacaoInvalida("Arquivo maior que 2 MB.")
     if not conteudo[:4] == b"PK\x03\x04":
         raise ImportacaoInvalida("O conteúdo não é um XLSX válido.")
@@ -92,8 +98,8 @@ def _ler_xlsx(conteudo: bytes) -> list[dict[str, str]]:
         linhas = []
         cabecalho = None
         for i, linha in enumerate(aba.iter_rows(values_only=True)):
-            if i >= LIMITE_LINHAS:
-                raise ImportacaoInvalida(f"Máximo de {LIMITE_LINHAS} linhas.")
+            if i >= _limite_linhas():
+                raise ImportacaoInvalida(f"Máximo de {_limite_linhas()} linhas.")
             if cabecalho is None:
                 cabecalho = [str(c or "").strip().lower() for c in linha]
                 continue
@@ -129,8 +135,8 @@ def validar_linhas(
     """Valida tudo antes de gravar. Não toca no banco."""
     if not linhas:
         raise ImportacaoInvalida("Nenhuma linha no arquivo.")
-    if len(linhas) > LIMITE_LINHAS:
-        raise ImportacaoInvalida(f"Máximo de {LIMITE_LINHAS} linhas.")
+    if len(linhas) > _limite_linhas():
+        raise ImportacaoInvalida(f"Máximo de {_limite_linhas()} linhas.")
 
     setores_existentes = {
         s.nome.strip().lower(): s.id
@@ -269,6 +275,34 @@ def _niveis_hierarquia(linhas: list[LinhaImportacao]) -> int:
     return niveis
 
 
+def _tem_ciclo(arestas: dict[str, str]) -> bool:
+    """Ciclo no grafo e-mail → superior, sem recursão."""
+    cor: dict[str, int] = {}
+    for inicio in arestas:
+        if cor.get(inicio) == 2:
+            continue
+        pilha: list[tuple[str, bool]] = [(inicio, False)]
+        while pilha:
+            nodo, fechou = pilha.pop()
+            if fechou:
+                cor[nodo] = 2
+                continue
+            if cor.get(nodo) == 1:
+                return True
+            if cor.get(nodo) == 2:
+                continue
+            cor[nodo] = 1
+            pilha.append((nodo, True))
+            pai = arestas.get(nodo)
+            if not pai:
+                continue
+            if cor.get(pai) == 1:
+                return True
+            if cor.get(pai) != 2:
+                pilha.append((pai, False))
+    return False
+
+
 def confirmar_importacao(
     db: Session,
     consultor: Usuario,
@@ -322,7 +356,6 @@ def confirmar_importacao(
         ).all()
     }
 
-    criados = 0
     agora_ = agora()
     emails = {linha.email for linha in linhas if linha.email}
     emails.update(linha.superior_email for linha in linhas if linha.superior_email)
@@ -359,91 +392,125 @@ def confirmar_importacao(
                 )
             ).all()
         }
+    arestas = {
+        linha.email: linha.superior_email
+        for linha in linhas
+        if linha.email and linha.superior_email
+    }
+    if _tem_ciclo(arestas):
+        raise ErroAuth(422, "A hierarquia não pode formar ciclo.")
+
+    novos_setores: list[dict] = []
+    novos_cargos: list[dict] = []
+    novos_usuarios: list[dict] = []
+    novos_vinculos: list[dict] = []
+    novos_perfis: list[dict] = []
     for linha in linhas:
         if linha.erros:
             continue
-        setor = None
         if linha.setor:
             chave = linha.setor.strip().lower()
-            setor = setores.get(chave)
-            if setor is None:
-                setor = Setor(
-                    id=novo_id(),
-                    projeto_id=projeto_id,
-                    nome=linha.setor.strip()[:120],
-                    criado_em=agora_,
-                    atualizado_em=agora_,
-                    deleted_at=None,
+            if chave not in setores:
+                sid = novo_id()
+                novos_setores.append(
+                    {
+                        "id": sid,
+                        "projeto_id": projeto_id,
+                        "nome": linha.setor.strip()[:120],
+                        "criado_em": agora_,
+                        "atualizado_em": agora_,
+                        "deleted_at": None,
+                    }
                 )
-                db.add(setor)
-                db.flush()
-                setores[chave] = setor
-        cargo = None
+                setores[chave] = Setor(id=sid, projeto_id=projeto_id, nome=linha.setor)
         if linha.cargo:
             chave = linha.cargo.strip().lower()
-            cargo = cargos.get(chave)
-            if cargo is None:
-                cargo = Cargo(
-                    id=novo_id(),
-                    projeto_id=projeto_id,
-                    nome=linha.cargo.strip()[:120],
-                    criado_em=agora_,
-                    atualizado_em=agora_,
-                    deleted_at=None,
+            if chave not in cargos:
+                cid = novo_id()
+                novos_cargos.append(
+                    {
+                        "id": cid,
+                        "projeto_id": projeto_id,
+                        "nome": linha.cargo.strip()[:120],
+                        "criado_em": agora_,
+                        "atualizado_em": agora_,
+                        "deleted_at": None,
+                    }
                 )
-                db.add(cargo)
-                db.flush()
-                cargos[chave] = cargo
-
-        usuario = usuarios.get(linha.email)
-        if usuario is None:
-            usuario = Usuario(
-                id=novo_id(),
-                nome=linha.nome.strip()[:160],
-                email=linha.email,
-                senha_hash=None,
-                papel="FUNCIONARIO",
-                ativo=False,
-                tentativas_falhas=0,
-                criado_em=agora_,
-                atualizado_em=agora_,
-                deleted_at=None,
+                cargos[chave] = Cargo(id=cid, projeto_id=projeto_id, nome=linha.cargo)
+        if linha.email not in usuarios:
+            uid = novo_id()
+            novos_usuarios.append(
+                {
+                    "id": uid,
+                    "nome": linha.nome.strip()[:160],
+                    "email": linha.email,
+                    "senha_hash": None,
+                    "papel": "FUNCIONARIO",
+                    "ativo": False,
+                    "tentativas_falhas": 0,
+                    "criado_em": agora_,
+                    "atualizado_em": agora_,
+                    "deleted_at": None,
+                }
             )
-            db.add(usuario)
-            db.flush()
-            usuarios[usuario.email] = usuario
+            usuarios[linha.email] = Usuario(id=uid, email=linha.email)
+
+    if novos_setores:
+        db.execute(insert(Setor), novos_setores)
+    if novos_cargos:
+        db.execute(insert(Cargo), novos_cargos)
+    if novos_usuarios:
+        db.execute(insert(Usuario), novos_usuarios)
+
+    criados = 0
+    for linha in linhas:
+        if linha.erros:
+            continue
+        usuario = usuarios[linha.email]
         if usuario.id not in vinculos:
-            db.add(
-                ProjetoUsuario(
-                    id=novo_id(),
-                    projeto_id=projeto_id,
-                    usuario_id=usuario.id,
-                    papel="FUNCIONARIO",
-                )
+            novos_vinculos.append(
+                {
+                    "id": novo_id(),
+                    "projeto_id": projeto_id,
+                    "usuario_id": usuario.id,
+                    "papel": "FUNCIONARIO",
+                }
             )
             vinculos.add(usuario.id)
-        superior = usuarios.get(linha.superior_email) if linha.superior_email else None
+        setor = setores.get(linha.setor.strip().lower()) if linha.setor else None
+        cargo = cargos.get(linha.cargo.strip().lower()) if linha.cargo else None
+        superior = (
+            usuarios.get(linha.superior_email) if linha.superior_email else None
+        )
         perfil = perfis.get(usuario.id)
+        dados_perfil = {
+            "setor_id": setor.id if setor else None,
+            "cargo_id": cargo.id if cargo else None,
+            "superior_id": superior.id if superior else None,
+            "atualizado_em": agora_,
+        }
         if perfil is None:
-            perfil = PerfilFuncionario(
-                id=novo_id(),
-                projeto_id=projeto_id,
-                usuario_id=usuario.id,
-                setor_id=setor.id if setor else None,
-                cargo_id=cargo.id if cargo else None,
-                superior_id=superior.id if superior else None,
-                criado_em=agora_,
-                atualizado_em=agora_,
-                deleted_at=None,
+            novos_perfis.append(
+                {
+                    "id": novo_id(),
+                    "projeto_id": projeto_id,
+                    "usuario_id": usuario.id,
+                    "criado_em": agora_,
+                    "deleted_at": None,
+                    **dados_perfil,
+                }
             )
-            db.add(perfil)
-            perfis[usuario.id] = perfil
         else:
-            perfil.setor_id = setor.id if setor else None
-            perfil.cargo_id = cargo.id if cargo else None
-            perfil.superior_id = superior.id if superior else None
+            perfil.setor_id = dados_perfil["setor_id"]
+            perfil.cargo_id = dados_perfil["cargo_id"]
+            perfil.superior_id = dados_perfil["superior_id"]
             perfil.atualizado_em = agora_
         criados += 1
+    if novos_vinculos:
+        db.execute(insert(ProjetoUsuario), novos_vinculos)
+    if novos_perfis:
+        db.execute(insert(PerfilFuncionario), novos_perfis)
 
     db.commit()
     return {"criados": criados, "total": enviadas}
