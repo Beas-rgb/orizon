@@ -139,6 +139,7 @@ def test_resposta_avisa_consultora_sem_nome(client, monkeypatch) -> None:
         params={"quantidade": 1},
     ).json()["tokens"][0]
     pergunta_id = client.get(f"/responder/{token}", headers=func).json()[0]["id"]
+    antes_emails = len(caixa_email.mensagens)
     client.post(
         f"/responder/{token}",
         headers=func,
@@ -147,14 +148,8 @@ def test_resposta_avisa_consultora_sem_nome(client, monkeypatch) -> None:
 
     avisos = client.get("/notificacoes", headers=headers)
     assert avisos.status_code == 200
-    aviso = avisos.json()[0]
-    assert aviso["titulo"] == "Nova resposta"
-    assert token not in aviso["mensagem"]
-    assert "rh@" not in aviso["mensagem"]
-
-    lida = client.post(f"/notificacoes/{aviso['id']}/lida", headers=headers)
-    assert lida.status_code == 200
-    assert lida.json()["lida"] is True
+    assert all(item["titulo"] != "Nova resposta" for item in avisos.json())
+    assert len(caixa_email.mensagens) == antes_emails
 
 
 def test_telefone_nao_envia(db) -> None:

@@ -17,7 +17,6 @@ from app.models.pesquisa import (
     Resposta,
     TokenResposta,
 )
-from app.models.projeto import Projeto
 from app.models.usuario import Usuario
 from app.services.auditoria import registrar as _auditar
 from app.services.identidade import ErroAuth
@@ -307,22 +306,6 @@ def _registrar_respostas_em(
     participante.respondido_em = agora_
     participante.atualizado_em = agora_
     _limpar_rate_responder(db, usuario.id, ip)
-    projeto = db.get(Projeto, pesquisa.projeto_id)
-    if projeto is not None:
-        consultor = db.get(Usuario, projeto.consultor_id)
-        if consultor is not None:
-            from app.services.notificacao import avisar
-
-            avisar(
-                db,
-                consultor,
-                "PESQUISA",
-                "Nova resposta",
-                f"Uma resposta chegou na pesquisa {pesquisa.titulo}.",
-                pesquisa.projeto_id,
-                "EMAIL",
-                "RESPOSTA",
-            )
     # CLIMA: auditoria sem usuario_id (não amarra quem respondeu).
     if pesquisa.tipo in TIPOS_ANONIMOS:
         _auditar(db, "PESQUISA_RESPONDIDA", None)
