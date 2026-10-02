@@ -139,6 +139,7 @@ _PREFIXOS_NEXT = (
     "/projetos",
     "/responder",
     "/consultora",
+    "/lab",
     "/primeiro-acesso",
     "/recuperar",
 )

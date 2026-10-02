@@ -4,6 +4,7 @@ import {
   Archive,
   ArrowLeft,
   BarChart2,
+  Beaker,
   Briefcase,
   ClipboardList,
   Clock,
@@ -164,6 +165,16 @@ export function CascaNova({ children }: { children: ReactNode }) {
               icone: <ClipboardList size={16} />,
               marcado: pathname.startsWith("/consultora/pesquisas"),
             },
+            ...(usuario?.lab_habilitado
+              ? [
+                  {
+                    rotulo: "Laboratório",
+                    caminho: "/lab",
+                    icone: <Beaker size={16} />,
+                    marcado: pathname.startsWith("/lab"),
+                  } satisfies Atalho,
+                ]
+              : []),
           ]
         : [
             {

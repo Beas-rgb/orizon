@@ -22,6 +22,9 @@ const ConsultoraPesquisasTestePage = lazy(() =>
     default: m.ConsultoraPesquisasTestePage,
   })),
 );
+const LabPage = lazy(() =>
+  import("./pages/LabPage").then((m) => ({ default: m.LabPage })),
+);
 const DevPainel = lazy(() =>
   import("./pages/Paineis").then((m) => ({ default: m.DevPainel })),
 );
@@ -152,6 +155,14 @@ export default function App() {
         element={
           <RequireAuth>
             <ConsultoraPesquisasTestePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/lab"
+        element={
+          <RequireAuth>
+            <LabPage />
           </RequireAuth>
         }
       />

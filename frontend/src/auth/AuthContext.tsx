@@ -24,7 +24,14 @@ import {
 import { usuarioVeioNoLogin } from "../lib/sessaoEntrada";
 import { avisoSessaoExpirada, expiraEmMs, liberarRefresh, renovarSessao } from "../lib/sessao";
 
-type Usuario = { id: string; nome: string; email: string; painel: Painel };
+type Usuario = {
+  id: string;
+  nome: string;
+  email: string;
+  painel: Painel;
+  tipo_conta?: string | null;
+  lab_habilitado?: boolean;
+};
 
 type AuthCtx = {
   pronto: boolean;
