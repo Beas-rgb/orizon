@@ -193,3 +193,32 @@ def test_t10_rate_limit_429(client, monkeypatch) -> None:
     )
     assert bloqueado.status_code == 429
     assert "tentativas" in bloqueado.json()["detail"].lower()
+
+
+def test_sucesso_nao_grava_controle_e_ip_nao_entra_na_chave(
+    client, db, monkeypatch
+) -> None:
+    from sqlalchemy import select
+
+    from app.models.controle_acesso import ControleAcesso
+    from app.services.pesquisa.resposta import _chaves_rate_responder
+
+    assert _chaves_rate_responder("u1", "203.0.113.9") == ["responder:user:u1"]
+    _headers, _pid, token, func, obrigatoria, _extra = _cenario(
+        client, monkeypatch
+    )
+    envio = client.post(
+        f"/responder/{token}",
+        headers=func,
+        json={
+            "respostas": [
+                {"pergunta_id": obrigatoria["id"], "valor_numerico": 4},
+            ]
+        },
+    )
+    assert envio.status_code == 200, envio.text
+    db.expire_all()
+    linhas = db.scalars(
+        select(ControleAcesso).where(ControleAcesso.chave.like("responder:%"))
+    ).all()
+    assert linhas == []

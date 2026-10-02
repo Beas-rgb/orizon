@@ -213,9 +213,12 @@ def registrar_respostas(
     usuario: Usuario,
     ip: str | None = None,
 ) -> tuple[str, float | None]:
-    convite = _token_convite(db, token)
-    pesquisa = _pesquisa_viva(db, convite.pesquisa_id)
-    return _registrar_respostas_em(db, pesquisa, itens, usuario, ip)
+    def gravar() -> tuple[str, float | None]:
+        convite = _token_convite(db, token)
+        pesquisa = _pesquisa_viva(db, convite.pesquisa_id)
+        return _registrar_respostas_em(db, pesquisa, itens, usuario, ip)
+
+    return _com_limite_de_falha(db, usuario, gravar)
 
 
 def registrar_respostas_da_pesquisa(
@@ -225,8 +228,11 @@ def registrar_respostas_da_pesquisa(
     usuario: Usuario,
     ip: str | None = None,
 ) -> tuple[str, float | None]:
-    pesquisa = _exigir_pesquisa_aberta(db, pesquisa_id)
-    return _registrar_respostas_em(db, pesquisa, itens, usuario, ip)
+    def gravar() -> tuple[str, float | None]:
+        pesquisa = _exigir_pesquisa_aberta(db, pesquisa_id)
+        return _registrar_respostas_em(db, pesquisa, itens, usuario, ip)
+
+    return _com_limite_de_falha(db, usuario, gravar)
 
 
 def _registrar_respostas_em(
@@ -236,9 +242,7 @@ def _registrar_respostas_em(
     usuario: Usuario,
     ip: str | None = None,
 ) -> tuple[str, float | None]:
-    _rate_limit_responder(db, usuario.id, ip)
-    # Persiste a contagem mesmo se o envio falhar depois (422) e der rollback.
-    db.commit()
+    _ = ip
     participante = _participante_da_pesquisa(
         db, usuario, pesquisa, para_envio=True
     )
@@ -305,7 +309,6 @@ def _registrar_respostas_em(
     participante.status = "RESPONDIDA"
     participante.respondido_em = agora_
     participante.atualizado_em = agora_
-    _limpar_rate_responder(db, usuario.id, ip)
     # CLIMA: auditoria sem usuario_id (não amarra quem respondeu).
     if pesquisa.tipo in TIPOS_ANONIMOS:
         _auditar(db, "PESQUISA_RESPONDIDA", None)
@@ -317,63 +320,63 @@ def _registrar_respostas_em(
     return pesquisa.tipo, None
 
 
+_MSG_LIMITE = "Muitas tentativas. Aguarde alguns minutos e tente de novo."
+_FALHAS_QUE_CONTAM = {422, 404, 409}
+
+
 def _chaves_rate_responder(usuario_id: str, ip: str | None) -> list[str]:
-    chaves = [f"responder:user:{usuario_id}"]
-    if ip:
-        chaves.append(f"responder:ip:{ip}")
-    return chaves
+    """Só o usuário. O IP permanece na assinatura e não entra na chave."""
+    _ = ip
+    return [f"responder:user:{usuario_id}"]
 
 
-def _rate_limit_responder(
-    db: Session, usuario_id: str, ip: str | None
-) -> None:
-    """10 tentativas / 5 min por usuário e por IP (ControleAcesso)."""
+def _com_limite_de_falha(db: Session, usuario: Usuario, gravar):
+    """Sucesso não grava controle. Falha desfaz a resposta e só então conta."""
+    _exigir_limite_responder(db, usuario.id)
+    try:
+        return gravar()
+    except ErroAuth as exc:
+        db.rollback()
+        if exc.status in _FALHAS_QUE_CONTAM:
+            _anotar_falha_responder(db, usuario.id)
+        raise
+
+
+def _exigir_limite_responder(db: Session, usuario_id: str) -> None:
+    chave = _chaves_rate_responder(usuario_id, None)[0]
+    linha = db.get(ControleAcesso, chave)
+    if linha is None:
+        return
+    agora_ = agora()
+    bloqueado = _ciente(linha.bloqueado_ate)
+    if bloqueado and bloqueado > agora_:
+        raise ErroAuth(429, _MSG_LIMITE)
+
+
+def _anotar_falha_responder(db: Session, usuario_id: str) -> None:
     agora_ = agora()
     janela = timedelta(minutes=RESPONDER_JANELA_MINUTOS)
-    for chave in _chaves_rate_responder(usuario_id, ip):
-        linha = db.get(ControleAcesso, chave)
-        if linha is None:
-            linha = ControleAcesso(
-                chave=chave,
-                tentativas=0,
-                bloqueado_ate=None,
-                atualizado_em=agora_,
-            )
-            db.add(linha)
-            db.flush()
-        bloqueado = _ciente(linha.bloqueado_ate)
-        if bloqueado and bloqueado > agora_:
-            raise ErroAuth(
-                429,
-                "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
-            )
-        atualizado = _ciente(linha.atualizado_em) or agora_
-        if agora_ - atualizado > janela:
-            linha.tentativas = 0
-            linha.bloqueado_ate = None
-        linha.tentativas += 1
-        linha.atualizado_em = agora_
-        if linha.tentativas > RESPONDER_MAX_TENTATIVAS:
-            linha.bloqueado_ate = agora_ + janela
-            db.flush()
-            raise ErroAuth(
-                429,
-                "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
-            )
-    db.flush()
-
-
-def _limpar_rate_responder(
-    db: Session, usuario_id: str, ip: str | None
-) -> None:
-    agora_ = agora()
-    for chave in _chaves_rate_responder(usuario_id, ip):
-        linha = db.get(ControleAcesso, chave)
-        if linha is None:
-            continue
+    chave = _chaves_rate_responder(usuario_id, None)[0]
+    linha = db.get(ControleAcesso, chave)
+    if linha is None:
+        linha = ControleAcesso(
+            chave=chave,
+            tentativas=0,
+            bloqueado_ate=None,
+            atualizado_em=agora_,
+        )
+        db.add(linha)
+        db.flush()
+    atualizado = _ciente(linha.atualizado_em) or agora_
+    bloqueado = _ciente(linha.bloqueado_ate)
+    if agora_ - atualizado > janela and not (bloqueado and bloqueado > agora_):
         linha.tentativas = 0
         linha.bloqueado_ate = None
-        linha.atualizado_em = agora_
+    linha.tentativas += 1
+    linha.atualizado_em = agora_
+    if linha.tentativas >= RESPONDER_MAX_TENTATIVAS:
+        linha.bloqueado_ate = agora_ + janela
+    db.commit()
 
 
 def _validar_obrigatorias(
