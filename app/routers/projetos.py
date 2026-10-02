@@ -12,6 +12,7 @@ from fastapi import (
     File,
     HTTPException,
     Query,
+    Response,
     UploadFile,
 )
 from sqlalchemy.orm import Session
@@ -41,8 +42,10 @@ from app.schemas.projeto import (
 )
 from app.services.estrutura import (
     arvore_hierarquica,
+    contar_perfis,
     criar_cargo,
     definir_perfil_funcionario,
+    filhos_hierarquicos,
     listar_cargos,
     listar_perfis,
 )
@@ -264,10 +267,23 @@ def criar_cargo_rota(
 @router.get("/{projeto_id}/perfis", response_model=list[PerfilFuncionarioSaida])
 def perfis(
     projeto_id: str,
+    response: Response,
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
+    limite: int = 200,
+    deslocamento: int = 0,
 ) -> list[PerfilFuncionarioSaida]:
-    itens = chamar(lambda: listar_perfis(db, usuario, projeto_id))
+    itens = chamar(
+        lambda: listar_perfis(
+            db,
+            usuario,
+            projeto_id,
+            limite=limite,
+            deslocamento=deslocamento,
+        )
+    )
+    total = chamar(lambda: contar_perfis(db, usuario, projeto_id))
+    response.headers["X-Total-Count"] = str(total)
     return [
         PerfilFuncionarioSaida(
             usuario_id=item.usuario_id,
@@ -312,6 +328,35 @@ def arvore(
     db: Session = Depends(get_db),
 ) -> list[dict[str, object]]:
     return chamar(lambda: arvore_hierarquica(db, usuario, projeto_id))
+
+
+@router.get("/{projeto_id}/arvore/{usuario_id}/filhos")
+def filhos(
+    projeto_id: str,
+    usuario_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+    limite: int = 100,
+    deslocamento: int = 0,
+) -> list[dict[str, str | None]]:
+    itens = chamar(
+        lambda: filhos_hierarquicos(
+            db,
+            usuario,
+            projeto_id,
+            usuario_id,
+            limite=limite,
+            deslocamento=deslocamento,
+        )
+    )
+    return [
+        {
+            "usuario_id": item.usuario_id,
+            "setor_id": item.setor_id,
+            "cargo_id": item.cargo_id,
+        }
+        for item in itens
+    ]
 
 
 @router.post("/{projeto_id}/importar/previa", response_model=ImportacaoPreviaSaida)

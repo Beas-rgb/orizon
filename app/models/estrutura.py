@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, IdTempo
@@ -37,6 +37,11 @@ class PerfilFuncionario(IdTempo, Base):
             "projeto_id",
             "usuario_id",
             name="uq_perfil_funcionario_projeto_usuario",
+        ),
+        Index(
+            "ix_perfis_funcionario_superior_vivo",
+            "superior_id",
+            postgresql_where=text("deleted_at IS NULL"),
         ),
     )
 

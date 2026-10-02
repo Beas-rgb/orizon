@@ -3,7 +3,7 @@
 Setor segmenta. Superior define a árvore. Um ciclo (A→B→A) é rejeitado.
 """
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.autorizacao import exigir_papel
@@ -201,18 +201,35 @@ def listar_perfis(
     db: Session,
     usuario: Usuario,
     projeto_id: str,
+    *,
+    limite: int | None = None,
+    deslocamento: int = 0,
 ) -> list[PerfilFuncionario]:
     exigir_papel(db, usuario, projeto_id, {"CONSULTOR", "ORGAO"})
-    return list(
-        db.scalars(
-            select(PerfilFuncionario)
-            .where(
-                PerfilFuncionario.projeto_id == projeto_id,
-                PerfilFuncionario.deleted_at.is_(None),
-            )
-            .order_by(PerfilFuncionario.criado_em)
-        ).all()
+    consulta = (
+        select(PerfilFuncionario)
+        .where(
+            PerfilFuncionario.projeto_id == projeto_id,
+            PerfilFuncionario.deleted_at.is_(None),
+        )
+        .order_by(PerfilFuncionario.criado_em)
     )
+    if limite is not None:
+        consulta = consulta.limit(max(1, min(limite, 500))).offset(max(0, deslocamento))
+    return list(db.scalars(consulta).all())
+
+
+def contar_perfis(db: Session, usuario: Usuario, projeto_id: str) -> int:
+    exigir_papel(db, usuario, projeto_id, {"CONSULTOR", "ORGAO"})
+    total = db.scalar(
+        select(func.count())
+        .select_from(PerfilFuncionario)
+        .where(
+            PerfilFuncionario.projeto_id == projeto_id,
+            PerfilFuncionario.deleted_at.is_(None),
+        )
+    )
+    return int(total or 0)
 
 
 def arvore_hierarquica(
@@ -277,4 +294,38 @@ def arvore_hierarquica(
             ],
         }
 
+    if len(perfis) > 1000:
+        return [
+            {
+                "usuario_id": raiz.usuario_id,
+                "filhos_total": len(por_superior.get(raiz.usuario_id, [])),
+                "truncada": True,
+            }
+            for raiz in por_superior.get(None, [])
+        ]
     return [montar(raiz) for raiz in por_superior.get(None, [])]
+
+
+def filhos_hierarquicos(
+    db: Session,
+    usuario: Usuario,
+    projeto_id: str,
+    usuario_id: str,
+    *,
+    limite: int = 100,
+    deslocamento: int = 0,
+) -> list[PerfilFuncionario]:
+    exigir_papel(db, usuario, projeto_id, {"CONSULTOR", "ORGAO"})
+    return list(
+        db.scalars(
+            select(PerfilFuncionario)
+            .where(
+                PerfilFuncionario.projeto_id == projeto_id,
+                PerfilFuncionario.superior_id == usuario_id,
+                PerfilFuncionario.deleted_at.is_(None),
+            )
+            .order_by(PerfilFuncionario.criado_em)
+            .limit(max(1, min(limite, 100)))
+            .offset(max(0, deslocamento))
+        ).all()
+    )
