@@ -18,7 +18,8 @@ class Settings(BaseSettings):
 
     # Neon: poucas conexões simultâneas. Sem overflow para não estourar a cota.
     db_pool_size: int = 5
-    db_max_overflow: int = 0
+    db_max_overflow: int = 5
+    db_pool_timeout: int = 10
 
     jwt_secret: str = ""
     jwt_access_minutos: int = 15

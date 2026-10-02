@@ -10,10 +10,12 @@ services:
       - key: APP_ENV
         value: production
       - key: DB_POOL_SIZE
-        value: "2"
+        value: "5"
       - key: DB_MAX_OVERFLOW
-        value: "0"
+        value: "5"
       - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_DIRECT
         sync: false
       - key: JWT_SECRET
         sync: false

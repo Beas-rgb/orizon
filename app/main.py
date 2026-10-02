@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from sqlalchemy.exc import TimeoutError as PoolTimeout
 from starlette.middleware.gzip import GZipMiddleware
 
 from app.core.config import conferir_producao, settings
@@ -37,6 +38,15 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Horizon", version="0.1.0", lifespan=lifespan)
+
+
+@app.exception_handler(PoolTimeout)
+def pool_esgotado(_pedido: Request, _exc: PoolTimeout) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Banco ocupado. Tente novamente em instantes."},
+        headers={"Retry-After": "3"},
+    )
 
 _origens = [
     origem.strip()

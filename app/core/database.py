@@ -34,6 +34,13 @@ def desvincular_engine() -> None:
     SessionLocal = None
 
 
+def argumentos_conexao(url: str) -> dict[str, object]:
+    """PgBouncer em modo transação não aceita prepared statement."""
+    if "-pooler" in url:
+        return {"prepare_threshold": None}
+    return {}
+
+
 def get_engine() -> Engine:
     """Fábrica de conexões. Reutiliza o mesmo engine no processo.
 
@@ -51,6 +58,8 @@ def get_engine() -> Engine:
         max_overflow=settings.db_max_overflow,
         pool_pre_ping=True,
         pool_recycle=300,
+        pool_timeout=settings.db_pool_timeout,
+        connect_args=argumentos_conexao(settings.database_url),
     )
     SessionLocal = sessionmaker(
         bind=_engine,
