@@ -141,23 +141,39 @@ def login(db: Session, email: str, senha: str) -> dict[str, str]:
         raise ErroAuth(429, MSG_ESPERA)
 
     usuario = _usuario_por_email(db, endereco)
-    hash_guardado = usuario.senha_hash if usuario and usuario.ativo else None
+    uid = usuario.id if usuario else None
+    ativo = bool(
+        usuario and usuario.ativo and usuario.deleted_at is None and usuario.senha_hash
+    )
+    hash_guardado = usuario.senha_hash if ativo else None
+    db.rollback()
+
     confere = senha_confere(senha, hash_guardado or _hash_dummy())
-    if usuario is None or not usuario.ativo or not hash_guardado or not confere:
+    if uid is None or not ativo or not hash_guardado or not confere:
         bloqueou = registrar_falha(db, chave)
-        if usuario is not None:
-            usuario.tentativas_falhas += 1
-            usuario.atualizado_em = _agora()
-            if bloqueou:
-                usuario.bloqueado_ate = _agora() + timedelta(
-                    minutes=settings.login_espera_minutos
-                )
-        _auditar(db, "LOGIN_FALHA", usuario.id if usuario else None)
+        if uid is not None:
+            falho = db.get(Usuario, uid)
+            if falho is not None:
+                falho.tentativas_falhas += 1
+                falho.atualizado_em = _agora()
+                if bloqueou:
+                    falho.bloqueado_ate = _agora() + timedelta(
+                        minutes=settings.login_espera_minutos
+                    )
+        _auditar(db, "LOGIN_FALHA", uid)
         db.commit()
         if bloqueou:
             raise ErroAuth(429, MSG_ESPERA)
         raise ErroAuth(401, MSG_CREDENCIAL)
 
+    usuario = db.get(Usuario, uid)
+    if (
+        usuario is None
+        or usuario.deleted_at is not None
+        or not usuario.ativo
+        or not usuario.senha_hash
+    ):
+        raise ErroAuth(401, MSG_CREDENCIAL)
     limpar_falhas(db, chave)
     if precisa_rehash(hash_guardado):
         usuario.senha_hash = hash_senha(senha)
@@ -229,6 +245,8 @@ def primeiro_acesso(
             registrar_falha(db, chave_ip)
         db.commit()
         raise
+    db.rollback()
+    novo_hash = hash_senha(senha)
     convite = db.scalar(
         select(Convite).where(Convite.token_hash == hash_token(token))
     )
@@ -253,7 +271,7 @@ def primeiro_acesso(
         usuario = Usuario(
             nome=convite.nome,
             email=convite.email,
-            senha_hash=hash_senha(senha),
+            senha_hash=novo_hash,
             papel=convite.papel,
             ativo=True,
             tentativas_falhas=0,
@@ -262,7 +280,7 @@ def primeiro_acesso(
         db.flush()
     else:
         usuario = existente
-        usuario.senha_hash = hash_senha(senha)
+        usuario.senha_hash = novo_hash
         usuario.ativo = True
         usuario.atualizado_em = _agora()
     convite.status = "ACEITO"
@@ -348,6 +366,8 @@ def redefinir_senha(
             registrar_falha(db, chave_ip)
         db.commit()
         raise
+    db.rollback()
+    novo_hash = hash_senha(senha)
     linha = db.scalar(
         select(TokenRedefinicao).where(
             TokenRedefinicao.token_hash == hash_token(token)
@@ -370,7 +390,7 @@ def redefinir_senha(
             registrar_falha(db, chave_ip)
         db.commit()
         raise ErroAuth(400, MSG_TOKEN)
-    usuario.senha_hash = hash_senha(senha)
+    usuario.senha_hash = novo_hash
     usuario.tentativas_falhas = 0
     usuario.bloqueado_ate = None
     usuario.atualizado_em = _agora()
