@@ -70,7 +70,7 @@ function textoErro(corpo: { detail?: unknown }) {
   return "Não foi possível concluir.";
 }
 
-export { ApiErro, falhaPassageira, sessaoEncerrada } from "./sessaoEstado";
+export { ApiErro, falhaPassageira, sessaoEncerrada, esperaReconexaoMs, MAX_TENTATIVAS_RECONEXAO } from "./sessaoEstado";
 
 type ApiOpcoes = RequestInit & {
   json?: unknown;

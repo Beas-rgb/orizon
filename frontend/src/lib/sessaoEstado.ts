@@ -21,3 +21,11 @@ export function falhaPassageira(erro: unknown): boolean {
     (erro.rede || erro.status === 0 || erro.status >= 500)
   );
 }
+
+export const ESPERAS_RECONEXAO_S = [2, 4, 8, 16, 30] as const;
+export const MAX_TENTATIVAS_RECONEXAO = 6;
+
+export function esperaReconexaoMs(tentativa: number): number {
+  const indice = Math.min(Math.max(tentativa, 1), ESPERAS_RECONEXAO_S.length) - 1;
+  return ESPERAS_RECONEXAO_S[indice] * 1000;
+}

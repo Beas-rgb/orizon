@@ -4,15 +4,20 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import {
   api,
+  esperaReconexaoMs,
+  falhaPassageira,
   guardarSessao,
   limparSessao,
+  MAX_TENTATIVAS_RECONEXAO,
   painelAtual,
   sair as sairApi,
+  sessaoEncerrada,
   tokenAtual,
   type Painel,
 } from "../lib/api";
@@ -22,6 +27,7 @@ type Usuario = { id: string; nome: string; email: string; painel: Painel };
 type AuthCtx = {
   pronto: boolean;
   usuario: Usuario | null;
+  conexao: "ok" | "instavel";
   recarregar: () => Promise<void>;
   entrarComTokens: (dados: {
     access_token: string;
@@ -33,36 +39,78 @@ type AuthCtx = {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+const PAPEIS = ["consultora", "orgao", "funcionario", "dev"];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [pronto, setPronto] = useState(false);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [conexao, setConexao] = useState<"ok" | "instavel">("ok");
+  const tentativa = useRef(0);
+  const esperaId = useRef<number | null>(null);
+  const montado = useRef(true);
 
   const recarregar = useCallback(async () => {
     const painel = painelAtual();
-    if (!tokenAtual() || !["consultora", "orgao", "funcionario", "dev"].includes(painel)) {
+    if (!tokenAtual() || !PAPEIS.includes(painel)) {
       limparSessao();
       setUsuario(null);
+      setConexao("ok");
+      tentativa.current = 0;
       setPronto(true);
       return;
     }
     try {
       const eu = await api<Usuario>("/auth/eu");
-      if (!["consultora", "orgao", "funcionario", "dev"].includes(eu.painel)) {
+      if (!PAPEIS.includes(eu.painel)) {
         limparSessao();
         setUsuario(null);
+        setConexao("ok");
       } else {
         setUsuario(eu);
+        setConexao("ok");
+        tentativa.current = 0;
       }
-    } catch {
-      limparSessao();
-      setUsuario(null);
+    } catch (erro) {
+      if (sessaoEncerrada(erro)) {
+        limparSessao();
+        setUsuario(null);
+        setConexao("ok");
+        tentativa.current = 0;
+      } else {
+        if (falhaPassageira(erro)) {
+          setConexao("instavel");
+          setUsuario(
+            (atual) =>
+              atual ?? {
+                id: "",
+                nome: "",
+                email: "",
+                painel: painel as Painel,
+              },
+          );
+          if (tentativa.current < MAX_TENTATIVAS_RECONEXAO && montado.current) {
+            tentativa.current += 1;
+            const ms = esperaReconexaoMs(tentativa.current);
+            if (esperaId.current !== null) window.clearTimeout(esperaId.current);
+            esperaId.current = window.setTimeout(() => {
+              esperaId.current = null;
+              if (montado.current) void recarregar();
+            }, ms);
+          }
+        }
+      }
     } finally {
       setPronto(true);
     }
   }, []);
 
   useEffect(() => {
+    montado.current = true;
     void recarregar();
+    return () => {
+      montado.current = false;
+      if (esperaId.current !== null) window.clearTimeout(esperaId.current);
+    };
   }, [recarregar]);
 
   const entrarComTokens = useCallback(
@@ -77,11 +125,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sair = useCallback(async () => {
     await sairApi();
     setUsuario(null);
+    setConexao("ok");
   }, []);
 
   const value = useMemo(
-    () => ({ pronto, usuario, recarregar, entrarComTokens, sair }),
-    [pronto, usuario, recarregar, entrarComTokens, sair],
+    () => ({ pronto, usuario, conexao, recarregar, entrarComTokens, sair }),
+    [pronto, usuario, conexao, recarregar, entrarComTokens, sair],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
