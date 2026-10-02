@@ -1,3 +1,5 @@
+import { ApiErro } from "./sessaoEstado";
+
 const CHAVE_ACESSO = "horizon_access";
 const CHAVE_REFRESH = "horizon_refresh";
 const CHAVE_PAINEL = "horizon_painel";
@@ -68,7 +70,13 @@ function textoErro(corpo: { detail?: unknown }) {
   return "Não foi possível concluir.";
 }
 
-type ApiOpcoes = RequestInit & { json?: unknown; formData?: FormData };
+export { ApiErro, falhaPassageira, sessaoEncerrada } from "./sessaoEstado";
+
+type ApiOpcoes = RequestInit & {
+  json?: unknown;
+  formData?: FormData;
+  timeoutMs?: number;
+};
 
 export async function api<T = unknown>(caminho: string, opcoes: ApiOpcoes = {}): Promise<T> {
   const headers: Record<string, string> = {
@@ -85,10 +93,28 @@ export async function api<T = unknown>(caminho: string, opcoes: ApiOpcoes = {}):
   const acesso = tokenAtual();
   if (acesso) headers.Authorization = `Bearer ${acesso}`;
 
-  const { json: _json, formData: _fd, ...rest } = opcoes;
-  const resposta = await fetch(urlApi(caminho), { ...rest, headers, body });
+  const { json: _json, formData: _fd, timeoutMs = 30_000, signal, ...rest } = opcoes;
+  const controle = new AbortController();
+  const prazo = setTimeout(() => controle.abort(), timeoutMs);
+  if (signal) {
+    if (signal.aborted) controle.abort();
+    else signal.addEventListener("abort", () => controle.abort(), { once: true });
+  }
+  let resposta: Response;
+  try {
+    resposta = await fetch(urlApi(caminho), {
+      ...rest,
+      headers,
+      body,
+      signal: controle.signal,
+    });
+  } catch {
+    throw new ApiErro(0, "Sem conexão com o servidor.", true);
+  } finally {
+    clearTimeout(prazo);
+  }
   if (resposta.status === 204) return null as T;
   const corpo = await resposta.json().catch(() => ({}));
-  if (!resposta.ok) throw new Error(textoErro(corpo));
+  if (!resposta.ok) throw new ApiErro(resposta.status, textoErro(corpo), false);
   return corpo as T;
 }
