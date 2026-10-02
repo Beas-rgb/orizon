@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, insert, select
 from sqlalchemy.orm import Session
 
 from app.core.autorizacao import papel_no_projeto
@@ -260,6 +260,7 @@ def _registrar_respostas_em(
             )
         ).all()
     }
+    opcoes_por_id = _opcoes_das_perguntas(db, list(perguntas.values()))
     if not itens:
         raise ErroAuth(422, "Envie as respostas.")
     _validar_obrigatorias(perguntas, itens)
@@ -276,36 +277,32 @@ def _registrar_respostas_em(
         linha.usado = True
         linha.usado_em = agora_
 
+    linhas: list[dict] = []
     for item in itens:
         pergunta = perguntas.get(item["pergunta_id"])
         if pergunta is None:
             raise ErroAuth(422, "Pergunta inválida.")
-        numerico, texto, opcoes = _normalizar(db, pergunta, item)
+        numerico, texto, opcoes = _normalizar(pergunta, item, opcoes_por_id)
         if isinstance(opcoes, list):
             for opcao_id in opcoes:
-                db.add(
-                    Resposta(
-                        id=novo_id(),
-                        token_id=token_resposta_id,
-                        pergunta_id=pergunta.id,
-                        valor_texto=None,
-                        valor_numerico=None,
-                        opcao_id=opcao_id,
-                        respondido_em=agora_,
+                linhas.append(
+                    _linha_resposta(
+                        token_resposta_id, pergunta.id, None, None, opcao_id, agora_
                     )
                 )
         else:
-            db.add(
-                Resposta(
-                    id=novo_id(),
-                    token_id=token_resposta_id,
-                    pergunta_id=pergunta.id,
-                    valor_texto=texto,
-                    valor_numerico=numerico,
-                    opcao_id=opcoes,
-                    respondido_em=agora_,
+            linhas.append(
+                _linha_resposta(
+                    token_resposta_id,
+                    pergunta.id,
+                    texto,
+                    numerico,
+                    opcoes if isinstance(opcoes, str) else None,
+                    agora_,
                 )
             )
+    if linhas:
+        db.execute(insert(Resposta), linhas)
     participante.status = "RESPONDIDA"
     participante.respondido_em = agora_
     participante.atualizado_em = agora_
@@ -437,8 +434,43 @@ def _nota_do_token(db: Session, token_id: str) -> float | None:
     return round(float(media), 2) if media is not None else None
 
 
+def _opcoes_das_perguntas(
+    db: Session, perguntas: list[Pergunta]
+) -> dict[str, OpcaoResposta]:
+    ids = [item.id for item in perguntas]
+    if not ids:
+        return {}
+    return {
+        opcao.id: opcao
+        for opcao in db.scalars(
+            select(OpcaoResposta).where(OpcaoResposta.pergunta_id.in_(ids))
+        ).all()
+    }
+
+
+def _linha_resposta(
+    token_id: str,
+    pergunta_id: str,
+    texto: str | None,
+    numerico: int | None,
+    opcao_id: str | None,
+    quando,
+) -> dict:
+    return {
+        "id": novo_id(),
+        "token_id": token_id,
+        "pergunta_id": pergunta_id,
+        "valor_texto": texto,
+        "valor_numerico": numerico,
+        "opcao_id": opcao_id,
+        "respondido_em": quando,
+    }
+
+
 def _normalizar(
-    db: Session, pergunta: Pergunta, item: dict
+    pergunta: Pergunta,
+    item: dict,
+    opcoes_por_id: dict[str, OpcaoResposta],
 ) -> tuple[int | None, str | None, str | list[str] | None]:
     if pergunta.tipo == "TEXTO_LIVRE":
         texto = (item.get("valor_texto") or "").strip()
@@ -463,12 +495,12 @@ def _normalizar(
         if pergunta.obrigatoria and not vistos:
             raise ErroAuth(422, "Resposta obrigatória.")
         for opcao_id in vistos:
-            opcao = db.get(OpcaoResposta, opcao_id)
+            opcao = opcoes_por_id.get(opcao_id)
             if opcao is None or opcao.pergunta_id != pergunta.id:
                 raise ErroAuth(422, "Opção inválida.")
         return None, None, vistos
     opcao_id = item.get("opcao_id")
-    opcao = db.get(OpcaoResposta, opcao_id) if opcao_id else None
+    opcao = opcoes_por_id.get(opcao_id) if opcao_id else None
     if opcao is None or opcao.pergunta_id != pergunta.id:
         raise ErroAuth(422, "Opção inválida.")
     return None, None, opcao.id
