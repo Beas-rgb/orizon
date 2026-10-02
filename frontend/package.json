@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
+    "lint": "oxlint && npm run checar:hex",
+    "checar:hex": "node scripts/checar_hex.mjs",
     "test": "vitest run",
     "preview": "vite preview"
   },

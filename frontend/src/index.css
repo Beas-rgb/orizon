@@ -1,4 +1,17 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
+
+@theme {
+  --color-hz-primary: #0a3d91;
+  --color-hz-primary-strong: #082e6b;
+  --color-hz-text: #0b0f14;
+  --color-hz-text-2: #6b7280;
+  --color-hz-bg: #f8fafc;
+  --color-hz-surface: #ffffff;
+  --color-hz-success: #10b981;
+  --color-hz-warning: #f59e0b;
+  --color-hz-danger: #ef4444;
+}
 
 :root {
   --hz-accent: #1d5faf;
