@@ -2,10 +2,11 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.core.cliente import ip_do_cliente
 from app.core.database import get_db
 from app.core.deps import usuario_atual
 from app.models.usuario import Usuario
@@ -163,3 +164,20 @@ def reenviar_primeiro_acesso(
         lambda: reenviar_primeiro_acesso_consultora(db, usuario, consultor_id)
     )
     return MensagemSaida(**saida)
+
+
+@router.get("/dev/diagnostico/ip")
+def diagnostico_ip(
+    request: Request,
+    usuario: Usuario = Depends(usuario_atual),
+) -> dict[str, str | None]:
+    """Só a conta TI. Serve para escolher TRUSTED_PROXY_HOPS no painel."""
+    if usuario.papel != "TI":
+        raise HTTPException(status_code=404, detail="Não encontrado.")
+    return {
+        "client_host": request.client.host if request.client else None,
+        "x-forwarded-for": request.headers.get("x-forwarded-for"),
+        "true-client-ip": request.headers.get("true-client-ip"),
+        "cf-connecting-ip": request.headers.get("cf-connecting-ip"),
+        "ip": ip_do_cliente(request),
+    }

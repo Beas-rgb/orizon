@@ -39,3 +39,5 @@ Os valores ficam no painel. Este arquivo não os repete.
 - Cloudflare Pages: https://dash.cloudflare.com
 
 A região do Render e a do Neon ainda não foram anotadas aqui. Isso é da Fase 0, no painel, não neste código.
+
+`TRUSTED_PROXY_HOPS` fica em 0 até a medição. Com 0, o cabeçalho `X-Forwarded-For` é ignorado. A conta TI chama `GET /dev/diagnostico/ip`, compara `ip` com o IP público e só então grava o número no Render.

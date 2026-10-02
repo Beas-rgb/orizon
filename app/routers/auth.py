@@ -8,6 +8,7 @@ Nenhuma rota devolve senha, hash ou token de e-mail.
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
+from app.core.cliente import ip_do_cliente
 from app.core.database import get_db
 from app.core.deps import usuario_atual
 from app.models.usuario import Usuario
@@ -41,9 +42,7 @@ router = APIRouter(prefix="/auth", tags=["identidade"])
 
 
 def _ip(request: Request) -> str | None:
-    if request.client is None:
-        return None
-    return request.client.host
+    return ip_do_cliente(request)
 
 
 @router.post("/bootstrap", response_model=TokensSaida)

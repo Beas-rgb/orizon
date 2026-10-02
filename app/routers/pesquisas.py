@@ -16,6 +16,7 @@ from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.cliente import ip_do_cliente
 from app.core.database import get_db
 from app.core.deps import usuario_atual
 from app.models.usuario import Usuario
@@ -231,7 +232,7 @@ def responder_por_pesquisa(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> NotaSaida:
-    ip = request.client.host if request.client else None
+    ip = ip_do_cliente(request)
     tipo, nota = chamar(
         lambda: registrar_respostas_da_pesquisa(
             db,
@@ -614,7 +615,7 @@ def responder(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> NotaSaida:
-    ip = request.client.host if request.client else None
+    ip = ip_do_cliente(request)
     tipo, nota = chamar(
         lambda: registrar_respostas(
             db,
