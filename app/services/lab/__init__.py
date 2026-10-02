@@ -9,9 +9,11 @@ from app.services.lab.cenario import (
 )
 from app.services.lab.exclusao import executar_exclusao, solicitar_exclusao
 from app.services.lab.respostas import executar_respostas, solicitar_respostas
+from app.services.lab.tokens import emitir_tokens_carga
 
 __all__ = [
     "cenario_saida",
+    "emitir_tokens_carga",
     "executar_criacao",
     "executar_exclusao",
     "executar_respostas",

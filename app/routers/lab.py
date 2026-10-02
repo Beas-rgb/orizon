@@ -10,6 +10,7 @@ from app.routers._erro import chamar
 from app.schemas.lab import CenarioCriar, CenarioSaida, RespostasLabEntrada
 from app.services.lab import (
     cenario_saida,
+    emitir_tokens_carga,
     executar_criacao,
     executar_exclusao,
     executar_respostas,
@@ -114,6 +115,18 @@ def delete_cenario(
     )
     background.add_task(executar_exclusao, linha.id, dono.id)
     return CenarioSaida(**cenario_saida(linha))
+
+
+@router.post("/cenarios/{cenario_id}/tokens")
+def post_tokens(
+    cenario_id: str,
+    quantidade: int,
+    dono: Usuario = Depends(exigir_lab),
+    db: Session = Depends(get_db),
+) -> list[dict[str, str]]:
+    return chamar(
+        lambda: emitir_tokens_carga(db, dono, cenario_id, quantidade)
+    )
 
 
 @router.get("/saude")
