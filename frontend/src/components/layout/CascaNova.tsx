@@ -144,7 +144,7 @@ export function CascaNova({ children }: { children: ReactNode }) {
             marcado: aba === "historico",
           },
         ]
-      : painel === "consultora"
+        : painel === "consultora"
         ? [
             {
               rotulo: "Início",
@@ -156,7 +156,7 @@ export function CascaNova({ children }: { children: ReactNode }) {
               rotulo: "Trabalhos",
               caminho: "/projetos",
               icone: <Briefcase size={16} />,
-              marcado: pathname === "/projetos",
+              marcado: pathname === "/projetos" || pathname === "/projetos/novo",
             },
             {
               rotulo: "Novo trabalho",
@@ -166,9 +166,27 @@ export function CascaNova({ children }: { children: ReactNode }) {
             },
             {
               rotulo: "Pesquisas",
-              caminho: "/consultora/pesquisas",
+              caminho: "/consultora/pesquisas?aba=pesquisas",
               icone: <ClipboardList size={16} />,
-              marcado: pathname.startsWith("/consultora/pesquisas"),
+              marcado: pathname.startsWith("/consultora/pesquisas") && aba !== "modelos" && aba !== "organizacao" && !search.includes("tipo=DESEMPENHO"),
+            },
+            {
+              rotulo: "Avaliações",
+              caminho: "/consultora/pesquisas?aba=pesquisas&tipo=DESEMPENHO",
+              icone: <Star size={16} />,
+              marcado: pathname.startsWith("/consultora/pesquisas") && search.includes("tipo=DESEMPENHO"),
+            },
+            {
+              rotulo: "Modelos",
+              caminho: "/consultora/pesquisas?aba=modelos",
+              icone: <Archive size={16} />,
+              marcado: pathname.startsWith("/consultora/pesquisas") && aba === "modelos",
+            },
+            {
+              rotulo: "Organização",
+              caminho: "/consultora/pesquisas?aba=organizacao",
+              icone: <Users size={16} />,
+              marcado: pathname.startsWith("/consultora/pesquisas") && aba === "organizacao",
             },
             ...(usuario?.lab_habilitado
               ? [
@@ -181,7 +199,22 @@ export function CascaNova({ children }: { children: ReactNode }) {
                 ]
               : []),
           ]
-        : [
+        : painel === "funcionario"
+          ? [
+              { rotulo: "Início", caminho: "/inicio", icone: <Home size={16} />, marcado: pathname === "/inicio" && !aba },
+              { rotulo: "Pendentes", caminho: "/inicio?aba=pendentes", icone: <ClipboardList size={16} />, marcado: aba === "pendentes" },
+              { rotulo: "Em andamento", caminho: "/inicio?aba=andamento", icone: <Clock size={16} />, marcado: aba === "andamento" },
+              { rotulo: "Concluídas", caminho: "/inicio?aba=concluidas", icone: <Star size={16} />, marcado: aba === "concluidas" },
+            ]
+          : painel === "dev"
+            ? [
+                { rotulo: "Início", caminho: "/inicio", icone: <Home size={16} />, marcado: pathname === "/inicio" && !aba },
+                { rotulo: "Saúde", caminho: "/inicio?aba=saude", icone: <BarChart2 size={16} />, marcado: aba === "saude" },
+                { rotulo: "Pedidos", caminho: "/inicio?aba=pedidos", icone: <ClipboardList size={16} />, marcado: aba === "pedidos" },
+                { rotulo: "Consultoras", caminho: "/inicio?aba=consultores", icone: <Users size={16} />, marcado: aba === "consultores" },
+                { rotulo: "E-mail", caminho: "/inicio?aba=email", icone: <Settings size={16} />, marcado: aba === "email" },
+              ]
+            : [
             {
               rotulo: "Início",
               caminho: "/inicio",

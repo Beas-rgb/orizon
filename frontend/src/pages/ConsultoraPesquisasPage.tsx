@@ -3,7 +3,7 @@
  * Rota: /consultora/pesquisas (basename /app).
  */
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { api } from "../lib/api";
 import { glassStyle } from "../lib/theme";
@@ -46,14 +46,24 @@ function rotuloStatus(status: string) {
 
 export function ConsultoraPesquisasPage() {
   const navigate = useNavigate();
-  const [aba, setAba] = useState<Aba>("pesquisas");
+  const [params, setParams] = useSearchParams();
+  const abaUrl = params.get("aba");
+  const aba: Aba =
+    abaUrl === "visao" || abaUrl === "modelos" || abaUrl === "organizacao" || abaUrl === "pesquisas"
+      ? abaUrl
+      : "pesquisas";
+  function setAba(id: Aba) {
+    const next = new URLSearchParams(params);
+    next.set("aba", id);
+    setParams(next);
+  }
   const [itens, setItens] = useState<PesquisaItem[]>([]);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [modelos, setModelos] = useState<Modelo[]>([]);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
   const [filtroOrg, setFiltroOrg] = useState("");
-  const [filtroTipo, setFiltroTipo] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState(() => params.get("tipo") || "");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
   const [mostrarNova, setMostrarNova] = useState(false);

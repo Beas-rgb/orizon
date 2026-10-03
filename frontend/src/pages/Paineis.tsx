@@ -33,6 +33,7 @@ export function OrgaoPainel() {
   const [erro, setErro] = useState("");
   const [params, setParams] = useSearchParams();
   const abaUrl = params.get("aba");
+  const soTrabalhos = abaUrl === "trabalhos";
   const abaPesq =
     abaUrl === "agendadas" || abaUrl === "encerradas" || abaUrl === "historico"
       ? abaUrl
@@ -120,6 +121,7 @@ export function OrgaoPainel() {
           </ul>
         </div>
 
+        {!soTrabalhos ? (
         <div className="rounded-3xl p-5" style={glassStyle}>
           <h2 className="text-[14px] font-bold mb-3">Pesquisas</h2>
           {!ativo ? (
@@ -224,6 +226,7 @@ export function OrgaoPainel() {
             </>
           )}
         </div>
+        ) : null}
       </div>
     </AppShell>
   );
@@ -248,6 +251,8 @@ function rotuloStatus(status: string) {
 export function FuncionarioPainel() {
   const [itens, setItens] = useState<MinhaPesquisa[]>([]);
   const [erro, setErro] = useState("");
+  const [params] = useSearchParams();
+  const aba = params.get("aba");
 
   useEffect(() => {
     api<MinhaPesquisa[]>("/eu/pesquisas")
@@ -270,7 +275,9 @@ export function FuncionarioPainel() {
       {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
 
       <div className="flex flex-col gap-5">
-        {grupos.map((g) => {
+        {grupos
+          .filter((g) => !aba || g.chave === aba)
+          .map((g) => {
           const lista = itens.filter((i) => g.filtro.includes(i.status_participacao));
           return (
             <div key={g.chave} className="rounded-3xl p-5" style={glassStyle}>
@@ -340,6 +347,9 @@ type DiagnosticoEmail = {
 };
 
 export function DevPainel() {
+  const [params] = useSearchParams();
+  const aba = params.get("aba");
+  const mostra = (id: string) => !aba || aba === id;
   const [saude, setSaude] = useState<{ status: string } | null>(null);
   const [banco, setBanco] = useState<{ status: string } | null>(null);
   const [email, setEmail] = useState<{ modo: string } | null>(null);
@@ -496,7 +506,7 @@ export function DevPainel() {
         </div>
       ) : null}
 
-      {diagnosticoEmail ? (
+      {mostra("email") && diagnosticoEmail ? (
         <div className="rounded-3xl p-4 mb-5 text-[12px]" style={glassStyle}>
           <p className="font-bold text-gray-800 mb-2">Diagnóstico de entrega</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-gray-600">
@@ -553,6 +563,7 @@ export function DevPainel() {
         </div>
       ) : null}
 
+      {mostra("saude") ? (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-5">
         {[
           ["API", saude?.status || "…"],
@@ -565,8 +576,9 @@ export function DevPainel() {
           </div>
         ))}
       </div>
+      ) : null}
 
-      {email?.modo === "local" ? (
+      {mostra("email") ? (email?.modo === "local" ? (
         <div
           className="rounded-3xl p-4 sm:p-5 mb-5 text-[12px] text-gray-700 leading-relaxed"
           style={{
@@ -654,8 +666,9 @@ export function DevPainel() {
           costuma falhar com &quot;Network is unreachable&quot; — prefira SendGrid. Mailtrap
           demo pode não entregar no Gmail real.
         </div>
-      ) : null}
+      ) : null) : null}
 
+      {mostra("pedidos") ? (
       <div className="rounded-3xl p-5" style={glassStyle}>
         <h2 className="text-[14px] font-bold mb-3">Pedidos de consultora</h2>
         <ul className="flex flex-col gap-2">
@@ -688,7 +701,9 @@ export function DevPainel() {
           ) : null}
         </ul>
       </div>
+      ) : null}
 
+      {mostra("consultores") ? (
       <div className="rounded-3xl p-5 mt-5" style={glassStyle}>
         <h2 className="text-[14px] font-bold mb-2">Consultoras</h2>
         <p className="text-[12px] text-gray-500 mb-3">
@@ -726,6 +741,7 @@ export function DevPainel() {
           ) : null}
         </ul>
       </div>
+      ) : null}
     </AppShell>
   );
 }
