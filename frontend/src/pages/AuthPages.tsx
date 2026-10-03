@@ -6,7 +6,6 @@ import { Logo } from "../components/brand/Logo";
 import { FaixaServidor } from "../components/estado/FaixaServidor";
 import { lerAvisoSessao } from "../lib/sessao";
 import { api } from "../lib/api";
-import { ACCENT } from "../lib/theme";
 import { consumirRetornoResponder } from "./ResponderPage";
 
 /** Token do e-mail: `?t=` (preferido) ou `#` (links antigos). */
@@ -18,11 +17,12 @@ function tokenDaUrl(): string {
 }
 
 const inputClass =
-  "mt-1.5 w-full rounded-xl px-3.5 py-3 text-[14px] text-gray-800 outline-none transition-[border,box-shadow] focus:border-[#1D5FAF]/55 focus:shadow-[0_0_0_3px_rgba(29,95,175,0.12)]";
+  "mt-1.5 w-full rounded-xl px-3.5 py-3 text-[14px] outline-none";
 
 const inputStyle = {
-  background: "rgba(255,255,255,0.82)",
-  border: "1px solid rgba(220,226,235,0.95)",
+  background: "var(--hz-sidebar)",
+  border: "1px solid var(--hz-border)",
+  color: "var(--hz-auth-text)",
 } as const;
 
 function CampoSenha({
@@ -40,7 +40,7 @@ function CampoSenha({
 }) {
   const [visivel, setVisivel] = useState(false);
   return (
-    <label className="block text-[13px] font-medium text-gray-600">
+    <label className="block text-[13px] font-medium" style={{ color: "var(--hz-auth-text-2)" }}>
       {label}
       <span className="relative mt-1.5 block">
         <input
@@ -54,7 +54,7 @@ function CampoSenha({
         />
         <button
           type="button"
-          className="icon-btn absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-black/5"
+          className="icon-btn absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg"
           aria-label={visivel ? "Ocultar senha" : "Mostrar senha"}
           onClick={() => setVisivel((v) => !v)}
         >
@@ -129,36 +129,37 @@ export function LoginPage() {
       sub="Use o e-mail da sua conta."
       rodape={
         <>
-          <Link to="/recuperar" className="text-[#1D5FAF] font-medium hover:underline">
+          <Link to="/recuperar" className="font-medium hover:underline" style={{ color: "var(--hz-primary-soft)" }}>
             Esqueci a senha
           </Link>
-          <Link to="/primeiro-acesso" className="text-gray-500 hover:text-gray-700">
-            Primeiro acesso
+          <Link to="/cadastro" style={{ color: "var(--hz-auth-text-2)" }}>
+            Solicitar acesso
           </Link>
         </>
       }
     >
       <form className="flex flex-col gap-5" onSubmit={enviar}>
-        <label className="block text-[13px] font-medium text-gray-600">
-          E-mail
+        <label className="block text-[13px] font-medium" style={{ color: "var(--hz-auth-text-2)" }}>
+          Email
           <input
             name="email"
             type="email"
             required
-            autoComplete="email"
+            autoComplete="username"
+            placeholder="seuemail@exemplo.com"
             className={inputClass}
             style={inputStyle}
           />
         </label>
         <CampoSenha />
-        {erro ? <p className="text-[13px] text-[#A02828] -mt-2">{erro}</p> : null}
+        {erro ? <p className="text-[13px]" style={{ color: "var(--hz-danger)" }}>{erro}</p> : null}
         <button
           type="submit"
           disabled={carregando}
-          className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold disabled:opacity-60 mt-1"
-          style={{ background: "#171717" }}
+          className="w-full rounded-xl py-3.5 text-[14px] font-semibold tracking-[0.14em] disabled:opacity-60"
+          style={{ background: "var(--hz-primary)", color: "var(--hz-surface)" }}
         >
-          {carregando ? "Entrando…" : "Entrar"}
+          {carregando ? "ENTRANDO…" : "ENTRAR"}
         </button>
       </form>
     </AuthLayout>
@@ -198,17 +199,17 @@ export function CadastroPage() {
       titulo="Pedir conta"
       sub="A consultora só entra depois da autorização do TI."
       rodape={
-        <Link to="/entrar" className="text-gray-500 hover:text-gray-700">
+        <Link to="/entrar" className="hover:underline" style={{ color: "var(--hz-auth-text-2)" }}>
           Já tenho conta
         </Link>
       }
     >
       <form className="flex flex-col gap-5" onSubmit={enviar}>
-        <label className="block text-[13px] font-medium text-gray-600">
+        <label className="block text-[13px] font-medium" style={{ color: "var(--hz-auth-text-2)" }}>
           Nome
           <input name="nome" required className={inputClass} style={inputStyle} />
         </label>
-        <label className="block text-[13px] font-medium text-gray-600">
+        <label className="block text-[13px] font-medium" style={{ color: "var(--hz-auth-text-2)" }}>
           E-mail
           <input
             name="email"
@@ -219,13 +220,13 @@ export function CadastroPage() {
             style={inputStyle}
           />
         </label>
-        {erro ? <p className="text-[13px] text-[#A02828] -mt-2">{erro}</p> : null}
+        {erro ? <p className="text-[13px] -mt-2" style={{ color: "var(--hz-danger)" }}>{erro}</p> : null}
         {ok ? <p className="text-[13px] text-[#1E7A4A] -mt-2">{ok}</p> : null}
         <button
           type="submit"
           disabled={carregando}
           className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold disabled:opacity-60 mt-1"
-          style={{ background: "#171717" }}
+          style={{ background: "var(--hz-primary)", color: "var(--hz-surface)" }}
         >
           {carregando ? "Enviando…" : "Enviar pedido"}
         </button>
@@ -283,13 +284,13 @@ export function RecuperarPage() {
         titulo="Nova senha"
         sub="Mínimo 8 caracteres, com maiúscula, número e símbolo."
         rodape={
-          <Link to="/entrar" className="text-gray-500 hover:text-gray-700">
+          <Link to="/entrar" className="hover:underline" style={{ color: "var(--hz-auth-text-2)" }}>
             Voltar ao login
           </Link>
         }
       >
         <form className="flex flex-col gap-5" onSubmit={redefinir}>
-          <label className="block text-[13px] font-medium text-gray-600">
+          <label className="block text-[13px] font-medium" style={{ color: "var(--hz-auth-text-2)" }}>
             Token
             <input
               value={token}
@@ -300,12 +301,12 @@ export function RecuperarPage() {
             />
           </label>
           <CampoSenha label="Nova senha" minLength={8} autoComplete="new-password" />
-          {erro ? <p className="text-[13px] text-[#A02828] -mt-2">{erro}</p> : null}
+          {erro ? <p className="text-[13px] -mt-2" style={{ color: "var(--hz-danger)" }}>{erro}</p> : null}
           {ok ? <p className="text-[13px] text-[#1E7A4A] -mt-2">{ok}</p> : null}
           <button
             type="submit"
             className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold mt-1"
-            style={{ background: "#171717" }}
+            style={{ background: "var(--hz-primary)", color: "var(--hz-surface)" }}
           >
             Salvar senha
           </button>
@@ -319,13 +320,13 @@ export function RecuperarPage() {
       titulo="Recuperar senha"
       sub="Enviamos o link para o e-mail da conta."
       rodape={
-        <Link to="/entrar" className="text-gray-500 hover:text-gray-700">
+        <Link to="/entrar" className="hover:underline" style={{ color: "var(--hz-auth-text-2)" }}>
           Voltar ao login
         </Link>
       }
     >
       <form className="flex flex-col gap-5" onSubmit={pedirEmail}>
-        <label className="block text-[13px] font-medium text-gray-600">
+        <label className="block text-[13px] font-medium" style={{ color: "var(--hz-auth-text-2)" }}>
           E-mail
           <input
             name="email"
@@ -336,12 +337,12 @@ export function RecuperarPage() {
             style={inputStyle}
           />
         </label>
-        {erro ? <p className="text-[13px] text-[#A02828] -mt-2">{erro}</p> : null}
+        {erro ? <p className="text-[13px] -mt-2" style={{ color: "var(--hz-danger)" }}>{erro}</p> : null}
         {ok ? <p className="text-[13px] text-[#1E7A4A] -mt-2">{ok}</p> : null}
         <button
           type="submit"
           className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold mt-1"
-          style={{ background: "#171717" }}
+          style={{ background: "var(--hz-primary)", color: "var(--hz-surface)" }}
         >
           Enviar instruções
         </button>
@@ -384,13 +385,13 @@ export function PrimeiroAcessoPage() {
       titulo="Primeiro acesso"
       sub="Cole o token do convite e escolha sua senha."
       rodape={
-        <Link to="/entrar" className="text-gray-500 hover:text-gray-700">
+        <Link to="/entrar" className="hover:underline" style={{ color: "var(--hz-auth-text-2)" }}>
           Já defini minha senha
         </Link>
       }
     >
       <form className="flex flex-col gap-5" onSubmit={enviar}>
-        <label className="block text-[13px] font-medium text-gray-600">
+        <label className="block text-[13px] font-medium" style={{ color: "var(--hz-auth-text-2)" }}>
           Token do convite
           <input
             value={token}
@@ -407,14 +408,14 @@ export function PrimeiroAcessoPage() {
           minLength={8}
           autoComplete="new-password"
         />
-        <p className="text-[12px] text-gray-500 -mt-2 leading-relaxed">
+        <p className="text-[12px] -mt-2 leading-relaxed" style={{ color: "var(--hz-auth-text-2)" }}>
           Use no mínimo 8 caracteres, com letra maiúscula, número e símbolo.
         </p>
-        {erro ? <p className="text-[13px] text-[#A02828]">{erro}</p> : null}
+        {erro ? <p className="text-[13px]" style={{ color: "var(--hz-danger)" }}>{erro}</p> : null}
         <button
           type="submit"
           className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold mt-1"
-          style={{ background: "#171717" }}
+          style={{ background: "var(--hz-primary)", color: "var(--hz-surface)" }}
         >
           Continuar
         </button>
@@ -433,7 +434,10 @@ export function LandingPage() {
   }, [pronto, usuario, navigate]);
 
   return (
-    <div className="min-h-screen relative overflow-hidden page-bg">
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{ background: "var(--hz-auth-bg)", color: "var(--hz-auth-text)" }}
+    >
       <FaixaServidor />
       <div
         className="pointer-events-none absolute inset-0"
@@ -445,11 +449,12 @@ export function LandingPage() {
 
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-6 max-w-5xl mx-auto w-full">
         <Link to="/" className="flex items-center gap-2.5">
-          <Logo variante="horizontal" tamanho={28} tom="claro" />
+          <Logo variante="horizontal" tamanho={28} tom="escuro" />
         </Link>
         <Link
           to="/entrar"
-          className="text-[13px] font-semibold text-gray-700 hover:text-gray-900 px-3 py-2"
+          className="px-3 py-2 text-[13px] font-semibold"
+          style={{ color: "var(--hz-auth-text)" }}
         >
           Entrar
         </Link>
@@ -458,14 +463,14 @@ export function LandingPage() {
       <main className="relative z-10 max-w-5xl mx-auto px-6 sm:px-10 pt-16 sm:pt-24 pb-20">
         <p
           className="text-[13px] font-semibold tracking-[0.18em] uppercase mb-5"
-          style={{ color: ACCENT }}
+          style={{ color: "var(--hz-primary-soft)" }}
         >
           Horizon
         </p>
-        <h1 className="text-[2.75rem] sm:text-6xl font-semibold text-gray-900 tracking-tight leading-[1.08] max-w-xl">
+        <h1 className="max-w-xl text-[2.75rem] font-semibold leading-[1.08] tracking-tight sm:text-6xl">
           Pesquisas com clareza para cada papel.
         </h1>
-        <p className="mt-6 text-[16px] sm:text-[17px] text-gray-600 max-w-md leading-relaxed">
+        <p className="mt-6 max-w-md text-[16px] leading-relaxed sm:text-[17px]" style={{ color: "var(--hz-auth-text-2)" }}>
           A consultora aplica. O funcionário responde. O órgão vê o consolidado.
         </p>
 
@@ -479,19 +484,20 @@ export function LandingPage() {
           </Link>
           <Link
             to="/primeiro-acesso"
-            className="inline-flex justify-center px-7 py-3.5 rounded-xl text-[14px] font-semibold text-gray-800"
+            className="inline-flex justify-center rounded-xl px-7 py-3.5 text-[14px] font-semibold"
             style={{
-              background: "rgba(255,255,255,0.65)",
-              border: "1px solid rgba(210,218,230,0.9)",
+              background: "var(--hz-auth-card)",
+              color: "var(--hz-auth-text)",
+              border: "1px solid var(--hz-border)",
             }}
           >
             Primeiro acesso
           </Link>
         </div>
 
-        <p className="mt-8 text-[13px] text-gray-500">
+        <p className="mt-8 text-[13px]" style={{ color: "var(--hz-auth-text-2)" }}>
           Consultora sem conta?{" "}
-          <Link to="/cadastro" className="font-medium text-[#1D5FAF] hover:underline">
+          <Link to="/cadastro" className="font-medium hover:underline" style={{ color: "var(--hz-primary-soft)" }}>
             Pedir acesso
           </Link>
         </p>
@@ -512,36 +518,36 @@ function AuthLayout({
   rodape?: ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col page-bg">
+    <div
+      className="flex min-h-dvh flex-col"
+      style={{ background: "var(--hz-auth-bg)", color: "var(--hz-auth-text)" }}
+    >
       <FaixaServidor />
-      <header className="relative z-10 px-6 sm:px-10 py-6 max-w-lg mx-auto w-full">
-        <Link to="/" className="inline-flex items-center gap-2.5">
-          <Logo variante="horizontal" tamanho={26} tom="claro" />
-        </Link>
-      </header>
-
-      <div className="relative z-10 flex-1 flex items-start sm:items-center justify-center px-5 pb-12">
-        <div className="w-full max-w-[400px]">
-          <h1 className="text-[26px] sm:text-[28px] font-semibold text-gray-900 tracking-tight">
-            {titulo}
-          </h1>
-          <p className="mt-2 text-[14px] text-gray-500 leading-relaxed">{sub}</p>
-
-          <div className="mt-8 rounded-[24px] bg-white p-6 ring-1 ring-black/[0.05] sm:p-7">
-            {children}
-          </div>
-
+      <div className="flex flex-1 flex-col items-center justify-center px-5 py-10">
+        <Logo variante="empilhado" tamanho={64} tom="escuro" />
+        <p
+          className="mt-3 text-[11px]"
+          style={{ letterSpacing: "0.28em", color: "var(--hz-auth-text-2)" }}
+        >
+          DADOS • PESSOAS • RESULTADOS
+        </p>
+        <div
+          className="mt-8 w-full max-w-[400px] rounded-2xl p-6 sm:p-7"
+          style={{
+            background: "var(--hz-auth-card)",
+            border: "1px solid var(--hz-border)",
+          }}
+        >
+          <h1 className="text-[22px] font-medium tracking-tight">{titulo}</h1>
+          <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--hz-auth-text-2)" }}>
+            {sub}
+          </p>
+          <div className="mt-6">{children}</div>
           {rodape ? (
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-[13px]">
               {rodape}
             </div>
           ) : null}
-
-          <p className="mt-8 text-center">
-            <Link to="/" className="text-[12px] text-gray-400 hover:text-gray-600">
-              ← Voltar à página inicial
-            </Link>
-          </p>
         </div>
       </div>
     </div>
