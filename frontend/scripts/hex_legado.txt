@@ -3,7 +3,6 @@ src/components/dashboard/JobHistory.tsx
 src/components/dashboard/MetricsPanel.tsx
 src/components/dashboard/QuickAccess.tsx
 src/components/dashboard/SmartBriefing.tsx
-src/components/estado/AvisoAcordando.tsx
 src/components/estrutura/ArvoreOrganizacional.tsx
 src/components/estrutura/ImportacaoEquipe.tsx
 src/components/layout/AppShell.tsx
