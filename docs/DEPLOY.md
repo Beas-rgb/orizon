@@ -39,13 +39,20 @@ Os valores ficam no painel. Este arquivo não os repete.
 - Neon: https://console.neon.tech
 - Cloudflare Pages: https://dash.cloudflare.com
 
-## Regiões (Fase 0 — preencher no painel)
+## Regiões (Fase 0)
 
 | Serviço | Região | Anotado em |
 |---|---|---|
-| Render (API) | _preencher_ | |
-| Neon (Postgres) | _preencher_ | |
+| Neon (Postgres) | `aws-sa-east-1` (São Paulo) | 02/10/2026 via API Neon |
+| Render (API) | _conferir no painel_ (header `/health` não expõe a região) | |
+| Neon branch staging | `staging` (filho de `production`) | 02/10/2026 |
 
-A região ainda não foi anotada. Isso é da Fase 0, no painel, não neste código.
+Pages: `https://orizon-a0u.pages.dev` (projeto Cloudflare `orizon`).
+Env do Pages: `VITE_API_URL`, `VITE_BASE=/`, `NODE_VERSION=22`.
+Preview: `https://preview.orizon-a0u.pages.dev`.
+
+No Render, para virar a rota principal do front (ainda manual — sem API Render aqui):
+1. `APP_PUBLIC_URL=https://orizon-a0u.pages.dev`
+2. `CORS_ORIGINS=https://orizon-a0u.pages.dev`
 
 `TRUSTED_PROXY_HOPS` fica em 0 até a medição. Com 0, o cabeçalho `X-Forwarded-For` é ignorado. A conta TI chama `GET /dev/diagnostico/ip`, compara `ip` com o IP público e só então grava o número no Render.

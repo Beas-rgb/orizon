@@ -482,17 +482,17 @@ export function PesquisaEditorPage() {
     <AppShell active="pesquisas">
       <div
         className="mb-4 rounded-3xl px-5 py-4"
-        style={{ ...glassStyle, borderLeft: "4px solid #0F766E" }}
+        style={{ ...glassStyle, borderLeft: "4px solid var(--hz-teal)" }}
       >
         <button
           type="button"
           onClick={() => navigate(`/projetos/${projetoId}`)}
           className="text-[12px] font-semibold mb-2"
-          style={{ color: "#0F766E" }}
+          style={{ color: "var(--hz-teal)" }}
         >
           ← Voltar ao trabalho
         </button>
-        <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#0F766E" }}>
+        <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--hz-teal)" }}>
           Edição da pesquisa
         </p>
         <h1 className="text-[18px] font-bold text-gray-800 mt-1">
@@ -502,8 +502,8 @@ export function PesquisaEditorPage() {
           {pesquisa?.tipo || "…"} · {pesquisa?.status || "…"}
         </p>
       </div>
-      {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
-      {aviso ? <p className="text-[#1E7A4A] text-[13px] mb-3">{aviso}</p> : null}
+      {erro ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{erro}</p> : null}
+      {aviso ? <p className="text-[var(--hz-ok)] text-[13px] mb-3">{aviso}</p> : null}
 
       <div className="flex flex-wrap gap-2 mb-4">
         {(
@@ -527,9 +527,9 @@ export function PesquisaEditorPage() {
             onClick={() => setAba(id)}
             className="px-3 py-1.5 rounded-full text-[12px] font-bold border"
             style={{
-              background: aba === id ? "#0F766E" : "rgba(255,255,255,0.55)",
-              color: aba === id ? "#fff" : "#0F766E",
-              borderColor: aba === id ? "#0F766E" : "rgba(15,118,110,0.25)",
+              background: aba === id ? "var(--hz-teal)" : "var(--hz-white-55)",
+              color: aba === id ? "var(--hz-surface)" : "var(--hz-teal)",
+              borderColor: aba === id ? "var(--hz-teal)" : "var(--hz-teal-25)",
             }}
           >
             {label}
@@ -540,7 +540,7 @@ export function PesquisaEditorPage() {
             type="button"
             onClick={() => void publicar()}
             className="ml-auto px-3 py-1.5 rounded-xl text-[12px] font-bold text-white"
-            style={{ background: "#1E7A4A" }}
+            style={{ background: "var(--hz-ok)" }}
           >
             Publicar
           </button>
@@ -549,7 +549,7 @@ export function PesquisaEditorPage() {
             type="button"
             onClick={() => void gerarLink()}
             className="ml-auto px-3 py-1.5 rounded-xl text-[12px] font-bold text-white"
-            style={{ background: "#171717" }}
+            style={{ background: "var(--hz-ink)" }}
           >
             Gerar link
           </button>
@@ -560,7 +560,7 @@ export function PesquisaEditorPage() {
         <div className="rounded-2xl p-3 text-[12px] break-all mb-4" style={glassStyle}>
           <p className="font-bold mb-1">Link de resposta</p>
           {links.map((l) => (
-            <a key={l} href={l} className="block text-[#1D5FAF] font-semibold underline">
+            <a key={l} href={l} className="block text-[var(--hz-accent)] font-semibold underline">
               {l}
             </a>
           ))}
@@ -580,7 +580,7 @@ export function PesquisaEditorPage() {
           </label>
           <p className="text-[12px] text-gray-500">Tipo: {pesquisa.tipo}. Status: {pesquisa.status}.</p>
           {rascunho ? (
-            <button type="submit" className="rounded-xl py-2.5 text-white text-[13px] font-bold" style={{ background: "#171717" }}>
+            <button type="submit" className="rounded-xl py-2.5 text-white text-[13px] font-bold" style={{ background: "var(--hz-ink)" }}>
               Salvar dados
             </button>
           ) : null}
@@ -617,7 +617,7 @@ export function PesquisaEditorPage() {
               <button
                 type="submit"
                 className="sm:col-span-2 self-start rounded-xl px-4 py-2 text-white text-[13px] font-bold"
-                style={{ background: "#171717" }}
+                style={{ background: "var(--hz-ink)" }}
               >
                 Salvar dados
               </button>
@@ -674,7 +674,7 @@ export function PesquisaEditorPage() {
                       <button
                         type="button"
                         className="text-[12px] font-bold text-white px-3 py-1.5 rounded-xl"
-                        style={{ background: "#171717" }}
+                        style={{ background: "var(--hz-ink)" }}
                         onClick={() => void salvarPergunta(p)}
                       >
                         Salvar
@@ -706,14 +706,14 @@ export function PesquisaEditorPage() {
                         <div className="flex gap-2 flex-wrap">
                           <button
                             type="button"
-                            className="text-[11px] font-bold text-[#1D5FAF]"
+                            className="text-[11px] font-bold text-[var(--hz-accent)]"
                             onClick={() => setEditando(p.id)}
                           >
                             Editar
                           </button>
                           <button
                             type="button"
-                            className="text-[11px] font-bold text-[#A02828]"
+                            className="text-[11px] font-bold text-[var(--hz-danger)]"
                             onClick={() => void excluirPergunta(p.id)}
                           >
                             Excluir
@@ -749,7 +749,7 @@ export function PesquisaEditorPage() {
                         {p.tem_midia ? (
                           <button
                             type="button"
-                            className="text-[11px] font-bold text-[#A02828]"
+                            className="text-[11px] font-bold text-[var(--hz-danger)]"
                             onClick={() => void removerMidia(p.id)}
                           >
                             Remover mídia
@@ -795,7 +795,7 @@ export function PesquisaEditorPage() {
               <button
                 type="submit"
                 className="sm:col-span-2 rounded-xl py-2.5 text-white text-[13px] font-bold"
-                style={{ background: "#171717" }}
+                style={{ background: "var(--hz-ink)" }}
               >
                 Adicionar pergunta
               </button>
@@ -826,13 +826,13 @@ export function PesquisaEditorPage() {
                   <li
                     key={p.usuario_id}
                     className="p-3 rounded-2xl flex justify-between gap-2"
-                    style={{ background: "rgba(255,255,255,0.55)" }}
+                    style={{ background: "var(--hz-white-55)" }}
                   >
                     <div>
                       <p className="text-[13px] font-semibold">{p.nome}</p>
                       <p className="text-[11px] text-gray-500">{p.email}</p>
                     </div>
-                    <span className="text-[12px] font-bold text-[#1D5FAF]">{p.status}</span>
+                    <span className="text-[12px] font-bold text-[var(--hz-accent)]">{p.status}</span>
                   </li>
                 ))}
                 {participantes.length === 0 ? (
@@ -844,7 +844,7 @@ export function PesquisaEditorPage() {
                   <button
                     type="button"
                     className="text-[12px] font-bold text-left"
-                    style={{ color: "#0F766E" }}
+                    style={{ color: "var(--hz-teal)" }}
                     onClick={() =>
                       void api<ParticipantesResp>(
                         `/pesquisas/${pesquisaId}/participantes?limite=100&deslocamento=${participantes.length}`,
@@ -893,7 +893,7 @@ export function PesquisaEditorPage() {
             ) : null}
           </ol>
           {desempenho ? (
-            <div className="mt-5 rounded-2xl p-4" style={{ background: "rgba(15,118,110,0.08)" }}>
+            <div className="mt-5 rounded-2xl p-4" style={{ background: "var(--hz-teal-08)" }}>
               <p className="text-[13px] font-bold text-gray-800 mb-1">Prévia do cálculo</p>
               <p className="text-[12px] text-gray-600">
                 Exemplo com notas AUTO 4,0 × {pesos.AUTO} + SUPERIOR 4,5 × {pesos.SUPERIOR}{" "}
@@ -904,7 +904,7 @@ export function PesquisaEditorPage() {
           ) : null}
           <Link
             to={`/projetos/${projetoId}`}
-            className="inline-block mt-4 text-[12px] font-bold text-[#1D5FAF]"
+            className="inline-block mt-4 text-[12px] font-bold text-[var(--hz-accent)]"
           >
             Voltar ao trabalho
           </Link>
@@ -925,7 +925,7 @@ export function PesquisaEditorPage() {
               type="button"
               onClick={() => void publicar()}
               className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
-              style={{ background: "#1E7A4A" }}
+              style={{ background: "var(--hz-ok)" }}
             >
               Publicar pesquisa
             </button>
@@ -934,7 +934,7 @@ export function PesquisaEditorPage() {
               type="button"
               onClick={() => void gerarLink()}
               className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
-              style={{ background: "#171717" }}
+              style={{ background: "var(--hz-ink)" }}
             >
               Gerar link de resposta
             </button>
@@ -976,7 +976,7 @@ export function PesquisaEditorPage() {
                   <li
                     key={r.id}
                     className="p-3 rounded-2xl text-[12px]"
-                    style={{ background: "rgba(255,255,255,0.55)" }}
+                    style={{ background: "var(--hz-white-55)" }}
                   >
                     <span className="font-bold">{r.tipo_relacao}</span>
                     {" · "}
@@ -994,7 +994,7 @@ export function PesquisaEditorPage() {
                 type="button"
                 onClick={() => void gerarRelacoesCiclo()}
                 className="mt-3 rounded-xl px-4 py-2 text-white text-[12px] font-bold"
-                style={{ background: "#171717" }}
+                style={{ background: "var(--hz-ink)" }}
               >
                 Gerar relações
               </button>
@@ -1050,7 +1050,7 @@ export function PesquisaEditorPage() {
                 type="button"
                 onClick={() => void salvarPesos()}
                 className="rounded-xl px-4 py-2 text-white text-[12px] font-bold"
-                style={{ background: "#171717" }}
+                style={{ background: "var(--hz-ink)" }}
               >
                 Salvar pesos
               </button>
@@ -1089,7 +1089,7 @@ export function PesquisaEditorPage() {
                 <button
                   type="submit"
                   className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-                  style={{ background: "#171717" }}
+                  style={{ background: "var(--hz-ink)" }}
                 >
                   Criar ciclo
                 </button>
@@ -1113,7 +1113,7 @@ export function PesquisaEditorPage() {
               <li
                 key={c.id}
                 className="p-3 rounded-2xl text-[12px] flex justify-between gap-2"
-                style={{ background: "rgba(255,255,255,0.55)" }}
+                style={{ background: "var(--hz-white-55)" }}
               >
                 <span>
                   {c.nome} · {c.escopo} · {c.status}
@@ -1145,7 +1145,7 @@ export function PesquisaEditorPage() {
           <button
             type="button"
             className="rounded-xl px-4 py-2 text-white text-[12px] font-bold mb-3"
-            style={{ background: "#171717" }}
+            style={{ background: "var(--hz-ink)" }}
             onClick={() =>
               void api<typeof painel>(`/pesquisas/${pesquisaId}/painel`)
                 .then(setPainel)
@@ -1162,7 +1162,7 @@ export function PesquisaEditorPage() {
             </p>
           ))}
           {desempenho && cicloAtivo ? (
-            <div className="mt-4 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+            <div className="mt-4 pt-3" style={{ borderTop: "1px solid var(--hz-black-06)" }}>
               <p className="text-[13px] font-bold text-gray-800 mb-2">Nota ponderada</p>
               <label className="text-[12px] font-semibold text-gray-600 block mb-2">
                 Avaliado
@@ -1187,7 +1187,7 @@ export function PesquisaEditorPage() {
                 type="button"
                 disabled={!avaliadoResultado}
                 className="rounded-xl px-4 py-2 text-white text-[12px] font-bold disabled:opacity-60"
-                style={{ background: "#0F766E" }}
+                style={{ background: "var(--hz-teal)" }}
                 onClick={() =>
                   void api<typeof notaResultado>(
                     `/ciclos/${cicloAtivo}/resultado/${avaliadoResultado}`,
@@ -1264,7 +1264,7 @@ function ListaOpcoes({
             </button>
             <button
               type="button"
-              className="text-[12px] font-bold text-[#A02828] px-2"
+              className="text-[12px] font-bold text-[var(--hz-danger)] px-2"
               onClick={() => onChange(itens.filter((_, j) => j !== i))}
             >
               Excluir
@@ -1282,7 +1282,7 @@ function ListaOpcoes({
         <button
           type="button"
           className="text-[12px] font-bold px-3 rounded-xl text-white"
-          style={{ background: "#0F766E" }}
+          style={{ background: "var(--hz-teal)" }}
           onClick={() => {
             const texto = rascunho.trim();
             if (!texto) return;

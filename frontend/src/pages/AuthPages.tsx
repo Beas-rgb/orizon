@@ -221,7 +221,7 @@ export function CadastroPage() {
           />
         </label>
         {erro ? <p className="text-[13px] -mt-2" style={{ color: "var(--hz-danger)" }}>{erro}</p> : null}
-        {ok ? <p className="text-[13px] text-[#1E7A4A] -mt-2">{ok}</p> : null}
+        {ok ? <p className="text-[13px] text-[var(--hz-ok)] -mt-2">{ok}</p> : null}
         <button
           type="submit"
           disabled={carregando}
@@ -302,7 +302,7 @@ export function RecuperarPage() {
           </label>
           <CampoSenha label="Nova senha" minLength={8} autoComplete="new-password" />
           {erro ? <p className="text-[13px] -mt-2" style={{ color: "var(--hz-danger)" }}>{erro}</p> : null}
-          {ok ? <p className="text-[13px] text-[#1E7A4A] -mt-2">{ok}</p> : null}
+          {ok ? <p className="text-[13px] text-[var(--hz-ok)] -mt-2">{ok}</p> : null}
           <button
             type="submit"
             className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold mt-1"
@@ -338,7 +338,7 @@ export function RecuperarPage() {
           />
         </label>
         {erro ? <p className="text-[13px] -mt-2" style={{ color: "var(--hz-danger)" }}>{erro}</p> : null}
-        {ok ? <p className="text-[13px] text-[#1E7A4A] -mt-2">{ok}</p> : null}
+        {ok ? <p className="text-[13px] text-[var(--hz-ok)] -mt-2">{ok}</p> : null}
         <button
           type="submit"
           className="w-full rounded-xl py-3.5 text-white text-[14px] font-semibold mt-1"
@@ -443,7 +443,7 @@ export function LandingPage() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 15% 20%, rgba(29,95,175,0.10), transparent 55%), radial-gradient(ellipse 50% 40% at 90% 80%, rgba(22,74,138,0.07), transparent 50%)",
+            "radial-gradient(ellipse 70% 50% at 15% 20%, var(--hz-accent-10), transparent 55%), radial-gradient(ellipse 50% 40% at 90% 80%, var(--hz-accent-dark-07), transparent 50%)",
         }}
       />
 

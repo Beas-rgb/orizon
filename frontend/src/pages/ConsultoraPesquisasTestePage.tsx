@@ -67,7 +67,7 @@ export function ConsultoraPesquisasTestePage() {
       <h1 className="text-lg font-bold mb-2">Teste — pesquisas (API)</h1>
       <p className="text-xs text-gray-500 mb-4">
         Tela de prova. UI definitiva em{" "}
-        <Link className="underline text-[#1D5FAF]" to="/consultora/pesquisas">
+        <Link className="underline text-[var(--hz-accent)]" to="/consultora/pesquisas">
           /consultora/pesquisas
         </Link>
         .
@@ -110,7 +110,7 @@ export function ConsultoraPesquisasTestePage() {
             <option value="DIAGNOSTICO_ORGANIZACIONAL">DIAGNOSTICO_ORGANIZACIONAL</option>
           </select>
         </label>
-        <button type="submit" className="bg-[#1D5FAF] text-white px-3 py-2 text-sm font-bold">
+        <button type="submit" className="bg-[var(--hz-accent)] text-white px-3 py-2 text-sm font-bold">
           Criar pesquisa
         </button>
       </form>
@@ -122,7 +122,7 @@ export function ConsultoraPesquisasTestePage() {
         {itens.map((item) => (
           <li key={item.id} className="mb-1">
             <Link
-              className="text-[#1D5FAF] underline"
+              className="text-[var(--hz-accent)] underline"
               to={`/projetos/${item.projeto_id}/pesquisas/${item.id}`}
             >
               {item.titulo}

@@ -292,7 +292,7 @@ export function ResponderPage() {
           <Link
             to="/inicio"
             className="inline-block rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
-            style={{ background: "#171717" }}
+            style={{ background: "var(--hz-ink)" }}
           >
             Ir ao meu painel
           </Link>
@@ -310,11 +310,11 @@ export function ResponderPage() {
         <p className="text-[12px] text-gray-500 mb-4">
           Suas respostas individuais não aparecem no painel do órgão.
         </p>
-        {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
-        {ok ? <p className="text-[#1E7A4A] text-[13px] mb-3">{ok}</p> : null}
+        {erro ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{erro}</p> : null}
+        {ok ? <p className="text-[var(--hz-ok)] text-[13px] mb-3">{ok}</p> : null}
 
         {enviado ? (
-          <Link to="/inicio" className="text-[13px] font-bold text-[#1D5FAF]">
+          <Link to="/inicio" className="text-[13px] font-bold text-[var(--hz-accent)]">
             Voltar ao início
           </Link>
         ) : total === 0 ? (
@@ -341,7 +341,7 @@ export function ResponderPage() {
                 <legend className="text-[14px] font-semibold text-gray-800">
                   {atual.texto}
                   {atual.obrigatoria ? (
-                    <span className="text-[#A02828] ml-1">*</span>
+                    <span className="text-[var(--hz-danger)] ml-1">*</span>
                   ) : null}
                 </legend>
                 {midias[atual.id] ? (
@@ -375,7 +375,7 @@ export function ResponderPage() {
                 disabled={indice === 0 || enviando}
                 onClick={() => setIndice((i) => Math.max(0, i - 1))}
                 className="rounded-xl px-4 py-2.5 text-[13px] font-bold disabled:opacity-40"
-                style={{ background: "rgba(255,255,255,0.7)" }}
+                style={{ background: "var(--hz-white-70)" }}
               >
                 Anterior
               </button>
@@ -385,7 +385,7 @@ export function ResponderPage() {
                   disabled={enviando}
                   onClick={() => setIndice((i) => Math.min(total - 1, i + 1))}
                   className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold"
-                  style={{ background: "#171717" }}
+                  style={{ background: "var(--hz-ink)" }}
                 >
                   Próxima
                 </button>
@@ -394,7 +394,7 @@ export function ResponderPage() {
                   type="submit"
                   disabled={enviando}
                   className="rounded-xl px-4 py-2.5 text-white text-[13px] font-bold disabled:opacity-40"
-                  style={{ background: "#1E7A4A" }}
+                  style={{ background: "var(--hz-ok)" }}
                 >
                   {enviando ? "Enviando…" : "Enviar respostas"}
                 </button>
@@ -410,7 +410,7 @@ export function ResponderPage() {
                 type="button"
                 onClick={() => void enviar()}
                 className="rounded-xl px-4 py-2.5 text-[13px] font-bold"
-                style={{ background: "rgba(255,255,255,0.7)" }}
+                style={{ background: "var(--hz-white-70)" }}
               >
                 Tentar de novo
               </button>
@@ -454,9 +454,9 @@ function CampoPergunta({
             key={n}
             className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-bold cursor-pointer"
             style={{
-              background: escolhida === String(n) ? ACCENT : "rgba(255,255,255,0.7)",
-              color: escolhida === String(n) ? "#fff" : "#1f2937",
-              border: "1px solid rgba(29,95,175,0.25)",
+              background: escolhida === String(n) ? ACCENT : "var(--hz-white-70)",
+              color: escolhida === String(n) ? "var(--hz-surface)" : "var(--hz-body)",
+              border: "1px solid var(--hz-accent-25)",
             }}
           >
             <input

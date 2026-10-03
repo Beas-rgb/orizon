@@ -71,7 +71,7 @@ function NoItem({
     <div style={{ marginLeft: nivel * 18 }}>
       <div
         className="flex items-center gap-2 rounded-xl px-3 py-2"
-        style={{ background: "rgba(255,255,255,0.55)" }}
+        style={{ background: "var(--hz-white-55)" }}
       >
         {temFilhos ? (
           <button
@@ -160,7 +160,7 @@ export function ArvoreOrganizacional({
         <button
           type="button"
           className="text-[12px] font-bold px-3 py-2 rounded-xl"
-          style={{ background: "rgba(29,95,175,0.10)", color: ACCENT }}
+          style={{ background: "var(--hz-accent-10)", color: ACCENT }}
           onClick={() => setManual(new Set(idsVisiveis(visivel)))}
         >
           Expandir tudo
@@ -168,7 +168,7 @@ export function ArvoreOrganizacional({
         <button
           type="button"
           className="text-[12px] font-bold px-3 py-2 rounded-xl text-gray-600"
-          style={{ background: "rgba(0,0,0,0.05)" }}
+          style={{ background: "var(--hz-black-05)" }}
           onClick={() => setManual(new Set())}
         >
           Recolher

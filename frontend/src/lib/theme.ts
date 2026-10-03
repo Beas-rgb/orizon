@@ -1,20 +1,20 @@
 import type { CSSProperties } from "react";
 
-export const ACCENT = "#1D5FAF";
-export const ACCENT_DARK = "#164A8A";
+export const ACCENT = "var(--hz-accent)";
+export const ACCENT_DARK = "var(--hz-accent-dark)";
 
 export const glassStyle: CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid rgba(0,0,0,0.06)",
-  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+  background: "var(--hz-surface)",
+  border: "1px solid var(--hz-black-06)",
+  boxShadow: "0 1px 2px var(--hz-black-04)",
 };
 
 export const dropdownStyle: CSSProperties = {
-  background: "rgba(244,247,252,0.92)",
+  background: "var(--hz-mist-92)",
   backdropFilter: "blur(30px) saturate(180%)",
   WebkitBackdropFilter: "blur(30px) saturate(180%)",
-  border: "1px solid rgba(255,255,255,0.75)",
-  boxShadow: "0 16px 40px rgba(0,0,0,0.14)",
+  border: "1px solid var(--hz-white-75)",
+  boxShadow: "0 16px 40px var(--hz-black-14)",
 };
 
 export function iniciais(nome: string) {

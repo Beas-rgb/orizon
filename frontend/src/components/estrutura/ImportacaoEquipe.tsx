@@ -85,7 +85,7 @@ export function ImportacaoEquipe({
           type="button"
           onClick={baixarModelo}
           className="text-[12px] font-bold underline"
-          style={{ color: "#171717" }}
+          style={{ color: "var(--hz-ink)" }}
         >
           Baixar modelo CSV
         </button>
@@ -98,7 +98,7 @@ export function ImportacaoEquipe({
         <button
           type="submit"
           className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-          style={{ background: "#171717" }}
+          style={{ background: "var(--hz-ink)" }}
         >
           Ver prévia
         </button>
@@ -107,7 +107,7 @@ export function ImportacaoEquipe({
         <p className="text-[11px] text-gray-500">Selecionado: {arquivoNome}</p>
       ) : null}
       {previa ? (
-        <div className="rounded-2xl p-4" style={{ background: "rgba(29,95,175,0.06)" }}>
+        <div className="rounded-2xl p-4" style={{ background: "var(--hz-accent-06)" }}>
           <p className="text-[13px] font-bold text-gray-800 mb-2">
             Prévia{arquivoNome ? ` · ${arquivoNome}` : ""}
           </p>
@@ -138,14 +138,14 @@ export function ImportacaoEquipe({
                     key={`${l.email}-${i}`}
                     className="border-b border-white/40"
                     style={{
-                      background: l.erros.length ? "rgba(160,40,40,0.06)" : "transparent",
+                      background: l.erros.length ? "var(--hz-danger-06)" : "transparent",
                     }}
                   >
                     <td className="py-1 pr-2">{l.nome}</td>
                     <td className="py-1 pr-2">{l.email}</td>
                     <td className="py-1 pr-2">{l.cargo}</td>
                     <td className="py-1 pr-2">{l.setor}</td>
-                    <td className="py-1 text-[#A02828]">{l.erros.join(", ") || "—"}</td>
+                    <td className="py-1 text-[var(--hz-danger)]">{l.erros.join(", ") || "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -157,7 +157,7 @@ export function ImportacaoEquipe({
               disabled={importando || previa.validos === 0}
               onClick={() => void confirmar()}
               className="rounded-xl px-4 py-2 text-white text-[13px] font-bold disabled:opacity-60"
-              style={{ background: "#1E7A4A" }}
+              style={{ background: "var(--hz-ok)" }}
             >
               {importando ? "Importando…" : `Confirmar ${previa.validos} válidos`}
             </button>

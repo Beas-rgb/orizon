@@ -34,9 +34,9 @@ type Props = {
 };
 
 const toneMap = {
-  danger: { color: "#A02828", bg: "rgba(160,40,40,0.09)", border: "rgba(160,40,40,0.20)" },
-  warn: { color: "#A07020", bg: "rgba(160,112,32,0.09)", border: "rgba(160,112,32,0.20)" },
-  ok: { color: "#1E7A4A", bg: "rgba(30,122,74,0.09)", border: "rgba(30,122,74,0.20)" },
+  danger: { color: "var(--hz-danger)", bg: "var(--hz-danger-09)", border: "var(--hz-danger-20)" },
+  warn: { color: "var(--hz-warn)", bg: "var(--hz-warn-09)", border: "var(--hz-warn-20)" },
+  ok: { color: "var(--hz-ok)", bg: "var(--hz-ok-09)", border: "var(--hz-ok-20)" },
 };
 
 export function SmartBriefing({ nome, priority, indicators }: Props) {
@@ -56,7 +56,7 @@ export function SmartBriefing({ nome, priority, indicators }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         <div
           className="rounded-2xl p-4 flex flex-col justify-between"
-          style={{ background: "rgba(29,95,175,0.08)", border: "1px solid rgba(29,95,175,0.18)" }}
+          style={{ background: "var(--hz-accent-08)", border: "1px solid var(--hz-accent-18)" }}
         >
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -75,7 +75,7 @@ export function SmartBriefing({ nome, priority, indicators }: Props) {
 
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle size={13} style={{ color: "#A02828" }} />
+            <AlertTriangle size={13} style={{ color: "var(--hz-danger)" }} />
             <p className="text-gray-800 text-[13px] font-bold">Prioridades</p>
           </div>
           <div className="flex flex-col gap-2">
@@ -92,8 +92,8 @@ export function SmartBriefing({ nome, priority, indicators }: Props) {
                   whileHover={{ scale: 1.015 }}
                   className="flex items-start gap-2.5 p-3 rounded-2xl text-left"
                   style={{
-                    background: done ? "rgba(30,122,74,0.08)" : tone.bg,
-                    border: `1px solid ${done ? "rgba(30,122,74,0.20)" : tone.border}`,
+                    background: done ? "var(--hz-ok-08)" : tone.bg,
+                    border: `1px solid ${done ? "var(--hz-ok-20)" : tone.border}`,
                     opacity: done ? 0.55 : 1,
                   }}
                   onClick={() =>
@@ -107,8 +107,8 @@ export function SmartBriefing({ nome, priority, indicators }: Props) {
                   <div
                     className="w-5 h-5 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-white text-[10px]"
                     style={{
-                      background: done ? "#1E7A4A" : "rgba(255,255,255,0.75)",
-                      border: `1px solid ${done ? "#1E7A4A" : "rgba(0,0,0,0.12)"}`,
+                      background: done ? "var(--hz-ok)" : "var(--hz-white-75)",
+                      border: `1px solid ${done ? "var(--hz-ok)" : "var(--hz-black-12)"}`,
                     }}
                   >
                     {done ? "✓" : ""}
@@ -144,8 +144,8 @@ export function SmartBriefing({ nome, priority, indicators }: Props) {
                 key={item.label}
                 className="flex items-center justify-between p-3 rounded-2xl gap-2"
                 style={{
-                  background: "rgba(255,255,255,0.55)",
-                  border: "1px solid rgba(255,255,255,0.7)",
+                  background: "var(--hz-white-55)",
+                  border: "1px solid var(--hz-white-70)",
                 }}
               >
                 <p className="text-gray-600 text-[11px]">{item.label}</p>
@@ -160,13 +160,13 @@ export function SmartBriefing({ nome, priority, indicators }: Props) {
 
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Zap size={13} style={{ color: "#A07020" }} />
+            <Zap size={13} style={{ color: "var(--hz-warn)" }} />
             <p className="text-gray-800 text-[13px] font-bold">Ações Rápidas</p>
           </div>
           <div className="flex flex-col gap-2">
             {[
               { label: "Criar novo projeto", to: "/projetos/novo", color: ACCENT },
-              { label: "Ver trabalhos", to: "/projetos", color: "#1E7A4A" },
+              { label: "Ver trabalhos", to: "/projetos", color: "var(--hz-ok)" },
             ].map((a) => (
               <motion.button
                 key={a.label}
@@ -176,8 +176,8 @@ export function SmartBriefing({ nome, priority, indicators }: Props) {
                 onClick={() => navigate(a.to)}
                 className="flex items-center gap-2.5 p-2.5 rounded-xl group text-left"
                 style={{
-                  background: "rgba(255,255,255,0.55)",
-                  border: "1px solid rgba(255,255,255,0.7)",
+                  background: "var(--hz-white-55)",
+                  border: "1px solid var(--hz-white-70)",
                 }}
               >
                 <div className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />

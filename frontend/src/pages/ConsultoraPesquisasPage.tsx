@@ -169,7 +169,7 @@ export function ConsultoraPesquisasPage() {
           type="button"
           onClick={() => setMostrarNova(true)}
           className="rounded-xl px-4 py-2 text-white text-[13px] font-bold"
-          style={{ background: "#171717" }}
+          style={{ background: "var(--hz-ink)" }}
         >
           + Nova pesquisa
         </button>
@@ -184,12 +184,12 @@ export function ConsultoraPesquisasPage() {
             className="rounded-full px-3 py-1.5 text-[12px] font-semibold"
             style={{
               background:
-                aba === item.id ? "rgba(29,95,175,0.15)" : "rgba(255,255,255,0.55)",
+                aba === item.id ? "var(--hz-accent-15)" : "var(--hz-white-55)",
               border:
                 aba === item.id
-                  ? "1px solid rgba(29,95,175,0.3)"
+                  ? "1px solid var(--hz-accent-30)"
                   : "1px solid transparent",
-              color: aba === item.id ? "#1D5FAF" : "#4b5563",
+              color: aba === item.id ? "var(--hz-accent)" : "var(--hz-text-2)",
             }}
           >
             {item.label}
@@ -197,8 +197,8 @@ export function ConsultoraPesquisasPage() {
         ))}
       </nav>
 
-      {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
-      {msg ? <p className="text-[#1E7A4A] text-[13px] mb-3">{msg}</p> : null}
+      {erro ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{erro}</p> : null}
+      {msg ? <p className="text-[var(--hz-ok)] text-[13px] mb-3">{msg}</p> : null}
 
       {mostrarNova ? (
         <form
@@ -251,7 +251,7 @@ export function ConsultoraPesquisasPage() {
             <button
               type="submit"
               className="rounded-xl px-4 py-2 text-white text-[13px] font-bold"
-              style={{ background: "#171717" }}
+              style={{ background: "var(--hz-ink)" }}
             >
               Criar
             </button>
@@ -371,7 +371,7 @@ export function ConsultoraPesquisasPage() {
       {aba === "organizacao" ? (
         <div className="rounded-3xl p-5" style={glassStyle}>
           <p className="text-[13px] text-gray-600">
-            Use <Link className="text-[#1D5FAF] font-semibold underline" to="/projetos">
+            Use <Link className="text-[var(--hz-accent)] font-semibold underline" to="/projetos">
               Trabalhos
             </Link>{" "}
             para abrir cada projeto, equipe e configuração. A listagem de pesquisas

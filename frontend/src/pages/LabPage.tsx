@@ -114,8 +114,8 @@ export function LabPage() {
     <main style={{ padding: 24, maxWidth: 720 }}>
       <p
         style={{
-          background: "#111",
-          color: "#fff",
+          background: "var(--hz-ink)",
+          color: "var(--hz-surface)",
           padding: "8px 12px",
           marginBottom: 16,
         }}
@@ -126,7 +126,7 @@ export function LabPage() {
       <p>
         <Link to="/inicio">Voltar ao início</Link>
       </p>
-      {erro ? <p style={{ color: "#b00020" }}>{erro}</p> : null}
+      {erro ? <p style={{ color: "var(--hz-danger)" }}>{erro}</p> : null}
 
       <form onSubmit={criar} style={{ display: "grid", gap: 8, marginBottom: 24 }}>
         <label>
@@ -173,7 +173,7 @@ export function LabPage() {
           <li
             key={item.id}
             style={{
-              borderTop: "1px solid #ddd",
+              borderTop: "1px solid var(--hz-line)",
               padding: "12px 0",
             }}
           >

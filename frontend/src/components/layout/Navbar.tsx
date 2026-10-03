@@ -34,11 +34,11 @@ export function Navbar({
     <nav
       className="fixed top-0 left-0 right-0 z-50 flex items-center px-3 sm:px-4 py-2 gap-2 sm:gap-3"
       style={{
-        background: "rgba(238,242,248,0.80)",
+        background: "var(--hz-mist-80)",
         backdropFilter: "blur(24px) saturate(170%)",
         WebkitBackdropFilter: "blur(24px) saturate(170%)",
-        borderBottom: "1px solid rgba(255,255,255,0.55)",
-        boxShadow: "0 1px 12px rgba(0,0,0,0.08)",
+        borderBottom: "1px solid var(--hz-white-55)",
+        boxShadow: "0 1px 12px var(--hz-black-08)",
         height: "60px",
       }}
     >
@@ -57,8 +57,8 @@ export function Navbar({
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
             style={{
-              background: "#171717",
-              boxShadow: "0 2px 8px rgba(29,95,175,0.30)",
+              background: "var(--hz-ink)",
+              boxShadow: "0 2px 8px var(--hz-accent-30)",
             }}
           >
             <span className="text-white text-xs font-bold">OR</span>
@@ -74,13 +74,13 @@ export function Navbar({
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-2xl transition-all duration-300"
           style={{
-            background: searchFocused ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.55)",
+            background: searchFocused ? "var(--hz-white-75)" : "var(--hz-white-55)",
             border: searchFocused
-              ? "1px solid rgba(29,95,175,0.35)"
-              : "1px solid rgba(255,255,255,0.6)",
+              ? "1px solid var(--hz-accent-35)"
+              : "1px solid var(--hz-white-60)",
             boxShadow: searchFocused
-              ? "0 0 0 3px rgba(29,95,175,0.10), 0 4px 16px rgba(0,0,0,0.08)"
-              : "0 1px 6px rgba(0,0,0,0.05)",
+              ? "0 0 0 3px var(--hz-accent-10), 0 4px 16px var(--hz-black-08)"
+              : "0 1px 6px var(--hz-black-05)",
           }}
         >
           <Search size={15} className="text-gray-400 shrink-0" />
@@ -100,7 +100,7 @@ export function Navbar({
           ) : (
             <div
               className="hidden md:flex items-center gap-1 px-1.5 py-0.5 rounded-md"
-              style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.08)" }}
+              style={{ background: "var(--hz-black-05)", border: "1px solid var(--hz-black-08)" }}
             >
               <Command size={10} className="text-gray-400" />
               <span className="text-gray-400 text-[10px]">K</span>
@@ -183,8 +183,8 @@ export function Navbar({
             <div
               className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-bold"
               style={{
-                background: "#171717",
-                boxShadow: "0 2px 6px rgba(29,95,175,0.28)",
+                background: "var(--hz-ink)",
+                boxShadow: "0 2px 6px var(--hz-accent-28)",
               }}
             >
               {iniciais(nome).slice(0, 1)}
@@ -207,7 +207,7 @@ export function Navbar({
                   <div className="flex items-center gap-3 p-2 mb-2">
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
-                      style={{ background: "#171717" }}
+                      style={{ background: "var(--hz-ink)" }}
                     >
                       {iniciais(nome).slice(0, 1)}
                     </div>
@@ -220,7 +220,7 @@ export function Navbar({
                     type="button"
                     onClick={onSair}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/80 text-[13px]"
-                    style={{ color: "#A02828" }}
+                    style={{ color: "var(--hz-danger)" }}
                   >
                     Sair
                   </button>

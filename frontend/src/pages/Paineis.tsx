@@ -85,7 +85,7 @@ export function OrgaoPainel() {
       <p className="text-[12px] text-gray-500 mb-5">
         Só trabalhos em que você participa. Histórico de pesquisas antigas e novas.
       </p>
-      {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
+      {erro ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{erro}</p> : null}
 
       <div className="grid lg:grid-cols-2 gap-5">
         <div className="rounded-3xl p-5" style={glassStyle}>
@@ -99,11 +99,11 @@ export function OrgaoPainel() {
                   className="w-full text-left p-3 rounded-2xl"
                   style={{
                     background:
-                      ativo === p.id ? "rgba(29,95,175,0.12)" : "rgba(255,255,255,0.55)",
+                      ativo === p.id ? "var(--hz-accent-12)" : "var(--hz-white-55)",
                     border:
                       ativo === p.id
-                        ? "1px solid rgba(29,95,175,0.22)"
-                        : "1px solid rgba(255,255,255,0.65)",
+                        ? "1px solid var(--hz-accent-22)"
+                        : "1px solid var(--hz-white-65)",
                   }}
                 >
                   <p className="text-[13px] font-semibold">
@@ -145,9 +145,9 @@ export function OrgaoPainel() {
                     style={{
                       background:
                         abaPesq === id
-                          ? "rgba(29,95,175,0.15)"
-                          : "rgba(255,255,255,0.5)",
-                      color: abaPesq === id ? "#1D5FAF" : "#6b7280",
+                          ? "var(--hz-accent-15)"
+                          : "var(--hz-white-50)",
+                      color: abaPesq === id ? "var(--hz-accent)" : "var(--hz-text-2)",
                     }}
                   >
                     {label}
@@ -163,7 +163,7 @@ export function OrgaoPainel() {
                         <li
                           key={pe.id}
                           className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
-                          style={{ background: "rgba(255,255,255,0.55)" }}
+                          style={{ background: "var(--hz-white-55)" }}
                         >
                           <div>
                             <p className="text-[13px] font-semibold">{pe.titulo}</p>
@@ -176,7 +176,7 @@ export function OrgaoPainel() {
                               type="button"
                               onClick={() => void verResultado(pe.id)}
                               className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                              style={{ background: "#171717" }}
+                              style={{ background: "var(--hz-ink)" }}
                             >
                               Ver consolidado
                             </button>
@@ -192,7 +192,7 @@ export function OrgaoPainel() {
                     <li
                       key={pe.id}
                       className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
-                      style={{ background: "rgba(255,255,255,0.55)" }}
+                      style={{ background: "var(--hz-white-55)" }}
                     >
                       <div>
                         <p className="text-[13px] font-semibold">{pe.titulo}</p>
@@ -205,7 +205,7 @@ export function OrgaoPainel() {
                           type="button"
                           onClick={() => void verResultado(pe.id)}
                           className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                          style={{ background: "#171717" }}
+                          style={{ background: "var(--hz-ink)" }}
                         >
                           Ver consolidado
                         </button>
@@ -272,7 +272,7 @@ export function FuncionarioPainel() {
       <p className="text-[12px] text-gray-500 mb-5">
         Responda só com a sua conta de funcionário. O órgão vê o consolidado, não a sua resposta.
       </p>
-      {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
+      {erro ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{erro}</p> : null}
 
       <div className="flex flex-col gap-5">
         {grupos
@@ -291,8 +291,8 @@ export function FuncionarioPainel() {
                     key={p.pesquisa_id}
                     className="p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3"
                     style={{
-                      background: "rgba(255,255,255,0.55)",
-                      border: "1px solid rgba(255,255,255,0.65)",
+                      background: "var(--hz-white-55)",
+                      border: "1px solid var(--hz-white-65)",
                     }}
                   >
                     <div>
@@ -308,12 +308,12 @@ export function FuncionarioPainel() {
                       <Link
                         to={`/responder/pesquisa/${encodeURIComponent(p.pesquisa_id)}`}
                         className="rounded-xl py-2 px-4 text-white text-[12px] font-bold"
-                        style={{ background: "#171717" }}
+                        style={{ background: "var(--hz-ink)" }}
                       >
                         {p.status_participacao === "EM_ANDAMENTO" ? "Continuar" : "Responder"}
                       </Link>
                     ) : p.status_participacao === "RESPONDIDA" ? (
-                      <span className="text-[12px] font-bold text-[#1E7A4A]">Respondida</span>
+                      <span className="text-[12px] font-bold text-[var(--hz-ok)]">Respondida</span>
                     ) : null}
                   </li>
                 ))}
@@ -471,17 +471,17 @@ export function DevPainel() {
       <p className="text-[12px] text-gray-500 mb-5">
         Diagnóstico e autorização de consultoras. Sem acesso a dados de negócio.
       </p>
-      {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
-      {msg ? <p className="text-[#1E7A4A] text-[13px] mb-3">{msg}</p> : null}
+      {erro ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{erro}</p> : null}
+      {msg ? <p className="text-[var(--hz-ok)] text-[13px] mb-3">{msg}</p> : null}
       {avisoEmail ? (
-        <p className="text-[#A07020] text-[13px] mb-3">{avisoEmail}</p>
+        <p className="text-[var(--hz-warn)] text-[13px] mb-3">{avisoEmail}</p>
       ) : null}
       {linkAcesso ? (
         <div
           className="rounded-2xl p-4 mb-5 text-[12px] break-all"
           style={{
-            background: "rgba(29,95,175,0.08)",
-            border: "1px solid rgba(29,95,175,0.2)",
+            background: "var(--hz-accent-08)",
+            border: "1px solid var(--hz-accent-20)",
           }}
         >
           <p className="font-bold text-gray-800 mb-1">Link de primeiro acesso (só para o TI)</p>
@@ -489,7 +489,7 @@ export function DevPainel() {
             Senha nunca vem por e-mail. Abra o link ou copie o código após{" "}
             <code className="text-[11px]">?t=</code> em /primeiro-acesso.
           </p>
-          <a className="text-[#1D5FAF] font-semibold underline" href={linkAcesso}>
+          <a className="text-[var(--hz-accent)] font-semibold underline" href={linkAcesso}>
             {linkAcesso}
           </a>
           <p className="mt-2 text-gray-500">
@@ -527,17 +527,17 @@ export function DevPainel() {
             </p>
           ) : null}
           {diagnosticoEmail.ultimo_erro ? (
-            <p className="mt-2 text-[#A02828]">{diagnosticoEmail.ultimo_erro}</p>
+            <p className="mt-2 text-[var(--hz-danger)]">{diagnosticoEmail.ultimo_erro}</p>
           ) : null}
           {diagnosticoEmail.ultimo_status === "ACEITO" ? (
-            <p className="mt-2 text-[#A07020]">
+            <p className="mt-2 text-[var(--hz-warn)]">
               “Aceito” confirma a fila do provedor, não a chegada na caixa. Se não
               aparecer no Gmail, confira Suppressions/Activity e autenticação
               SPF/DKIM no SendGrid.
             </p>
           ) : null}
           {(diagnosticoEmail.avisos || []).map((aviso) => (
-            <p key={aviso} className="mt-2 text-[#A07020]">
+            <p key={aviso} className="mt-2 text-[var(--hz-warn)]">
               {aviso}
             </p>
           ))}
@@ -556,7 +556,7 @@ export function DevPainel() {
             disabled={testandoEmail}
             onClick={() => void testarEnvioEmail()}
             className="mt-3 rounded-xl px-4 py-2 text-white font-bold disabled:opacity-60"
-            style={{ background: "#171717" }}
+            style={{ background: "var(--hz-ink)" }}
           >
             {testandoEmail ? "Enviando teste…" : "Enviar teste de e-mail"}
           </button>
@@ -583,8 +583,8 @@ export function DevPainel() {
           className="rounded-3xl p-4 sm:p-5 mb-5 text-[12px] text-gray-700 leading-relaxed"
           style={{
             ...glassStyle,
-            border: "1px solid rgba(160,112,32,0.35)",
-            background: "rgba(160,112,32,0.08)",
+            border: "1px solid var(--hz-warn-35)",
+            background: "var(--hz-warn-08)",
           }}
         >
           <p className="font-bold text-gray-800 mb-2">E-mail ainda em modo local</p>
@@ -596,7 +596,7 @@ export function DevPainel() {
             <li>
               Crie conta em{" "}
               <a
-                className="text-[#1D5FAF] underline"
+                className="text-[var(--hz-accent)] underline"
                 href="https://sendgrid.com"
                 target="_blank"
                 rel="noreferrer"
@@ -625,7 +625,7 @@ export function DevPainel() {
             <li>
               Confira{" "}
               <a
-                className="text-[#1D5FAF] underline break-all"
+                className="text-[var(--hz-accent)] underline break-all"
                 href="https://orizon-api.onrender.com/health/email"
                 target="_blank"
                 rel="noreferrer"
@@ -642,11 +642,11 @@ export function DevPainel() {
         </div>
       ) : email?.modo === "sendgrid" ? (
         <div
-          className="rounded-3xl p-4 mb-5 text-[12px] text-[#1E7A4A]"
+          className="rounded-3xl p-4 mb-5 text-[12px] text-[var(--hz-ok)]"
           style={{
             ...glassStyle,
-            border: "1px solid rgba(30,122,74,0.3)",
-            background: "rgba(30,122,74,0.08)",
+            border: "1px solid var(--hz-ok-30)",
+            background: "var(--hz-ok-08)",
           }}
         >
           Canal <strong>SendGrid</strong> ativo (HTTPS — ok no Render free). Convites
@@ -655,11 +655,11 @@ export function DevPainel() {
         </div>
       ) : email?.modo === "mailtrap" || email?.modo === "smtp" ? (
         <div
-          className="rounded-3xl p-4 mb-5 text-[12px] text-[#1E7A4A]"
+          className="rounded-3xl p-4 mb-5 text-[12px] text-[var(--hz-ok)]"
           style={{
             ...glassStyle,
-            border: "1px solid rgba(30,122,74,0.3)",
-            background: "rgba(30,122,74,0.08)",
+            border: "1px solid var(--hz-ok-30)",
+            background: "var(--hz-ok-08)",
           }}
         >
           Canal de e-mail ativo (<strong>{email.modo}</strong>). No Render free, SMTP
@@ -676,7 +676,7 @@ export function DevPainel() {
             <li
               key={p.id}
               className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
-              style={{ background: "rgba(255,255,255,0.55)" }}
+              style={{ background: "var(--hz-white-55)" }}
             >
               <div>
                 <p className="text-[13px] font-semibold">{p.nome}</p>
@@ -689,7 +689,7 @@ export function DevPainel() {
                   type="button"
                   onClick={() => void autorizar(p.id)}
                   className="px-3 py-1.5 rounded-xl text-white text-[12px] font-bold"
-                  style={{ background: "#171717" }}
+                  style={{ background: "var(--hz-ink)" }}
                 >
                   Autorizar
                 </button>
@@ -716,7 +716,7 @@ export function DevPainel() {
             <li
               key={c.id}
               className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
-              style={{ background: "rgba(255,255,255,0.55)" }}
+              style={{ background: "var(--hz-white-55)" }}
             >
               <div>
                 <p className="text-[13px] font-semibold">{c.nome}</p>
@@ -729,7 +729,7 @@ export function DevPainel() {
                   type="button"
                   onClick={() => void reenviarAcesso(c.id)}
                   className="px-3 py-1.5 rounded-xl text-white text-[12px] font-bold"
-                  style={{ background: "#171717" }}
+                  style={{ background: "var(--hz-ink)" }}
                 >
                   Reenviar primeiro acesso
                 </button>

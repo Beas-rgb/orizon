@@ -46,12 +46,12 @@ export function ProjetosListaPage() {
         <Link
           to="/projetos/novo"
           className="px-4 py-2.5 rounded-xl text-white text-[13px] font-bold"
-          style={{ background: "#171717" }}
+          style={{ background: "var(--hz-ink)" }}
         >
           Novo trabalho
         </Link>
       </div>
-      {erro ? <p className="text-[#A02828] text-[13px] mb-3">{erro}</p> : null}
+      {erro ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{erro}</p> : null}
       <div className="rounded-[24px] bg-white p-4 ring-1 ring-black/[0.05]">
         <ul className="flex flex-col">
           {projetos.map((p) => (
@@ -61,14 +61,14 @@ export function ProjetosListaPage() {
                 className="flex items-center justify-between gap-3 py-3"
               >
                 <div className="min-w-0">
-                  <p className="text-[14px] font-semibold text-[#1c1c1c]">
+                  <p className="text-[14px] font-semibold text-[var(--hz-ink)]">
                     {p.vinculo_titulo || nomeCliente(p)}
                   </p>
-                  <p className="text-[12px] text-[#6d6d6d]">
+                  <p className="text-[12px] text-[var(--hz-muted)]">
                     {nomeCliente(p)} · {p.rotulo}
                   </p>
                 </div>
-                <span className="shrink-0 text-[12px] font-semibold text-[#1D5FAF]">{p.estado}</span>
+                <span className="shrink-0 text-[12px] font-semibold text-[var(--hz-accent)]">{p.estado}</span>
               </Link>
             </li>
           ))}
@@ -174,11 +174,11 @@ export function NovoProjetoPage() {
           Título do vínculo
           <input name="vinculo_titulo" required className={field} />
         </label>
-        {erro ? <p className="text-[13px] text-[#A02828]">{erro}</p> : null}
+        {erro ? <p className="text-[13px] text-[var(--hz-danger)]">{erro}</p> : null}
         <button
           type="submit"
           className="rounded-2xl py-3 text-white text-[14px] font-bold mt-2"
-          style={{ background: "#171717" }}
+          style={{ background: "var(--hz-ink)" }}
         >
           Criar projeto
         </button>
@@ -457,13 +457,13 @@ export function ProjetoDetalhePage() {
         ) : null}
       </div>
 
-      {aviso ? <p className="text-[#A02828] text-[13px] mb-3">{aviso}</p> : null}
+      {aviso ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{aviso}</p> : null}
       {linkAcesso ? (
         <div
           className="rounded-2xl p-4 mb-4 text-[12px] break-all"
           style={{
-            background: "rgba(29,95,175,0.08)",
-            border: "1px solid rgba(29,95,175,0.2)",
+            background: "var(--hz-accent-08)",
+            border: "1px solid var(--hz-accent-20)",
           }}
         >
           <p className="font-bold text-gray-800 mb-1">Link de primeiro acesso (modo local)</p>
@@ -471,7 +471,7 @@ export function ProjetoDetalhePage() {
             E-mail ainda não está no ar. Copie o link e abra em aba anônima para
             definir a senha do órgão/funcionário.
           </p>
-          <a className="text-[#1D5FAF] font-semibold underline" href={linkAcesso}>
+          <a className="text-[var(--hz-accent)] font-semibold underline" href={linkAcesso}>
             {linkAcesso}
           </a>
         </div>
@@ -530,7 +530,7 @@ export function ProjetoDetalhePage() {
                         {m.situacao === "PENDENTE" && m.papel === "FUNCIONARIO" ? (
                           <button
                             type="button"
-                            className="text-[#1D5FAF] font-bold underline"
+                            className="text-[var(--hz-accent)] font-bold underline"
                             onClick={() => void reenviarConviteFuncionario(m.email)}
                           >
                             Reenviar
@@ -538,7 +538,7 @@ export function ProjetoDetalhePage() {
                         ) : m.situacao === "PENDENTE" && m.papel === "ORGAO" ? (
                           <button
                             type="button"
-                            className="text-[#1D5FAF] font-bold underline"
+                            className="text-[var(--hz-accent)] font-bold underline"
                             onClick={() => void reenviarConviteOrgao()}
                           >
                             Reenviar
@@ -577,7 +577,7 @@ export function ProjetoDetalhePage() {
               <button
                 type="submit"
                 className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-                style={{ background: "#171717" }}
+                style={{ background: "var(--hz-ink)" }}
               >
                 Convidar funcionário
               </button>
@@ -605,7 +605,7 @@ export function ProjetoDetalhePage() {
                 <li
                   key={s.id}
                   className="px-3 py-1.5 rounded-xl text-[12px] font-semibold"
-                  style={{ background: "rgba(29,95,175,0.10)", color: ACCENT }}
+                  style={{ background: "var(--hz-accent-10)", color: ACCENT }}
                 >
                   {s.nome}
                 </li>
@@ -623,9 +623,9 @@ export function ProjetoDetalhePage() {
               Cada pesquisa é um registro novo. A edição completa abre na tela seguinte.
             </p>
             {!pesquisasOk ? (
-              <div className="rounded-2xl p-3 text-[12px] text-gray-700" style={{ background: "rgba(160,112,32,0.1)" }}>
+              <div className="rounded-2xl p-3 text-[12px] text-gray-700" style={{ background: "var(--hz-warn-10)" }}>
                 Pesquisas desligadas neste trabalho.{" "}
-                <button type="button" className="font-bold text-[#1D5FAF] underline" onClick={() => void ligarPesquisas()}>
+                <button type="button" className="font-bold text-[var(--hz-accent)] underline" onClick={() => void ligarPesquisas()}>
                   Ligar agora
                 </button>
               </div>
@@ -635,7 +635,7 @@ export function ProjetoDetalhePage() {
                 <li
                   key={p.id}
                   className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
-                  style={{ background: "rgba(255,255,255,0.55)" }}
+                  style={{ background: "var(--hz-white-55)" }}
                 >
                   <div>
                     <p className="text-[13px] font-semibold">{p.titulo}</p>
@@ -646,7 +646,7 @@ export function ProjetoDetalhePage() {
                   <Link
                     to={`/projetos/${id}/pesquisas/${p.id}`}
                     className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                    style={{ background: "#164A8A" }}
+                    style={{ background: "var(--hz-accent-dark)" }}
                   >
                     Abrir edição
                   </Link>
@@ -684,7 +684,7 @@ export function ProjetoDetalhePage() {
               <button
                 type="submit"
                 className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-                style={{ background: "#171717" }}
+                style={{ background: "var(--hz-ink)" }}
               >
                 Criar e abrir edição
               </button>
@@ -706,7 +706,7 @@ export function ProjetoDetalhePage() {
                     <button
                       type="button"
                       className="text-[12px] font-bold px-3 py-1.5 rounded-xl text-white"
-                      style={{ background: "#171717" }}
+                      style={{ background: "var(--hz-ink)" }}
                       onClick={() => void verResultado(p)}
                     >
                       Ver consolidado
@@ -732,7 +732,7 @@ export function ProjetoDetalhePage() {
         {aba === "historico" && (
           <ul className="flex flex-col gap-2">
             {pesquisas.map((p) => (
-              <li key={p.id} className="p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.55)" }}>
+              <li key={p.id} className="p-3 rounded-2xl" style={{ background: "var(--hz-white-55)" }}>
                 <p className="text-[13px] font-semibold">{p.titulo}</p>
                 <p className="text-[11px] text-gray-500">
                   {p.tipo} · {p.status}
@@ -752,7 +752,7 @@ export function ProjetoDetalhePage() {
                 <li
                   key={d.id}
                   className="p-3 rounded-2xl text-[13px]"
-                  style={{ background: "rgba(255,255,255,0.55)" }}
+                  style={{ background: "var(--hz-white-55)" }}
                 >
                   {d.nome}
                   {d.visibilidade ? (
@@ -781,7 +781,7 @@ export function ProjetoDetalhePage() {
               <button
                 type="submit"
                 className="rounded-xl py-2.5 text-white text-[13px] font-bold"
-                style={{ background: "#171717" }}
+                style={{ background: "var(--hz-ink)" }}
               >
                 Enviar arquivo
               </button>
@@ -800,7 +800,7 @@ export function ProjetoDetalhePage() {
                 type="button"
                 onClick={() => void ligarPesquisas()}
                 className="self-start rounded-xl py-2 px-4 text-white text-[13px] font-bold"
-                style={{ background: "#171717" }}
+                style={{ background: "var(--hz-ink)" }}
               >
                 Ligar pesquisas
               </button>
@@ -811,7 +811,7 @@ export function ProjetoDetalhePage() {
                 <li
                   key={s.id}
                   className="px-3 py-1.5 rounded-xl text-[12px] font-semibold"
-                  style={{ background: "rgba(29,95,175,0.10)", color: ACCENT }}
+                  style={{ background: "var(--hz-accent-10)", color: ACCENT }}
                 >
                   {s.nome}
                 </li>
@@ -831,10 +831,10 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div
       className="rounded-2xl p-4"
-      style={{ background: "rgba(29,95,175,0.08)", border: "1px solid rgba(29,95,175,0.18)" }}
+      style={{ background: "var(--hz-accent-08)", border: "1px solid var(--hz-accent-18)" }}
     >
       <p className="text-[11px] text-gray-500">{label}</p>
-      <p className="text-[28px] font-extrabold text-[#1D5FAF]">{value}</p>
+      <p className="text-[28px] font-extrabold text-[var(--hz-accent)]">{value}</p>
     </div>
   );
 }

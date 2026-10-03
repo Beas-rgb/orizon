@@ -90,14 +90,14 @@ export function InicioConsultoraNovo({
     <div>
       <div className="min-[900px]:flex min-[900px]:items-start min-[900px]:justify-between min-[900px]:gap-6">
         <div>
-          <p className="text-[13px] text-[#8a8a8a]">{dataCabecalho()}</p>
+          <p className="text-[13px] text-[var(--hz-muted-2)]">{dataCabecalho()}</p>
           <h1 className="mt-1 text-[32px] font-semibold tracking-tight">
             {saudacao()}, {primeiroNome(nome)}
           </h1>
         </div>
         <div className="mt-4 flex items-center gap-2 min-[900px]:mt-2 min-[900px]:w-[420px]">
           <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full bg-white px-3 py-2.5 ring-1 ring-black/5">
-            <Search size={16} className="text-[#8a8a8a]" aria-hidden="true" />
+            <Search size={16} className="text-[var(--hz-muted-2)]" aria-hidden="true" />
             <input
               value={busca}
               onChange={(evento) => setBusca(evento.target.value)}
@@ -108,7 +108,7 @@ export function InicioConsultoraNovo({
           <button
             type="button"
             onClick={() => navigate("/projetos/novo")}
-            className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-[#171717] px-4 py-2.5 text-[14px] font-semibold text-white"
+            className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-[var(--hz-ink)] px-4 py-2.5 text-[14px] font-semibold text-white"
           >
             <Plus size={16} />
             <span className="hidden min-[900px]:inline">Novo trabalho</span>
@@ -116,7 +116,7 @@ export function InicioConsultoraNovo({
         </div>
       </div>
 
-      {erro ? <p className="mt-4 text-[13px] text-[#A02828]">{erro}</p> : null}
+      {erro ? <p className="mt-4 text-[13px] text-[var(--hz-danger)]">{erro}</p> : null}
 
       <section className="mt-5 grid grid-cols-2 gap-3 min-[900px]:grid-cols-3">
         <Cartao titulo="Abertos" valor={String(abertos)} detalhe="trabalhos" />
@@ -128,9 +128,9 @@ export function InicioConsultoraNovo({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-[18px] font-semibold">Trabalhos</h2>
-            <p className="text-[13px] text-[#6d6d6d]">Os órgãos da sua conta</p>
+            <p className="text-[13px] text-[var(--hz-muted)]">Os órgãos da sua conta</p>
           </div>
-          <div className="flex rounded-full bg-[#f4f3ef] p-1 text-[12px]">
+          <div className="flex rounded-full bg-[var(--hz-canvas-warm)] p-1 text-[12px]">
             {(
               [
                 ["todos", "Todos"],
@@ -144,7 +144,7 @@ export function InicioConsultoraNovo({
                 aria-pressed={filtro === chave}
                 onClick={() => setFiltro(chave)}
                 className={`rounded-full px-3 py-1.5 ${
-                  filtro === chave ? "bg-white font-semibold shadow-sm" : "text-[#5c5c5c]"
+                  filtro === chave ? "bg-white font-semibold shadow-sm" : "text-[var(--hz-muted)]"
                 }`}
               >
                 {rotulo}
@@ -160,22 +160,22 @@ export function InicioConsultoraNovo({
                 onClick={() => navigate(`/projetos/${item.id}`)}
                 className="flex w-full items-center gap-3 py-3 text-left"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f3f2ee] text-[11px] font-semibold">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--hz-canvas-warm)] text-[11px] font-semibold">
                   {sigla(nomeCliente(item))}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{nomeTrabalho(item)}</span>
-                  <span className="block truncate text-[12px] text-[#8a8a8a]">
+                  <span className="block truncate text-[12px] text-[var(--hz-muted-2)]">
                     {nomeCliente(item)} · {item.rotulo}
                   </span>
                 </span>
                 <span
                   className={`shrink-0 text-[12px] font-medium ${
                     item.estado === "EM_ANDAMENTO"
-                      ? "text-[#1f8a4c]"
+                      ? "text-[var(--hz-ok)]"
                       : ENCERRADOS.has(item.estado)
-                        ? "text-[#8a8a8a]"
-                        : "text-[#c47b12]"
+                        ? "text-[var(--hz-muted-2)]"
+                        : "text-[var(--hz-warn)]"
                   }`}
                 >
                   {ROTULO_ESTADO[item.estado] || item.estado}
@@ -185,7 +185,7 @@ export function InicioConsultoraNovo({
           ))}
         </ul>
         {lista.length === 0 ? (
-          <p className="py-6 text-[13px] text-[#6d6d6d]">
+          <p className="py-6 text-[13px] text-[var(--hz-muted)]">
             {projetos.length === 0
               ? "Nenhum trabalho ainda. Crie o primeiro."
               : "Nenhum trabalho nesta busca."}
@@ -208,7 +208,7 @@ export function InicioConsultoraNovo({
 function Cartao({ titulo, valor, detalhe }: { titulo: string; valor: string; detalhe: string }) {
   return (
     <article className="rounded-[22px] bg-white p-4 ring-1 ring-black/[0.04]">
-      <p className="text-[13px] text-[#6d6d6d]">{titulo}</p>
+      <p className="text-[13px] text-[var(--hz-muted)]">{titulo}</p>
       <p className="mt-2 text-[28px] font-semibold leading-none tracking-tight">
         {valor} <span className="text-[15px] font-medium">{detalhe}</span>
       </p>

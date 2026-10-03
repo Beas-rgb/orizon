@@ -8,25 +8,25 @@ const metrics = [
   {
     key: "iniciados" as const,
     label: "Iniciados",
-    color: "#1D5FAF",
-    bg: "rgba(29,95,175,0.10)",
-    border: "rgba(29,95,175,0.20)",
+    color: "var(--hz-accent)",
+    bg: "var(--hz-accent-10)",
+    border: "var(--hz-accent-20)",
     tag: "INI",
   },
   {
     key: "andamento" as const,
     label: "Em Andamento",
-    color: "#A07020",
-    bg: "rgba(160,112,32,0.10)",
-    border: "rgba(160,112,32,0.20)",
+    color: "var(--hz-warn)",
+    bg: "var(--hz-warn-10)",
+    border: "var(--hz-warn-20)",
     tag: "AND",
   },
   {
     key: "concluidos" as const,
     label: "Concluídos",
-    color: "#1E7A4A",
-    bg: "rgba(30,122,74,0.10)",
-    border: "rgba(30,122,74,0.20)",
+    color: "var(--hz-ok)",
+    bg: "var(--hz-ok-10)",
+    border: "var(--hz-ok-20)",
     tag: "CON",
   },
 ];
@@ -65,7 +65,7 @@ export function MetricsPanel({ counts }: { counts: Counts }) {
                 </div>
                 <div
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold text-gray-500"
-                  style={{ background: "rgba(0,0,0,0.06)" }}
+                  style={{ background: "var(--hz-black-06)" }}
                 >
                   <Minus size={10} />0
                 </div>

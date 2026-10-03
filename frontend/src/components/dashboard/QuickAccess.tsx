@@ -8,18 +8,18 @@ const actions = [
     icon: Plus,
     label: "Novo Trabalho",
     description: "Criar projeto",
-    color: "#1D5FAF",
-    bg: "rgba(29,95,175,0.10)",
-    border: "rgba(29,95,175,0.20)",
+    color: "var(--hz-accent)",
+    bg: "var(--hz-accent-10)",
+    border: "var(--hz-accent-20)",
     to: "/projetos/novo",
   },
   {
     icon: List,
     label: "Lista de Trabalhos",
     description: "Ver todos",
-    color: "#4B5C6E",
-    bg: "rgba(75,92,110,0.09)",
-    border: "rgba(75,92,110,0.18)",
+    color: "var(--hz-slate)",
+    bg: "var(--hz-slate-09)",
+    border: "var(--hz-slate-18)",
     to: "/projetos",
   },
 ];
@@ -77,18 +77,18 @@ export function QuickAccess({
               key={s.label}
               className="flex items-center gap-3 p-2.5 rounded-2xl"
               style={{
-                background: "rgba(255,255,255,0.55)",
-                border: "1px solid rgba(255,255,255,0.7)",
+                background: "var(--hz-white-55)",
+                border: "1px solid var(--hz-white-70)",
               }}
             >
               <div
                 className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                 style={{
-                  background: "rgba(29,95,175,0.09)",
-                  border: "1px solid rgba(29,95,175,0.16)",
+                  background: "var(--hz-accent-09)",
+                  border: "1px solid var(--hz-accent-16)",
                 }}
               >
-                <span className="text-[14px] font-extrabold text-[#1D5FAF]">{s.value}</span>
+                <span className="text-[14px] font-extrabold text-[var(--hz-accent)]">{s.value}</span>
               </div>
               <div>
                 <p className="text-gray-500 text-[10px]">{s.label}</p>

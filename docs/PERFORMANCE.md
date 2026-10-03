@@ -6,9 +6,9 @@ Ainda não medido no Neon. O inventário de staging da Fase 0 não rodou.
 
 ## Latência e região
 
-Regiões Render/Neon ainda não anotadas no painel (`docs/DEPLOY.md`).
-`GET /health/db` devolve `latencia_ms` (SELECT 1 no processo). O número do Free
-só vale depois de medir na URL de produção/staging — não inventar capacidade.
+Neon: `aws-sa-east-1` (São Paulo). Render: região ainda só no painel.
+`GET /health/db` devolve `latencia_ms`. Medição em produção (02/10/2026):
+cerca de **689 ms** no SELECT 1 (cold/warm do Free — não é capacidade).
 
 ## Orçamento de consultas
 

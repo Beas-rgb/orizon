@@ -48,7 +48,7 @@ export function Sidebar({ open, onClose, nome, papelLabel, sections, manterAbert
             exit={{ opacity: 0 }}
             onClick={onClose}
             className="fixed inset-0 z-40"
-            style={{ background: "rgba(20,30,50,0.20)", backdropFilter: "blur(3px)" }}
+            style={{ background: "var(--hz-navy-20)", backdropFilter: "blur(3px)" }}
           />
           <motion.div
             initial={{ x: -320, opacity: 0 }}
@@ -57,23 +57,23 @@ export function Sidebar({ open, onClose, nome, papelLabel, sections, manterAbert
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="fixed left-0 top-0 bottom-0 z-50 w-[min(18rem,88vw)] flex flex-col overflow-hidden"
             style={{
-              background: "rgba(240,244,250,0.88)",
+              background: "var(--hz-mist-88)",
               backdropFilter: "blur(40px) saturate(180%)",
               WebkitBackdropFilter: "blur(40px) saturate(180%)",
-              borderRight: "1px solid rgba(255,255,255,0.55)",
-              boxShadow: "6px 0 30px rgba(0,0,0,0.12)",
+              borderRight: "1px solid var(--hz-white-55)",
+              boxShadow: "6px 0 30px var(--hz-black-12)",
             }}
           >
             <div
               className="flex items-center justify-between p-5 pb-4"
-              style={{ borderBottom: "1px solid rgba(0,0,0,0.07)" }}
+              style={{ borderBottom: "1px solid var(--hz-black-07)" }}
             >
               <div className="flex items-center gap-3">
                 <div
                   className="w-9 h-9 rounded-2xl flex items-center justify-center"
                   style={{
-                    background: "#171717",
-                    boxShadow: "0 3px 10px rgba(29,95,175,0.30)",
+                    background: "var(--hz-ink)",
+                    boxShadow: "0 3px 10px var(--hz-accent-30)",
                   }}
                 >
                   <span className="text-white text-sm font-bold">OR</span>
@@ -106,25 +106,25 @@ export function Sidebar({ open, onClose, nome, papelLabel, sections, manterAbert
                       }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl mb-0.5 text-left group"
                       style={{
-                        background: item.active ? "rgba(29,95,175,0.12)" : "transparent",
+                        background: item.active ? "var(--hz-accent-12)" : "transparent",
                         border: item.active
-                          ? "1px solid rgba(29,95,175,0.22)"
+                          ? "1px solid var(--hz-accent-22)"
                           : "1px solid transparent",
                       }}
                     >
                       <div
                         className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                         style={{
-                          background: item.active ? "rgba(29,95,175,0.16)" : "rgba(0,0,0,0.05)",
+                          background: item.active ? "var(--hz-accent-16)" : "var(--hz-black-05)",
                         }}
                       >
-                        <item.icon size={15} style={{ color: item.active ? "#171717" : "#6b7280" }} />
+                        <item.icon size={15} style={{ color: item.active ? "var(--hz-ink)" : "var(--hz-text-2)" }} />
                       </div>
                       <span
                         className="flex-1 text-[13px]"
                         style={{
                           fontWeight: item.active ? 700 : 400,
-                          color: item.active ? "#171717" : "#4b5563",
+                          color: item.active ? "var(--hz-ink)" : "var(--hz-text-2)",
                         }}
                       >
                         {item.label}
@@ -133,8 +133,8 @@ export function Sidebar({ open, onClose, nome, papelLabel, sections, manterAbert
                         <span
                           className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
                           style={{
-                            background: item.active ? "rgba(29,95,175,0.16)" : "rgba(0,0,0,0.07)",
-                            color: item.active ? "#171717" : "#6b7280",
+                            background: item.active ? "var(--hz-accent-16)" : "var(--hz-black-07)",
+                            color: item.active ? "var(--hz-ink)" : "var(--hz-text-2)",
                           }}
                         >
                           {item.badge}
@@ -150,17 +150,17 @@ export function Sidebar({ open, onClose, nome, papelLabel, sections, manterAbert
               ))}
             </div>
 
-            <div className="p-4" style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
+            <div className="p-4" style={{ borderTop: "1px solid var(--hz-black-07)" }}>
               <div
                 className="flex items-center gap-3 p-3 rounded-2xl"
                 style={{
-                  background: "rgba(255,255,255,0.55)",
-                  border: "1px solid rgba(255,255,255,0.7)",
+                  background: "var(--hz-white-55)",
+                  border: "1px solid var(--hz-white-70)",
                 }}
               >
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
-                  style={{ background: "#171717" }}
+                  style={{ background: "var(--hz-ink)" }}
                 >
                   {nome.slice(0, 1).toUpperCase()}
                 </div>

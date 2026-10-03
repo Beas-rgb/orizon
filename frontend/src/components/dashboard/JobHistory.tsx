@@ -14,21 +14,21 @@ export type JobItem = {
 const statusConfig = {
   andamento: {
     label: "Em Andamento",
-    color: "#A07020",
-    bg: "rgba(160,112,32,0.12)",
-    border: "rgba(160,112,32,0.22)",
+    color: "var(--hz-warn)",
+    bg: "var(--hz-warn-12)",
+    border: "var(--hz-warn-22)",
   },
   concluido: {
     label: "Concluído",
-    color: "#1E7A4A",
-    bg: "rgba(30,122,74,0.12)",
-    border: "rgba(30,122,74,0.22)",
+    color: "var(--hz-ok)",
+    bg: "var(--hz-ok-12)",
+    border: "var(--hz-ok-22)",
   },
   iniciado: {
     label: "Iniciado",
-    color: "#1D5FAF",
-    bg: "rgba(29,95,175,0.12)",
-    border: "rgba(29,95,175,0.22)",
+    color: "var(--hz-accent)",
+    bg: "var(--hz-accent-12)",
+    border: "var(--hz-accent-22)",
   },
 };
 
@@ -45,7 +45,7 @@ export function JobHistory({ jobs }: { jobs: JobItem[] }) {
         <button
           type="button"
           onClick={() => navigate("/projetos")}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-white/50 text-[12px] font-semibold text-[#1D5FAF]"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-white/50 text-[12px] font-semibold text-[var(--hz-accent)]"
         >
           Ver todos <ChevronRight size={13} />
         </button>
@@ -68,8 +68,8 @@ export function JobHistory({ jobs }: { jobs: JobItem[] }) {
               onClick={() => navigate(`/projetos/${job.id}`)}
               className="flex items-center gap-3 p-3 rounded-2xl text-left group w-full"
               style={{
-                background: "rgba(255,255,255,0.55)",
-                border: "1px solid rgba(255,255,255,0.65)",
+                background: "var(--hz-white-55)",
+                border: "1px solid var(--hz-white-65)",
               }}
             >
               <div

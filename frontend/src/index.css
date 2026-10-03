@@ -2,27 +2,22 @@
 @import "./styles/tokens.css";
 
 @theme {
-  --color-hz-primary: #0a3d91;
-  --color-hz-primary-strong: #082e6b;
-  --color-hz-text: #0b0f14;
-  --color-hz-text-2: #6b7280;
-  --color-hz-bg: #f8fafc;
-  --color-hz-surface: #ffffff;
-  --color-hz-success: #10b981;
-  --color-hz-warning: #f59e0b;
-  --color-hz-danger: #ef4444;
+  --color-hz-primary: var(--hz-primary);
+  --color-hz-primary-strong: var(--hz-primary-strong);
+  --color-hz-text: var(--hz-text);
+  --color-hz-text-2: var(--hz-text-2);
+  --color-hz-bg: var(--hz-bg);
+  --color-hz-surface: var(--hz-surface);
+  --color-hz-success: var(--hz-success);
+  --color-hz-warning: var(--hz-warning);
+  --color-hz-danger: var(--hz-danger-bright);
 }
 
 :root {
-  --hz-accent: #1d5faf;
-  --hz-accent-dark: #164a8a;
-  --hz-ok: #1e7a4a;
-  --hz-warn: #a07020;
-  --hz-danger: #a02828;
   --hz-font: "DM Sans Variable", "DM Sans", system-ui, sans-serif;
   font-family: var(--hz-font);
-  color: #1f2937;
-  background: #eef1f5;
+  color: var(--hz-body);
+  background: var(--hz-canvas);
 }
 
 * {
@@ -48,21 +43,21 @@ textarea {
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--hz-white-45);
   backdrop-filter: blur(28px) saturate(160%);
   -webkit-backdrop-filter: blur(28px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--hz-white-60);
   box-shadow:
-    0 6px 24px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    0 6px 24px var(--hz-black-08),
+    inset 0 1px 0 var(--hz-white-75);
 }
 
 .glass-strong {
-  background: rgba(244, 247, 252, 0.92);
+  background: var(--hz-mist-92);
   backdrop-filter: blur(30px) saturate(180%);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
+  border: 1px solid var(--hz-white-75);
+  box-shadow: 0 16px 40px var(--hz-black-14);
 }
 
 .page-bg {
@@ -111,6 +106,6 @@ textarea {
 }
 
 .design-novo button[type="submit"] {
-  background: #171717 !important;
+  background: var(--hz-ink) !important;
   border-radius: 999px !important;
 }
