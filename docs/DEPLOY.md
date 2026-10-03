@@ -7,8 +7,8 @@ A tela pode sair do Cloudflare Pages. A API continua no Render Free. `web/app` e
 No painel do Cloudflare Pages:
 
 - Diretório do projeto: `frontend`
-- Comando: `npm ci && npm run build`
-- Saída: `dist`
+- Comando: `npm ci && npm run build:pages`
+- Saída: `dist` (base `/`)
 - `NODE_VERSION` = `22`
 - `VITE_API_URL` = a URL da API, sem barra no fim, por exemplo `https://orizon-api.onrender.com`
 - `VITE_BASE` = `/`
@@ -31,6 +31,7 @@ Os valores ficam no painel. Este arquivo não os repete.
 3. No Render, apontar `APP_PUBLIC_URL` e `CORS_ORIGINS` para o Pages.
 4. Enviar um primeiro acesso de teste e ver se o link abre no Pages, sem `/app` duplicado.
 5. A URL antiga `https://orizon-api.onrender.com/app` continua servindo a tela que está em `web/app`.
+   Para republicar esse fallback localmente: `cd frontend && npm run publish:app`.
 
 ## Painéis
 
@@ -38,6 +39,13 @@ Os valores ficam no painel. Este arquivo não os repete.
 - Neon: https://console.neon.tech
 - Cloudflare Pages: https://dash.cloudflare.com
 
-A região do Render e a do Neon ainda não foram anotadas aqui. Isso é da Fase 0, no painel, não neste código.
+## Regiões (Fase 0 — preencher no painel)
+
+| Serviço | Região | Anotado em |
+|---|---|---|
+| Render (API) | _preencher_ | |
+| Neon (Postgres) | _preencher_ | |
+
+A região ainda não foi anotada. Isso é da Fase 0, no painel, não neste código.
 
 `TRUSTED_PROXY_HOPS` fica em 0 até a medição. Com 0, o cabeçalho `X-Forwarded-For` é ignorado. A conta TI chama `GET /dev/diagnostico/ip`, compara `ip` com o IP público e só então grava o número no Render.

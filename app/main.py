@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+from time import perf_counter
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -147,11 +148,13 @@ def health() -> dict[str, str]:
 
 
 @app.get("/health/db")
-def health_db() -> dict[str, str]:
+def health_db() -> dict[str, str | int]:
     """Confirma que o Neon responde. Efeito no banco: nenhum (só SELECT 1)."""
+    inicio = perf_counter()
     try:
         check_db()
     except Exception:
         # Não devolver host, senha nem o texto cru do driver.
         raise HTTPException(status_code=503, detail="banco indisponível") from None
-    return {"status": "ok"}
+    latencia_ms = max(0, int((perf_counter() - inicio) * 1000))
+    return {"status": "ok", "latencia_ms": latencia_ms}

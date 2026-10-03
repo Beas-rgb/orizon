@@ -6,7 +6,9 @@ Ainda não medido no Neon. O inventário de staging da Fase 0 não rodou.
 
 ## Latência e região
 
-Ainda não medidas no painel. `GET /health/db` ainda não devolve `latencia_ms`.
+Regiões Render/Neon ainda não anotadas no painel (`docs/DEPLOY.md`).
+`GET /health/db` devolve `latencia_ms` (SELECT 1 no processo). O número do Free
+só vale depois de medir na URL de produção/staging — não inventar capacidade.
 
 ## Orçamento de consultas
 
@@ -24,7 +26,20 @@ Estimativa do plano, não medida neste Free: 16 logins ao mesmo tempo, com 64 Mi
 
 ## Carga
 
-Vazia até a Fase 9. Nenhum número daqui é capacidade do Render nem do Neon.
+Template da Fase 9. Preencher só após corrida em staging (`scripts/carga_staging.py`
+ou Locust). Nenhum número abaixo é capacidade do Render nem do Neon até a data
+da corrida.
+
+| Campo | Valor |
+|---|---|
+| Data da corrida | |
+| Ambiente (URL staging) | |
+| Cenário | |
+| Usuários / taxa | |
+| p50 / p95 / erros | |
+| CPU / RAM Render (painel) | |
+| Conexões Neon (painel) | |
+| Conclusão | _sem número de capacidade até fechar esta tabela_ |
 
 ## Banco desta fase
 

@@ -26,7 +26,10 @@ def test_health_db_select_1_ok(monkeypatch) -> None:
     response = client.get("/health/db")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    corpo = response.json()
+    assert corpo["status"] == "ok"
+    assert isinstance(corpo["latencia_ms"], int)
+    assert corpo["latencia_ms"] >= 0
 
 
 def test_health_db_falha_nao_vaza_detalhe(monkeypatch) -> None:
