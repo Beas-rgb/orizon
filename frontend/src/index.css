@@ -66,7 +66,8 @@ textarea {
 }
 
 .page-bg {
-  background: #f4f3ef;
+  background: var(--hz-bg);
+  color: var(--hz-text);
 }
 
 /* Mobile: área segura + toques */

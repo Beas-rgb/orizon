@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { AppShell } from "../components/layout/AppShell";
 import { api } from "../lib/api";
 
 type Cenario = {
@@ -109,7 +110,8 @@ export function LabPage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 720, fontFamily: "sans-serif" }}>
+    <AppShell>
+    <main style={{ padding: 24, maxWidth: 720 }}>
       <p
         style={{
           background: "#111",
@@ -212,5 +214,6 @@ export function LabPage() {
         ))}
       </ul>
     </main>
+    </AppShell>
   );
 }

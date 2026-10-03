@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { AppShell } from "../components/layout/AppShell";
 import { api, tokenAtual, urlApi } from "../lib/api";
 import { enviarComRetry } from "../lib/fila";
 import { ACCENT, glassStyle } from "../lib/theme";
@@ -275,15 +276,16 @@ export function ResponderPage() {
 
   if (!pronto || carregando) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4 text-sm" style={{ background: "var(--hz-bg)", color: "var(--hz-text-2)" }}>
-        Carregando…
-      </div>
+      <AppShell>
+        <p className="text-sm" style={{ color: "var(--hz-text-2)" }}>Carregando…</p>
+      </AppShell>
     );
   }
 
   if (reservado) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "var(--hz-bg)" }}>
+      <AppShell>
+      <div className="flex items-center justify-center px-4">
         <div className="max-w-md w-full rounded-3xl p-6 text-center" style={glassStyle}>
           <h1 className="text-[18px] font-bold text-gray-800 mb-2">Acesso restrito</h1>
           <p className="text-[13px] text-gray-600 mb-4">{erro}</p>
@@ -296,11 +298,13 @@ export function ResponderPage() {
           </Link>
         </div>
       </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen justify-center px-3 py-8" style={{ background: "var(--hz-bg)" }}>
+    <AppShell>
+    <div className="flex justify-center">
       <div className="w-full max-w-lg rounded-3xl p-5 sm:p-6" style={glassStyle}>
         <h1 className="text-[20px] font-bold text-gray-800 mb-1">Responder pesquisa</h1>
         <p className="text-[12px] text-gray-500 mb-4">
@@ -415,6 +419,7 @@ export function ResponderPage() {
         )}
       </div>
     </div>
+    </AppShell>
   );
 }
 

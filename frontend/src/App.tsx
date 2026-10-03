@@ -54,7 +54,7 @@ function Espera({ children }: { children: ReactNode }) {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen page-bg flex items-center justify-center text-gray-500 text-sm">
+        <div className="flex min-h-screen items-center justify-center text-sm" style={{ background: "var(--hz-bg)", color: "var(--hz-text-2)" }}>
           Carregando…
         </div>
       }
@@ -68,7 +68,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const { pronto, usuario } = useAuth();
   if (!pronto) {
     return (
-      <div className="min-h-screen page-bg flex items-center justify-center text-gray-500 text-sm">
+      <div className="flex min-h-screen items-center justify-center text-sm" style={{ background: "var(--hz-bg)", color: "var(--hz-text-2)" }}>
         Carregando…
       </div>
     );
