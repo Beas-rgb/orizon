@@ -7,8 +7,6 @@ src/components/estado/AvisoAcordando.tsx
 src/components/estrutura/ArvoreOrganizacional.tsx
 src/components/estrutura/ImportacaoEquipe.tsx
 src/components/layout/AppShell.tsx
-src/components/layout/CascaNova.tsx
-src/components/layout/InterruptorDesign.tsx
 src/components/layout/Navbar.tsx
 src/components/layout/Sidebar.tsx
 src/index.css

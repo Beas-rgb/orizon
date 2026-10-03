@@ -2,12 +2,11 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { InterruptorDesign } from "../components/layout/InterruptorDesign";
+import { Logo } from "../components/brand/Logo";
 import { FaixaServidor } from "../components/estado/FaixaServidor";
 import { lerAvisoSessao } from "../lib/sessao";
 import { api } from "../lib/api";
-import { useDesignTela } from "../lib/designTela";
-import { ACCENT, ACCENT_DARK } from "../lib/theme";
+import { ACCENT } from "../lib/theme";
 import { consumirRetornoResponder } from "./ResponderPage";
 
 /** Token do e-mail: `?t=` (preferido) ou `#` (links antigos). */
@@ -428,16 +427,13 @@ export function PrimeiroAcessoPage() {
 export function LandingPage() {
   const { pronto, usuario } = useAuth();
   const navigate = useNavigate();
-  const [design] = useDesignTela();
-  const novo = design === "novo";
 
   useEffect(() => {
     if (pronto && usuario) navigate("/inicio", { replace: true });
   }, [pronto, usuario, navigate]);
 
   return (
-    <div className={`min-h-screen relative overflow-hidden ${novo ? "design-novo bg-[#f4f3ef]" : "page-bg"}`}>
-      <InterruptorDesign />
+    <div className="min-h-screen relative overflow-hidden page-bg">
       <FaixaServidor />
       <div
         className="pointer-events-none absolute inset-0"
@@ -449,13 +445,7 @@ export function LandingPage() {
 
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-6 max-w-5xl mx-auto w-full">
         <Link to="/" className="flex items-center gap-2.5">
-          <span
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[12px] font-bold tracking-wide"
-            style={{ background: "#171717" }}
-          >
-            OR
-          </span>
-          <span className="text-[15px] font-semibold text-gray-900 tracking-tight">Orizon</span>
+          <Logo variante="horizontal" tamanho={28} tom="claro" />
         </Link>
         <Link
           to="/entrar"
@@ -470,7 +460,7 @@ export function LandingPage() {
           className="text-[13px] font-semibold tracking-[0.18em] uppercase mb-5"
           style={{ color: ACCENT }}
         >
-          Orizon
+          Horizon
         </p>
         <h1 className="text-[2.75rem] sm:text-6xl font-semibold text-gray-900 tracking-tight leading-[1.08] max-w-xl">
           Pesquisas com clareza para cada papel.
@@ -483,7 +473,7 @@ export function LandingPage() {
           <Link
             to="/entrar"
             className="inline-flex justify-center px-7 py-3.5 rounded-xl text-white text-[14px] font-semibold"
-            style={{ background: novo ? "#171717" : ACCENT }}
+            style={{ background: "var(--hz-primary)" }}
           >
             Entrar
           </Link>
@@ -521,30 +511,12 @@ function AuthLayout({
   children: ReactNode;
   rodape?: ReactNode;
 }) {
-  const [design] = useDesignTela();
-  const novo = design === "novo";
   return (
-    <div className={`min-h-screen flex flex-col ${novo ? "design-novo bg-[#f4f3ef]" : "page-bg"}`}>
-      <InterruptorDesign />
+    <div className="min-h-screen flex flex-col page-bg">
       <FaixaServidor />
-      {novo ? null : (
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 60% 45% at 50% 0%, rgba(29,95,175,0.08), transparent 60%)",
-          }}
-        />
-      )}
       <header className="relative z-10 px-6 sm:px-10 py-6 max-w-lg mx-auto w-full">
         <Link to="/" className="inline-flex items-center gap-2.5">
-          <span
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold"
-            style={{ background: novo ? "#171717" : ACCENT_DARK }}
-          >
-            {novo ? "O" : "OR"}
-          </span>
-          <span className="text-[14px] font-semibold text-gray-900">Orizon</span>
+          <Logo variante="horizontal" tamanho={26} tom="claro" />
         </Link>
       </header>
 
@@ -555,18 +527,7 @@ function AuthLayout({
           </h1>
           <p className="mt-2 text-[14px] text-gray-500 leading-relaxed">{sub}</p>
 
-          <div
-            className={`mt-8 p-6 sm:p-7 ${novo ? "rounded-[24px] bg-white ring-1 ring-black/[0.05]" : "rounded-2xl"}`}
-            style={
-              novo
-                ? undefined
-                : {
-                    background: "rgba(255,255,255,0.72)",
-                    border: "1px solid rgba(255,255,255,0.85)",
-                    boxShadow: "0 12px 40px rgba(15, 35, 70, 0.06)",
-                  }
-            }
-          >
+          <div className="mt-8 rounded-[24px] bg-white p-6 ring-1 ring-black/[0.05] sm:p-7">
             {children}
           </div>
 

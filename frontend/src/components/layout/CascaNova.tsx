@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Archive,
@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
-import { InterruptorDesign } from "./InterruptorDesign";
+import { Logo } from "../brand/Logo";
 
 const ROTULO: Record<string, string> = {
   consultora: "Consultora",
@@ -27,7 +27,7 @@ const ROTULO: Record<string, string> = {
 
 function iniciais(nome: string) {
   const partes = nome.trim().split(/\s+/).filter(Boolean);
-  if (partes.length === 0) return "OR";
+  if (partes.length === 0) return "HZ";
   if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
   return `${partes[0][0]}${partes[partes.length - 1][0]}`.toUpperCase();
 }
@@ -38,7 +38,12 @@ export function CascaNova({ children }: { children: ReactNode }) {
   const { usuario, sair } = useAuth();
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
-  const [menuAberto, setMenuAberto] = useState(true);
+  const [fixo, setFixo] = useState(false);
+  const [sobre, setSobre] = useState(false);
+  const aberto = fixo || sobre;
+  useEffect(() => {
+    localStorage.removeItem("orizon-design-consultora");
+  }, []);
   const nome = usuario?.nome || "Usuário";
   const painel = usuario?.painel || "";
   const papel = ROTULO[painel] || "Horizon";
@@ -191,79 +196,81 @@ export function CascaNova({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f3ef] text-[#1c1c1c]">
-      <div className="min-[900px]:flex">
+    <div className="min-h-screen bg-[var(--hz-bg)] text-[var(--hz-text)]">
+      <div className="relative min-[900px]:flex">
         <aside
-          className={`hidden min-[900px]:flex min-[900px]:flex-col min-[900px]:sticky min-[900px]:top-0 min-[900px]:h-screen min-[900px]:shrink-0 border-r border-black/[0.06] bg-[#f7f6f3] px-3 py-4 ${
-            menuAberto ? "w-[248px]" : "w-[76px]"
+          className={`hidden min-[900px]:flex min-[900px]:h-screen min-[900px]:flex-col min-[900px]:shrink-0 px-2 py-3 ${
+            sobre && !fixo ? "absolute z-40" : "sticky top-0 z-30"
           }`}
+          style={{
+            width: aberto ? 248 : 72,
+            background: "var(--hz-sidebar)",
+            color: "var(--hz-sidebar-text)",
+          }}
+          onMouseEnter={() => setSobre(true)}
+          onMouseLeave={() => setSobre(false)}
         >
-          <div className="flex items-center gap-2 px-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#171717] text-[12px] font-semibold text-white">
-              O
-            </span>
-            {menuAberto ? (
-              <span>
-                <span className="block text-[15px] font-semibold leading-none">Orizon</span>
-                <span className="text-[10px] tracking-[0.14em] text-[#8a8a8a]">
-                  {papel.toUpperCase()}
-                </span>
-              </span>
-            ) : null}
-          </div>
-          <nav className="mt-6 flex flex-col gap-1" aria-label="Principal">
+          <button
+            type="button"
+            className="mb-4 flex items-center gap-2 px-1"
+            onClick={() => setFixo((valor) => !valor)}
+            aria-label={fixo ? "Recolher menu" : "Fixar menu"}
+          >
+            <Logo
+              variante={aberto ? "horizontal" : "simbolo"}
+              tamanho={28}
+              tom="escuro"
+            />
+          </button>
+          <nav className="flex flex-col gap-1" aria-label="Principal">
             {atalhos.map((item) => (
               <button
                 key={item.caminho}
                 type="button"
+                title={aberto ? undefined : item.rotulo}
                 onClick={() => navigate(item.caminho)}
-                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] ${
-                  item.marcado
-                    ? "border-l-2 border-[#171717] bg-[#f3f2ee] font-semibold text-[#171717]"
-                    : "border-l-2 border-transparent text-[#3a3a3a]"
-                }`}
+                className="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px]"
+                style={{
+                  background: item.marcado ? "var(--hz-primary)" : "transparent",
+                  color: item.marcado ? "var(--hz-surface)" : "var(--hz-sidebar-text)",
+                }}
               >
                 {item.icone}
-                {menuAberto ? item.rotulo : null}
+                {aberto ? <span className="truncate">{item.rotulo}</span> : null}
+                {aberto && item.marcado ? <span className="ml-auto">›</span> : null}
               </button>
             ))}
           </nav>
-          <div className="mt-auto flex items-center gap-2 px-2 pt-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#171717] text-[12px] font-semibold text-white">
+          <div className="mt-auto flex items-center gap-2 px-1 pt-4">
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold"
+              style={{ background: "var(--hz-sidebar-active)", color: "var(--hz-surface)" }}
+            >
               {iniciais(nome)}
             </span>
-            {menuAberto ? (
+            {aberto ? (
               <span className="min-w-0">
-                <span className="block truncate text-[13px] font-semibold">{nome}</span>
-                <span className="text-[12px] text-[#6d6d6d]">{papel}</span>
+                <span className="block truncate text-[13px]" style={{ color: "var(--hz-auth-text)" }}>
+                  {nome}
+                </span>
+                <span className="text-[12px]">{papel}</span>
               </span>
             ) : null}
+            <button
+              type="button"
+              onClick={() => void encerrar()}
+              className="ml-auto p-2"
+              aria-label="Sair"
+              title="Sair"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => void encerrar()}
-            className="mt-2 flex items-center gap-2 px-3 py-2 text-left text-[13px] text-[#6d6d6d]"
-          >
-            <LogOut size={14} />
-            {menuAberto ? "Sair" : null}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMenuAberto((aberto) => !aberto)}
-            className="px-3 py-2 text-left text-[12px] text-[#8a8a8a]"
-          >
-            {menuAberto ? "Recolher menu" : "Abrir"}
-          </button>
         </aside>
         <div className="min-w-0 flex-1 pb-28 min-[900px]:pb-10">
           <header className="flex items-center justify-between px-4 pt-4 min-[900px]:hidden">
-            <span className="flex items-center gap-2 font-semibold">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#171717] text-[12px] text-white">
-                O
-              </span>
-              Orizon
-            </span>
-            <button type="button" onClick={() => void encerrar()} className="text-[13px] font-medium text-[#6d6d6d]">
+            <Logo variante="horizontal" tamanho={22} tom="claro" />
+            <button type="button" onClick={() => void encerrar()} className="text-[13px]">
               Sair
             </button>
           </header>
@@ -271,24 +278,23 @@ export function CascaNova({ children }: { children: ReactNode }) {
         </div>
       </div>
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 flex gap-1 overflow-x-auto border-t border-black/[0.06] bg-[#f7f6f3] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] min-[900px]:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex gap-1 overflow-x-auto px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] min-[900px]:hidden"
+        style={{ background: "var(--hz-sidebar)", color: "var(--hz-sidebar-text)" }}
         aria-label="Atalhos"
       >
-        {atalhos.map((item) => (
+        {atalhos.slice(0, 5).map((item) => (
           <button
             key={item.caminho}
             type="button"
             onClick={() => navigate(item.caminho)}
-            className={`flex shrink-0 flex-col items-center gap-1 px-2 text-[11px] ${
-              item.marcado ? "font-semibold text-[#171717]" : "text-[#8a8a8a]"
-            }`}
+            className="flex min-h-11 shrink-0 flex-col items-center gap-1 px-2 text-[11px]"
+            style={{ color: item.marcado ? "var(--hz-surface)" : "var(--hz-sidebar-text)" }}
           >
             {item.icone}
             {item.rotulo}
           </button>
         ))}
       </nav>
-      <InterruptorDesign />
     </div>
   );
 }
