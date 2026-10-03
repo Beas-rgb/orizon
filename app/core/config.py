@@ -123,7 +123,12 @@ def conferir_producao() -> None:
 
 
 def url_publica() -> str:
-    """Endereço da tela. No Render usa o host público, não o localhost."""
+    """Endereço da tela (e-mails e links).
+
+    Com Pages: APP_PUBLIC_URL = https://….pages.dev (sem /app).
+    Com SPA no Render: APP_PUBLIC_URL = …/app, ou localhost + RENDER_EXTERNAL_URL.
+    Nunca anexa /app em cima de um APP_PUBLIC_URL já público (Pages).
+    """
     externa = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
     atual = settings.app_public_url.rstrip("/")
     if externa and (

@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:app": "tsc -b && vite build",
+    "build:pages": "node scripts/build_pages.mjs",
+    "publish:app": "node scripts/publish_app.mjs",
     "lint": "oxlint && npm run checar:hex",
     "checar:hex": "node scripts/checar_hex.mjs",
     "test": "vitest run",
