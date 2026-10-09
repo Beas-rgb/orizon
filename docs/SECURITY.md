@@ -1,5 +1,7 @@
 # Segurança da sessão
 
+> Nota 08/10/2026: esta página descreve hash, fila, refresh e IP. Não marca isolamento nem CLIMA como corrigidos. A matriz com estado da evidência está em `docs/AUDITORIA_BANCO_SEGURANCA_2026-10.md`. A suíte não foi reexecutada no Passo 0.
+
 ## Hash da senha
 
 Argon2id via `argon2-cffi`. O padrão continua o que já estava no banco: 65536 KiB de memória, 3 iterações, paralelismo 4. Esses números ficam na configuração. Se um hash antigo não usa os parâmetros atuais, o login certo grava um hash novo. Senha errada não reescreve nada.

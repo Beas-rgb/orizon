@@ -1,5 +1,7 @@
 # Auditoria crítica Horizon — 18/09/2026
 
+> Foto histórica (18/09/2026). Estado vivo: `docs/INDEX_PLANO_MESTRE_50K.md`.
+
 Documento vivo de riscos, correções e roadmap. Escrito para ser lido por
 uma pressa (CTO/sócio técnico), não por um mentor. Tom: o que falha, o que
 já foi fechado, o que falta, em que ordem.

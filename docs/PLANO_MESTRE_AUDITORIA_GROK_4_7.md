@@ -1,5 +1,7 @@
 # Plano mestre — auditoria incremental
 
+> Foto histórica. Estado vivo: `docs/INDEX_PLANO_MESTRE_50K.md`.
+
 Estado vivo do Orizon. Não apaga o histórico abaixo. Não autoriza reescrita.
 
 Data de abertura: 25/09/2026.

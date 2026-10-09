@@ -1,5 +1,7 @@
 # Carga no staging — boot RC
 
+> Nota 08/10/2026: este harness mede simultaneidade em `/health`, não usuários por mês. 10 mil/mês e 50 mil/mês estão em `docs/PLANO_ESCALA_VALIDACAO_50K.md` e ainda não foram medidos. Não apontar este script para produção.
+
 Medição progressiva `10 → 20 → 50 → 100 → 200 → 300` contra `/health`.
 O script **recusa** URL de produção (`orizon-api.onrender.com` e afins).
 

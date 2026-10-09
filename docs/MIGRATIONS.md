@@ -1,5 +1,7 @@
 # Migrations
 
+> Nota 08/10/2026: no git o head é `0020_lab` (`migrations/versions/`). Isso não prova a revisão do Neon. Não aplicar `alembic stamp` nem `alembic upgrade` no destino do Render até o P0 em `docs/RELATORIO_PASSO_0_2026-10-08.md`. Staging só com restore combinado e URL direta. Estado vivo: `docs/INDEX_PLANO_MESTRE_50K.md`.
+
 - Nova mudança de tabela é um arquivo Alembic novo. 0001 a 0017 não são editados.
 - Índice no Postgres nasce com `CREATE INDEX CONCURRENTLY`, fora de transação.
 - O downgrade remove só o que a migration criou.

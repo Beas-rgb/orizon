@@ -1,5 +1,7 @@
 # Deploy
 
+> Nota 08/10/2026 (P0): conferir na tela do Render se `DATABASE_URL` e `DATABASE_URL_DIRECT` são o projeto Neon esperado. Não copiar senha nem connection string para issue, log, chat ou commit. A região do Render continua em aberto. A nota de `aws-sa-east-1` abaixo não prova o destino do Render. Ver `docs/RELATORIO_PASSO_0_2026-10-08.md`.
+
 A tela pode sair do Cloudflare Pages. A API continua no Render Free. `web/app` e a rota `/app` da API ficam até a Fase 10.
 
 ## Páginas
