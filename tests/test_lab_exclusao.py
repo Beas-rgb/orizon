@@ -131,3 +131,29 @@ def test_consultora_normal_nao_ve_projeto_lab(client, db, monkeypatch) -> None:
         "projeto_id"
     ]
     assert client.get(f"/projetos/{projeto_id}", headers=normal).status_code == 404
+
+
+def test_dry_run_exclusao_nao_apaga(client, db, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "enable_lab", True)
+    incluir_lab_se_ligado()
+    criar_consultor_teste(db, "Lab", "lab-dry@horizon.dev", SENHA)
+    headers = _headers(client, "lab-dry@horizon.dev")
+    cid = client.post(
+        "/lab/cenarios",
+        headers=headers,
+        json={
+            "nome": "Dry",
+            "tipo": "CLIMA",
+            "tamanho": 10,
+            "seed": 8,
+            "perfil": "ALEATORIO",
+        },
+    ).json()["id"]
+    previa = client.get(
+        f"/lab/cenarios/{cid}/exclusao-previa", headers=headers
+    )
+    assert previa.status_code == 200, previa.text
+    corpo = previa.json()
+    assert corpo["usuarios_sinteticos"] == 10
+    assert db.get(CenarioLab, cid) is not None
+    assert db.get(Projeto, corpo["projeto_id"]) is not None

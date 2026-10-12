@@ -194,21 +194,8 @@ def _vaga_de_acesso(
             raise ErroAuth(404, "Projeto não encontrado.")
         return
     if papel == "TI":
-        ja = db.scalar(
-            select(Usuario.id).where(
-                Usuario.papel == "TI",
-                Usuario.deleted_at.is_(None),
-            )
-        )
-        pendente = db.scalar(
-            select(Convite.id).where(
-                Convite.papel == "TI",
-                Convite.status == "PENDENTE",
-            )
-        )
-        if ja is not None or pendente is not None:
-            raise ErroAuth(409, "Já existe o acesso de desenvolvimento.")
-        return
+        # TI nasce só por ADMIN_* (garantir_admin) ou pelo bootstrap local.
+        raise ErroAuth(422, "O acesso de desenvolvimento não nasce por convite.")
     if papel == "ORGAO":
         # Ataque que corta: um órgão de outro cliente bloquear o onboarding
         # do próximo. A vaga é por projeto, não no sistema inteiro.
@@ -246,6 +233,8 @@ def criar_convite(
     email: str,
     papel: str,
     projeto_id: str | None = None,
+    *,
+    enviar_email: bool = True,
 ) -> dict[str, str | None]:
     if consultor.papel != "CONSULTOR":
         raise ErroAuth(403, "Só a consultora convida.")
@@ -276,21 +265,24 @@ def criar_convite(
     db.flush()
     from app.services.notificacao import entrega_aceita, entregar_email
 
-    entrega = entregar_email(
-        db,
-        endereco,
-        "Seu primeiro acesso ao Horizon",
-        _corpo_primeiro_acesso(
-            nome.strip(),
-            link,
-            token,
-            contexto="Você recebeu um convite para acessar o Horizon.",
-        ),
-        "CONVITE",
-        projeto_id,
-        consultor.id,
-    )
-    convite.entrega = "ENVIADO" if entrega_aceita(entrega) else "FALHA"
+    if enviar_email:
+        entrega = entregar_email(
+            db,
+            endereco,
+            "Seu primeiro acesso ao Horizon",
+            _corpo_primeiro_acesso(
+                nome.strip(),
+                link,
+                token,
+                contexto="Você recebeu um convite para acessar o Horizon.",
+            ),
+            "CONVITE",
+            projeto_id,
+            consultor.id,
+        )
+        convite.entrega = "ENVIADO" if entrega_aceita(entrega) else "FALHA"
+    else:
+        convite.entrega = "NAO_ENVIADO"
     # B6: o contador de espera é só para abuso / falha real de envio.
     # Somar em sucesso travava o 4º convite de órgão (429 falso).
     if papel != "FUNCIONARIO":

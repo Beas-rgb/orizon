@@ -432,6 +432,22 @@ def redefinir_senha(
     db.commit()
 
 
+def trocar_senha(
+    db: Session,
+    usuario: Usuario,
+    senha_atual: str,
+    senha_nova: str,
+) -> None:
+    """Troca autenticada. Exige a senha atual. Sem token de e-mail."""
+    _exigir_senha(senha_nova)
+    if not usuario.senha_hash or not senha_confere(senha_atual, usuario.senha_hash):
+        raise ErroAuth(400, MSG_CREDENCIAL)
+    usuario.senha_hash = hash_senha(senha_nova)
+    usuario.atualizado_em = _agora()
+    _auditar(db, "SENHA_TROCADA", usuario.id)
+    db.commit()
+
+
 def _revogar_tokens_abertos(db: Session, usuario_id: str) -> None:
     abertos = db.scalars(
         select(TokenRedefinicao).where(

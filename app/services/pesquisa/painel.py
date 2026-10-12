@@ -97,7 +97,8 @@ def painel(db: Session, usuario: Usuario, pesquisa_id: str) -> list[dict]:
                 "pergunta_id": pergunta.id,
                 "texto": pergunta.texto,
                 "tipo": pergunta.tipo,
-                "respostas": total,
+                # Com K, o total também some: filtrar N=1 vs N=4 revelaria o grupo.
+                "respostas": None if suprimido else total,
                 "media": media,
                 "contagem_opcoes": contagem_opcoes,
                 "suprimido": suprimido,

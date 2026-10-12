@@ -1,6 +1,7 @@
 """Tokens, formulário, registro de respostas e notas."""
 
 import hashlib
+import re
 from datetime import timedelta
 
 from sqlalchemy import func, insert, select, text
@@ -213,11 +214,15 @@ def registrar_respostas(
     itens: list[dict],
     usuario: Usuario,
     ip: str | None = None,
+    *,
+    chave_envio: str | None = None,
 ) -> tuple[str, float | None]:
     def gravar() -> tuple[str, float | None]:
         convite = _token_convite(db, token)
         pesquisa = _pesquisa_viva(db, convite.pesquisa_id)
-        return _registrar_respostas_em(db, pesquisa, itens, usuario, ip)
+        return _registrar_respostas_em(
+            db, pesquisa, itens, usuario, ip, chave_envio=chave_envio
+        )
 
     return _com_limite_de_falha(db, usuario, gravar)
 
@@ -228,12 +233,36 @@ def registrar_respostas_da_pesquisa(
     itens: list[dict],
     usuario: Usuario,
     ip: str | None = None,
+    *,
+    chave_envio: str | None = None,
 ) -> tuple[str, float | None]:
     def gravar() -> tuple[str, float | None]:
         pesquisa = _exigir_pesquisa_aberta(db, pesquisa_id)
-        return _registrar_respostas_em(db, pesquisa, itens, usuario, ip)
+        return _registrar_respostas_em(
+            db, pesquisa, itens, usuario, ip, chave_envio=chave_envio
+        )
 
     return _com_limite_de_falha(db, usuario, gravar)
+
+
+CHAVE_ENVIO = re.compile(r"[A-Za-z0-9_-]{8,128}")
+
+
+def hash_chave_envio(chave: str | None) -> str | None:
+    """Idempotency-Key do navegador. Sem chave, o reenvio volta 409."""
+    if chave is None or chave == "":
+        return None
+    if not CHAVE_ENVIO.fullmatch(chave):
+        raise ErroAuth(422, "Idempotency-Key inválida.")
+    return hashlib.sha256(chave.encode()).hexdigest()
+
+
+def comprovante_do_envio(chave: str | None) -> str | None:
+    """Código curto para a pessoa guardar. Sai só da chave, não das respostas."""
+    hash_ = hash_chave_envio(chave)
+    if hash_ is None:
+        return None
+    return f"RSP-{hash_[:4].upper()}-{hash_[4:8].upper()}"
 
 
 def _travar_envio(db: Session, pesquisa_id: str, usuario_id: str) -> None:
@@ -261,9 +290,30 @@ def _registrar_respostas_em(
     itens: list[dict],
     usuario: Usuario,
     ip: str | None = None,
+    *,
+    chave_envio: str | None = None,
 ) -> tuple[str, float | None]:
     _ = ip
+    hash_chave = hash_chave_envio(chave_envio)
     _travar_envio(db, pesquisa.id, usuario.id)
+    if hash_chave is not None:
+        anterior = db.scalar(
+            select(PesquisaParticipante).where(
+                PesquisaParticipante.pesquisa_id == pesquisa.id,
+                PesquisaParticipante.usuario_id == usuario.id,
+                PesquisaParticipante.deleted_at.is_(None),
+            )
+        )
+        if (
+            anterior is not None
+            and anterior.status == "RESPONDIDA"
+            and anterior.envio_chave_hash == hash_chave
+        ):
+            nota = None
+            if pesquisa.tipo == "DESEMPENHO" and anterior.token_id:
+                nota = _nota_do_token(db, anterior.token_id)
+            db.rollback()
+            return pesquisa.tipo, nota
     participante = _participante_da_pesquisa(
         db, usuario, pesquisa, para_envio=True
     )
@@ -327,6 +377,7 @@ def _registrar_respostas_em(
     participante.status = "RESPONDIDA"
     participante.respondido_em = agora_
     participante.atualizado_em = agora_
+    participante.envio_chave_hash = hash_chave
     # CLIMA: auditoria sem usuario_id (não amarra quem respondeu).
     if pesquisa.tipo in TIPOS_ANONIMOS:
         _auditar(db, "PESQUISA_RESPONDIDA", None)

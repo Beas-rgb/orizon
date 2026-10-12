@@ -14,12 +14,19 @@ class Settings(BaseSettings):
 
     database_url: str = ""
     database_url_direct: str = ""
+    # Revisões anteriores ao head que o boot pode atualizar sozinho, separadas
+    # por vírgula. Vazio: qualquer revisão antiga bloqueia o boot.
+    migracao_origens_autorizadas: str = ""
     app_env: str = "development"
 
     # Neon: poucas conexões simultâneas. Sem overflow para não estourar a cota.
     db_pool_size: int = 5
     db_max_overflow: int = 5
     db_pool_timeout: int = 10
+    # SET LOCAL por transação (funciona com PgBouncer em modo transação).
+    # Zero desliga. Ligar só depois de medir as transações mais longas.
+    db_statement_timeout_ms: int = 0
+    db_lock_timeout_ms: int = 0
 
     jwt_secret: str = ""
     jwt_access_minutos: int = 15
@@ -120,6 +127,13 @@ def conferir_producao() -> None:
         raise RuntimeError(
             "ENABLE_LAB não pode ficar ligado em produção."
         )
+    if not (
+        settings.r2_endpoint.strip()
+        and settings.r2_bucket.strip()
+        and settings.r2_access_key_id.strip()
+        and settings.r2_secret_access_key.strip()
+    ):
+        raise RuntimeError("R2 obrigatório em produção.")
 
 
 def url_publica() -> str:
@@ -147,6 +161,13 @@ _PREFIXOS_NEXT = (
     "/lab",
     "/primeiro-acesso",
     "/recuperar",
+    "/conta",
+    "/notificacoes",
+    "/documentos",
+    "/biblioteca",
+    "/banco-perguntas",
+    "/organizacao",
+    "/minhas-notas",
 )
 
 

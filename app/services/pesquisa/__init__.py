@@ -48,6 +48,7 @@ from app.services.pesquisa.modelos import (
 )
 from app.services.pesquisa.painel import painel
 from app.services.pesquisa.resposta import (
+    comprovante_do_envio,
     gerar_tokens,
     nota_da_pesquisa,
     nota_do_token,
@@ -72,6 +73,7 @@ __all__ = [
     "baixar_midia_pelo_token",
     "baixar_midia_pergunta",
     "calcular_resultado_avaliacao",
+    "comprovante_do_envio",
     "criar_ciclo",
     "criar_de_modelo",
     "criar_pesquisa",

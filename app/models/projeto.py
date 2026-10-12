@@ -29,6 +29,9 @@ class Projeto(IdTempo, Base):
     estado: Mapped[str] = mapped_column(String(32), default="ABERTO")
     vinculo_tipo: Mapped[str] = mapped_column(String(32))
     vinculo_titulo: Mapped[str] = mapped_column(String(200))
+    origem: Mapped[str] = mapped_column(
+        String(16), default="NORMAL", server_default="NORMAL"
+    )
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

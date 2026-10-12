@@ -215,10 +215,16 @@ def equipe(
 @router.get("/{projeto_id}/setores", response_model=list[SetorSaida])
 def setores(
     projeto_id: str,
+    limite: int = Query(500, ge=1, le=500),
+    deslocamento: int = Query(0, ge=0),
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[SetorSaida]:
-    itens = chamar(lambda: listar_setores(db, usuario, projeto_id))
+    itens = chamar(
+        lambda: listar_setores(
+            db, usuario, projeto_id, limite=limite, deslocamento=deslocamento
+        )
+    )
     return [SetorSaida(id=item.id, nome=item.nome) for item in itens]
 
 
@@ -246,10 +252,16 @@ def apagar_setor(
 @router.get("/{projeto_id}/cargos", response_model=list[CargoSaida])
 def cargos(
     projeto_id: str,
+    limite: int = Query(500, ge=1, le=500),
+    deslocamento: int = Query(0, ge=0),
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[CargoSaida]:
-    itens = chamar(lambda: listar_cargos(db, usuario, projeto_id))
+    itens = chamar(
+        lambda: listar_cargos(
+            db, usuario, projeto_id, limite=limite, deslocamento=deslocamento
+        )
+    )
     return [CargoSaida(id=item.id, nome=item.nome) for item in itens]
 
 
@@ -433,6 +445,60 @@ def importar_confirmar(
         lambda: confirmar_importacao(db, consultor, projeto_id, linhas)
     )
     return ImportacaoConfirmarSaida(**resultado)
+
+
+@router.post("/{projeto_id}/importar/tarefa", status_code=202)
+def importar_tarefa(
+    projeto_id: str,
+    corpo: ImportacaoConfirmarEntrada,
+    background: BackgroundTasks,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Grava em lotes depois da resposta. O request não segura a transação."""
+    from app.services.jobs import agendar_importacao, executar_importacao
+    from app.services.projeto import obter_projeto
+
+    chamar(lambda: obter_projeto(db, consultor, projeto_id))
+    tarefa = chamar(
+        lambda: agendar_importacao(db, consultor, projeto_id, corpo.linhas)
+    )
+    background.add_task(
+        executar_importacao,
+        tarefa.id,
+        consultor.id,
+        projeto_id,
+        corpo.linhas,
+    )
+    return {"id": tarefa.id, "status": tarefa.status}
+
+
+@router.post("/{projeto_id}/exportar/tarefa", status_code=202)
+def exportar_tarefa(
+    projeto_id: str,
+    background: BackgroundTasks,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.jobs import agendar_exportacao, executar_exportacao
+    from app.services.projeto import obter_projeto
+
+    chamar(lambda: obter_projeto(db, consultor, projeto_id))
+    tarefa = chamar(lambda: agendar_exportacao(db, consultor, projeto_id))
+    background.add_task(executar_exportacao, tarefa.id, consultor.id, projeto_id)
+    return {"id": tarefa.id, "status": tarefa.status}
+
+
+@router.get("/{projeto_id}/resumo")
+def resumo(
+    projeto_id: str,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Dashboard do trabalho. K-anonimato já aplicado em cada pesquisa."""
+    from app.services.pesquisa.resumo import resumo_do_projeto
+
+    return chamar(lambda: resumo_do_projeto(db, usuario, projeto_id))
 
 
 @router.get("/{projeto_id}/configuracao", response_model=ConfiguracaoSaida)

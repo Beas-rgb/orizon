@@ -121,6 +121,9 @@ def listar(
     db: Session,
     usuario: Usuario,
     projeto_id: str | None,
+    *,
+    limite: int = 100,
+    deslocamento: int = 0,
 ) -> list[Documento]:
     if usuario.papel == "TI":
         raise ErroAuth(403, "Sem acesso à biblioteca.")
@@ -137,6 +140,11 @@ def listar(
             )
         else:
             consulta = consulta.where(Documento.camada == "INTERNA")
+    consulta = (
+        consulta.order_by(Documento.criado_em.desc(), Documento.id)
+        .limit(min(max(limite, 1), 200))
+        .offset(max(deslocamento, 0))
+    )
     docs = list(db.scalars(consulta).all())
     return [doc for doc in docs if pode_ver(db, usuario, doc)]
 

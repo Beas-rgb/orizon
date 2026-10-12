@@ -6,6 +6,7 @@ import type { NoArvore } from "../components/estrutura/tipos";
 import { AppShell } from "../components/layout/AppShell";
 import { api } from "../lib/api";
 import { ACCENT, glassStyle } from "../lib/theme";
+import { Dialogo } from "../ui";
 
 type Projeto = {
   id: string;
@@ -189,6 +190,7 @@ export function NovoProjetoPage() {
 
 type Pesquisa = { id: string; titulo: string; tipo: string; status: string };
 type Membro = {
+  id?: string | null;
   nome: string;
   email: string;
   papel: string;
@@ -202,10 +204,19 @@ type Doc = { id: string; nome: string; visibilidade?: string };
 type PainelItem = {
   pergunta_id: string;
   texto: string;
-  respostas: number;
+  respostas: number | null;
   media?: number | null;
   suprimido?: boolean;
 };
+type Entrega = {
+  id: string;
+  canal: string;
+  destino: string;
+  assunto: string;
+  status: string;
+  erro?: string | null;
+};
+type Modelo = { id: string; nome: string; tipo: string };
 
 export function ProjetoDetalhePage() {
   const { id } = useParams();
@@ -221,6 +232,7 @@ export function ProjetoDetalhePage() {
       "resultados",
       "historico",
       "biblioteca",
+      "entregas",
       "config",
     ] as const
   ).includes(abaPedida as "visao")
@@ -232,6 +244,7 @@ export function ProjetoDetalhePage() {
         | "resultados"
         | "historico"
         | "biblioteca"
+        | "entregas"
         | "config")
     : "visao";
   const [projeto, setProjeto] = useState<Projeto | null>(null);
@@ -247,6 +260,11 @@ export function ProjetoDetalhePage() {
   const [painelTitulo, setPainelTitulo] = useState("");
   const [arvore, setArvore] = useState<NoArvore[]>([]);
   const [equipeTemMais, setEquipeTemMais] = useState(false);
+  const [entregas, setEntregas] = useState<Entrega[]>([]);
+  const [modelos, setModelos] = useState<Modelo[]>([]);
+  const [editarAberto, setEditarAberto] = useState(false);
+  const [pessoaAberto, setPessoaAberto] = useState<Membro | null>(null);
+  const [modeloAberto, setModeloAberto] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -277,6 +295,12 @@ export function ProjetoDetalhePage() {
     api<NoArvore[]>(`/projetos/${id}/arvore`)
       .then(setArvore)
       .catch(() => setArvore([]));
+    api<Entrega[]>(`/projetos/${id}/entregas`)
+      .then(setEntregas)
+      .catch(() => setEntregas([]));
+    api<Modelo[]>("/modelos")
+      .then(setModelos)
+      .catch(() => setModelos([]));
   }, [id]);
 
   async function reenviarConviteOrgao() {
@@ -389,6 +413,64 @@ export function ProjetoDetalhePage() {
     }
   }
 
+  async function criarDeModelo(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!id) return;
+    const form = evento.currentTarget;
+    try {
+      const criada = await api<Pesquisa>(`/projetos/${id}/pesquisas/de-modelo`, {
+        method: "POST",
+        json: {
+          template_id: (form.elements.namedItem("template_id") as HTMLSelectElement).value,
+          titulo: (form.elements.namedItem("titulo_modelo") as HTMLInputElement).value || null,
+        },
+      });
+      setModeloAberto(false);
+      navigate(`/projetos/${id}/pesquisas/${criada.id}`);
+    } catch (exc) {
+      setAviso(exc instanceof Error ? exc.message : "Erro");
+    }
+  }
+
+  async function salvarTrabalho(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!id) return;
+    const form = evento.currentTarget;
+    try {
+      const atual = await api<Projeto>(`/projetos/${id}`, {
+        method: "PATCH",
+        json: {
+          vinculo_titulo: (form.elements.namedItem("titulo") as HTMLInputElement).value,
+        },
+      });
+      setProjeto(atual);
+      setEditarAberto(false);
+    } catch (exc) {
+      setAviso(exc instanceof Error ? exc.message : "Erro");
+    }
+  }
+
+  async function salvarPessoa(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!id || !pessoaAberto?.id) return;
+    const form = evento.currentTarget;
+    try {
+      await api(`/projetos/${id}/perfis`, {
+        method: "PUT",
+        json: {
+          usuario_id: pessoaAberto.id,
+          setor_id: (form.elements.namedItem("setor_id") as HTMLSelectElement).value || null,
+          cargo_id: null,
+          superior_id: (form.elements.namedItem("superior_id") as HTMLSelectElement).value || null,
+        },
+      });
+      setPessoaAberto(null);
+      await recarregarEquipe();
+    } catch (exc) {
+      setAviso(exc instanceof Error ? exc.message : "Erro");
+    }
+  }
+
   async function verResultado(pesquisa: Pesquisa) {
     setAviso("");
     setPainelTitulo(pesquisa.titulo);
@@ -455,6 +537,13 @@ export function ProjetoDetalhePage() {
             {nomeCliente(projeto)} · {projeto.rotulo} · {projeto.estado}
           </p>
         ) : null}
+        <button
+          type="button"
+          className="mt-2 text-[12px] font-bold text-[var(--hz-accent)]"
+          onClick={() => setEditarAberto(true)}
+        >
+          Editar trabalho
+        </button>
       </div>
 
       {aviso ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{aviso}</p> : null}
@@ -542,6 +631,14 @@ export function ProjetoDetalhePage() {
                             onClick={() => void reenviarConviteOrgao()}
                           >
                             Reenviar
+                          </button>
+                        ) : m.id ? (
+                          <button
+                            type="button"
+                            className="text-[var(--hz-accent)] font-bold underline"
+                            onClick={() => setPessoaAberto(m)}
+                          >
+                            Editar
                           </button>
                         ) : (
                           "—"
@@ -656,6 +753,13 @@ export function ProjetoDetalhePage() {
                 <p className="text-gray-500 text-[13px]">Nenhuma pesquisa neste trabalho.</p>
               ) : null}
             </ul>
+            <button
+              type="button"
+              className="self-start text-[12px] font-bold text-[var(--hz-accent)]"
+              onClick={() => setModeloAberto(true)}
+            >
+              Criar a partir de modelo
+            </button>
             <form
               onSubmit={criarPesquisa}
               className="grid gap-3 max-w-lg rounded-3xl p-4"
@@ -789,6 +893,25 @@ export function ProjetoDetalhePage() {
           </div>
         )}
 
+        {aba === "entregas" && (
+          <ul className="flex flex-col gap-2">
+            {entregas.map((item) => (
+              <li key={item.id} className="rounded-2xl p-3" style={{ background: "var(--hz-white-55)" }}>
+                <p className="text-[13px] font-semibold">{item.assunto}</p>
+                <p className="text-[12px] text-gray-500">
+                  {item.canal} · {item.status} · {item.destino}
+                </p>
+                {item.erro ? (
+                  <p className="text-[12px] text-[var(--hz-danger)]">{item.erro}</p>
+                ) : null}
+              </li>
+            ))}
+            {entregas.length === 0 ? (
+              <p className="text-[13px] text-gray-500">Nenhuma entrega de e-mail neste trabalho.</p>
+            ) : null}
+          </ul>
+        )}
+
         {aba === "config" && (
           <div className="flex flex-col gap-3">
             <p className="text-[13px] text-gray-600">
@@ -823,6 +946,98 @@ export function ProjetoDetalhePage() {
           </div>
         )}
       </div>
+      {editarAberto && projeto ? (
+        <Dialogo titulo="Editar trabalho" onFechar={() => setEditarAberto(false)}>
+          <form onSubmit={salvarTrabalho} className="grid gap-3">
+            <label className="text-[12px] font-semibold">
+              Título
+              <input
+                name="titulo"
+                defaultValue={projeto.vinculo_titulo || ""}
+                required
+                minLength={2}
+                className={field}
+              />
+            </label>
+            <button
+              type="submit"
+              className="rounded-xl py-2 text-[13px] font-bold text-[var(--hz-surface)]"
+              style={{ background: "var(--hz-ink)" }}
+            >
+              Salvar
+            </button>
+          </form>
+        </Dialogo>
+      ) : null}
+      {modeloAberto ? (
+        <Dialogo titulo="Criar pesquisa a partir de modelo" onFechar={() => setModeloAberto(false)}>
+          {modelos.length === 0 ? (
+            <p className="text-[13px] text-gray-500">Nenhum modelo salvo.</p>
+          ) : (
+            <form onSubmit={criarDeModelo} className="grid gap-3">
+              <label className="text-[12px] font-semibold">
+                Modelo
+                <select name="template_id" className={field} required>
+                  {modelos.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-[12px] font-semibold">
+                Título (opcional)
+                <input name="titulo_modelo" className={field} />
+              </label>
+              <button
+                type="submit"
+                className="rounded-xl py-2 text-[13px] font-bold text-[var(--hz-surface)]"
+                style={{ background: "var(--hz-ink)" }}
+              >
+                Criar
+              </button>
+            </form>
+          )}
+        </Dialogo>
+      ) : null}
+      {pessoaAberto ? (
+        <Dialogo titulo="Editar pessoa" onFechar={() => setPessoaAberto(null)}>
+          <form onSubmit={salvarPessoa} className="grid gap-3">
+            <p className="text-[13px]">{pessoaAberto.nome}</p>
+            <label className="text-[12px] font-semibold">
+              Setor
+              <select name="setor_id" className={field}>
+                <option value="">Sem setor</option>
+                {setores.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-[12px] font-semibold">
+              Superior
+              <select name="superior_id" className={field}>
+                <option value="">Sem superior</option>
+                {equipe
+                  .filter((m) => m.id && m.id !== pessoaAberto.id)
+                  .map((m) => (
+                    <option key={m.id || m.email} value={m.id || ""}>
+                      {m.nome}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <button
+              type="submit"
+              className="rounded-xl py-2 text-[13px] font-bold text-[var(--hz-surface)]"
+              style={{ background: "var(--hz-ink)" }}
+            >
+              Salvar
+            </button>
+          </form>
+        </Dialogo>
+      ) : null}
     </AppShell>
   );
 }

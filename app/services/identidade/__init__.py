@@ -16,6 +16,7 @@ from .auth import (
     redefinir_senha,
     refresh,
     sair,
+    trocar_senha,
 )
 from .convites import (
     ResolucaoOrgao,
@@ -77,6 +78,7 @@ __all__ = [
     "registrar_falha",
     "resolver_usuario_orgao_por_email",
     "sair",
+    "trocar_senha",
     "segundos_bloqueio",
     "settings",
     "testar_email_ti",

@@ -269,6 +269,60 @@ def test_calcular_resultado_com_pesos(client, monkeypatch, db) -> None:
     assert db.scalar(select(Resposta).limit(1)) is None
 
 
+def test_subordinado_sozinho_nao_aparece_para_a_chefia(client, monkeypatch, db) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    chefe_token = _funcionario(client, headers, projeto_id, "chefe@p.dev", "Chefe")
+    chefe_id = _usuario_id(client, headers, projeto_id, "chefe@p.dev")
+    sub_token = _funcionario(client, headers, projeto_id, "sub@p.dev", "Sub")
+    sub_id = _usuario_id(client, headers, projeto_id, "sub@p.dev")
+    client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": sub_id, "superior_id": chefe_id},
+    )
+    pesquisa = client.post(
+        f"/projetos/{projeto_id}/pesquisas",
+        headers=headers,
+        json={"titulo": "Desempenho", "tipo": "DESEMPENHO"},
+    ).json()
+    pergunta = client.post(
+        f"/pesquisas/{pesquisa['id']}/perguntas",
+        headers=headers,
+        json={"texto": "Entrega", "tipo": "NOTA_5"},
+    ).json()
+    ciclo = client.post(
+        f"/projetos/{projeto_id}/ciclos",
+        headers=headers,
+        json={"nome": "Ciclo"},
+    ).json()
+    client.post(f"/ciclos/{ciclo['id']}/gerar-relacoes", headers=headers)
+    relacoes = db.scalars(
+        select(AvaliacaoRelacionamento).where(
+            AvaliacaoRelacionamento.ciclo_id == ciclo["id"],
+            AvaliacaoRelacionamento.avaliado_id == chefe_id,
+        )
+    ).all()
+    auto = next(r for r in relacoes if r.tipo_relacao == "AUTO")
+    subordinado = next(r for r in relacoes if r.tipo_relacao == "SUBORDINADO")
+    assert _nota(client, chefe_token, auto.id, pergunta["id"], 4).status_code == 200
+    assert (
+        _nota(client, sub_token, subordinado.id, pergunta["id"], 2).status_code
+        == 200
+    )
+    caminho = f"/ciclos/{ciclo['id']}/resultado/{chefe_id}"
+
+    da_chefia = client.get(
+        caminho, headers={"Authorization": f"Bearer {chefe_token}"}
+    ).json()
+    assert "SUBORDINADO" not in da_chefia["por_perspectiva"]
+    assert da_chefia["perspectivas_suprimidas"] == ["SUBORDINADO"]
+    assert da_chefia["por_perspectiva"]["AUTO"] == 4.0
+
+    da_consultora = client.get(caminho, headers=headers).json()
+    assert da_consultora["por_perspectiva"]["SUBORDINADO"] == 2.0
+    assert da_consultora["perspectivas_suprimidas"] == []
+
+
 def test_resultado_404_fora_do_escopo(client, monkeypatch) -> None:
     headers, projeto_id = _projeto(client, monkeypatch)
     email = "func@prefeitura.dev"

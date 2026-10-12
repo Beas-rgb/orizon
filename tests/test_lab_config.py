@@ -39,3 +39,18 @@ def test_enable_lab_bloqueado_em_producao(monkeypatch) -> None:
     monkeypatch.setattr(cfg.settings, "enable_lab", True)
     with pytest.raises(RuntimeError, match="ENABLE_LAB"):
         cfg.conferir_producao()
+
+
+def test_producao_sem_r2_recusa_boot(monkeypatch) -> None:
+    from app.core import config as cfg
+
+    monkeypatch.setattr(cfg.settings, "app_env", "production")
+    monkeypatch.setattr(cfg.settings, "jwt_secret", "x" * 32)
+    monkeypatch.setattr(cfg.settings, "database_url", "sqlite://")
+    monkeypatch.setattr(cfg.settings, "enable_lab", False)
+    monkeypatch.setattr(cfg.settings, "r2_endpoint", "")
+    monkeypatch.setattr(cfg.settings, "r2_bucket", "")
+    monkeypatch.setattr(cfg.settings, "r2_access_key_id", "")
+    monkeypatch.setattr(cfg.settings, "r2_secret_access_key", "")
+    with pytest.raises(RuntimeError, match="R2"):
+        cfg.conferir_producao()

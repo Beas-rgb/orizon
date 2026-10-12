@@ -84,6 +84,27 @@ def _ids_sinteticos(db: Session, cenario_id: str) -> list[str]:
     )
 
 
+def prever_exclusao(db: Session, dono: Usuario, cenario_id: str) -> dict:
+    """Conta o que a limpeza apagaria. Nenhuma escrita."""
+    cenario = obter_cenario(db, dono, cenario_id)
+    projeto_id = cenario.projeto_id
+    projeto = db.get(Projeto, projeto_id) if projeto_id else None
+    if projeto is not None and getattr(projeto, "origem", "NORMAL") != "SINTETICO":
+        raise ErroAuth(409, "Cenário aponta para trabalho real.")
+    org = db.get(Organizacao, projeto.organizacao_id) if projeto else None
+    if org is not None and getattr(org, "origem", "NORMAL") != "SINTETICO":
+        raise ErroAuth(409, "Cenário aponta para organização real.")
+    pesquisas = _ids_pesquisa(db, projeto_id) if projeto_id else []
+    sinteticos = _ids_sinteticos(db, cenario_id)
+    return {
+        "cenario_id": cenario.id,
+        "projeto_id": projeto_id,
+        "organizacao_id": projeto.organizacao_id if projeto else None,
+        "pesquisas": len(pesquisas),
+        "usuarios_sinteticos": len(sinteticos),
+    }
+
+
 def executar_exclusao(cenario_id: str, dono_id: str) -> None:
     from app.core.database import SessionLocal, get_engine
 
@@ -103,8 +124,26 @@ def executar_exclusao(cenario_id: str, dono_id: str) -> None:
             org_id = None
             if projeto_id:
                 projeto = db.get(Projeto, projeto_id)
-                if projeto is not None and projeto.consultor_id == dono_id:
+                origem_ok = (
+                    projeto is not None
+                    and projeto.consultor_id == dono_id
+                    and getattr(projeto, "origem", "NORMAL") == "SINTETICO"
+                )
+                if origem_ok:
                     org_id = projeto.organizacao_id
+                    org = db.get(Organizacao, org_id)
+                    if (
+                        org is not None
+                        and getattr(org, "origem", "NORMAL") != "SINTETICO"
+                    ):
+                        _marcar(
+                            db,
+                            cenario_id,
+                            0,
+                            status="ERRO",
+                            erro="Organização real.",
+                        )
+                        return
                     _apagar_subarvore(db, cenario_id, projeto_id, org_id, dono_id)
                 else:
                     # Projeto estranho: não apaga nada além do registro do cenário
@@ -266,7 +305,7 @@ def _apagar_subarvore(
         db.delete(projeto)
         db.commit()
     org = db.get(Organizacao, org_id)
-    if org is not None and org.razao_social.startswith("LAB "):
+    if org is not None and getattr(org, "origem", "NORMAL") == "SINTETICO":
         # Só remove se nenhum outro projeto apontar
         outros = db.scalar(
             select(func.count())

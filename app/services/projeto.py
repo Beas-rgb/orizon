@@ -444,15 +444,26 @@ def reenviar_convite_funcionario(
     }
 
 
-def listar_setores(db: Session, usuario: Usuario, projeto_id: str) -> list[Setor]:
+def listar_setores(
+    db: Session,
+    usuario: Usuario,
+    projeto_id: str,
+    *,
+    limite: int = 500,
+    deslocamento: int = 0,
+) -> list[Setor]:
     if not _participa(db, usuario, projeto_id):
         raise ErroAuth(404, "Projeto não encontrado.")
     return list(
         db.scalars(
-            select(Setor).where(
+            select(Setor)
+            .where(
                 Setor.projeto_id == projeto_id,
                 Setor.deleted_at.is_(None),
             )
+            .order_by(Setor.nome, Setor.id)
+            .limit(min(max(limite, 1), 500))
+            .offset(max(deslocamento, 0))
         ).all()
     )
 

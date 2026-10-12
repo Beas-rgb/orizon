@@ -291,3 +291,111 @@ def test_importacao_ciclo_hierarquia(client, monkeypatch) -> None:
     dados = resp.json()
     assert dados["invalidos"] == 2
     assert any("ciclo" in " ".join(linha["erros"]) for linha in dados["linhas"])
+
+
+def _funcionario_em_projeto_de(db, consultor_id: str, base_id: str, email: str) -> str:
+    from app.core.tokens import novo_id
+    from app.models.base import agora
+    from app.models.projeto import Projeto
+
+    base = db.get(Projeto, base_id)
+    agora_ = agora()
+    projeto = Projeto(
+        id=novo_id(),
+        organizacao_id=base.organizacao_id,
+        consultor_id=consultor_id,
+        rotulo_id=base.rotulo_id,
+        estado="ABERTO",
+        vinculo_tipo="EDITAL",
+        vinculo_titulo="Outro trabalho",
+        criado_em=agora_,
+        atualizado_em=agora_,
+        deleted_at=None,
+    )
+    pessoa = Usuario(
+        id=novo_id(),
+        nome=email.split("@")[0],
+        email=email,
+        papel="FUNCIONARIO",
+        tipo_conta="NORMAL",
+        ativo=True,
+        tentativas_falhas=0,
+        criado_em=agora_,
+        atualizado_em=agora_,
+    )
+    db.add_all([projeto, pessoa])
+    db.flush()
+    db.add(
+        ProjetoUsuario(
+            id=novo_id(),
+            projeto_id=projeto.id,
+            usuario_id=pessoa.id,
+            papel="FUNCIONARIO",
+        )
+    )
+    db.commit()
+    return pessoa.id
+
+
+def test_importacao_nao_vincula_conta_de_outro_dono(client, monkeypatch, db) -> None:
+    headers, projeto_id = _projeto(client, monkeypatch)
+    consultora = db.scalar(select(Usuario).where(Usuario.email == "tia@horizon.dev"))
+    outra = Usuario(
+        nome="Outra",
+        email="outra@consultoria.dev",
+        papel="CONSULTOR",
+        tipo_conta="NORMAL",
+        ativo=True,
+        tentativas_falhas=0,
+    )
+    db.add(outra)
+    db.commit()
+    alheio = _funcionario_em_projeto_de(
+        db, outra.id, projeto_id, "alheio@outro-orgao.dev"
+    )
+    proprio = _funcionario_em_projeto_de(
+        db, consultora.id, projeto_id, "proprio@prefeitura.dev"
+    )
+    linhas = [
+        {"nome": "TI", "email": "joao@horizon.dev"},
+        {"nome": "Consultora", "email": "tia@horizon.dev"},
+        {"nome": "Outra", "email": "outra@consultoria.dev"},
+        {"nome": "Alheio", "email": "alheio@outro-orgao.dev"},
+        {"nome": "Proprio", "email": "proprio@prefeitura.dev"},
+    ]
+    previa = client.post(
+        f"/projetos/{projeto_id}/importar/previa",
+        headers=headers,
+        files={"arquivo": ("f.csv", _csv(linhas), "text/csv")},
+    ).json()
+    erros = {linha["email"]: linha["erros"] for linha in previa["linhas"]}
+    for email in (
+        "joao@horizon.dev",
+        "tia@horizon.dev",
+        "outra@consultoria.dev",
+        "alheio@outro-orgao.dev",
+    ):
+        assert any("use convite" in erro for erro in erros[email]), email
+    assert erros["proprio@prefeitura.dev"] == []
+
+    confirmadas = [
+        {**linha, "cargo": "", "setor": "", "superior_email": "", "erros": []}
+        for linha in linhas
+    ]
+    resposta = client.post(
+        f"/projetos/{projeto_id}/importar/confirmar",
+        headers=headers,
+        json={"linhas": confirmadas},
+    )
+    assert resposta.status_code == 200
+    assert resposta.json()["criados"] == 1
+    vinculados = set(
+        db.scalars(
+            select(ProjetoUsuario.usuario_id).where(
+                ProjetoUsuario.projeto_id == projeto_id,
+                ProjetoUsuario.papel == "FUNCIONARIO",
+            )
+        ).all()
+    )
+    assert vinculados == {proprio}
+    assert alheio not in vinculados

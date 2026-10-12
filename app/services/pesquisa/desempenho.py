@@ -4,8 +4,6 @@ Não toca em CLIMA. TIPOS_ANONIMOS continua {"CLIMA"}.
 """
 
 import json
-import threading
-from contextlib import nullcontext
 from datetime import datetime
 
 from sqlalchemy import func, select
@@ -13,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.autorizacao import exigir_papel, papel_no_projeto
+from app.core.database import serializar_no_sqlite
 from app.core.tokens import novo_id
 from app.models.base import agora
 from app.models.desempenho import (
@@ -26,12 +25,11 @@ from app.models.projeto import Projeto, ProjetoUsuario
 from app.models.usuario import Usuario
 from app.services.auditoria import registrar as _auditar
 from app.services.identidade import ErroAuth
+from app.services.pesquisa.comum import K_ANONIMATO
 
 ESCOPOS = {"ORGANIZACAO", "SETOR", "CARGO", "MANUAL"}
 TIPOS_RELACAO = {"AUTO", "SUPERIOR", "SUBORDINADO"}
 PESOS_PADRAO = {"AUTO": 1.0, "SUPERIOR": 2.0, "SUBORDINADO": 1.0}
-# O teste usa um único connection do SQLite. Duas threads nele derrubam as duas.
-_TRAVA_SQLITE = threading.Lock()
 
 
 def _projeto_da_consultora(db: Session, consultor: Usuario, projeto_id: str) -> Projeto:
@@ -191,13 +189,7 @@ def gerar_relacoes(
     Idempotente: a unique impede duplicata. Sem superior, não cria SUPERIOR.
     Sem subordinado, não cria SUBORDINADO.
     """
-    ligacao = db.get_bind()
-    trava = (
-        _TRAVA_SQLITE
-        if ligacao is not None and ligacao.dialect.name == "sqlite"
-        else nullcontext()
-    )
-    with trava:
+    with serializar_no_sqlite(db):
         return _gerar_relacoes_travado(db, consultor, ciclo_id)
 
 
@@ -485,7 +477,30 @@ def calcular_resultado_avaliacao(
         por_perspectiva[tipo] * pesos.get(tipo, PESOS_PADRAO[tipo])
         for tipo in por_perspectiva
     ) / soma_pesos
+    suprimidas: list[str] = []
+    if papel != "CONSULTOR" and "SUBORDINADO" in por_perspectiva:
+        respondentes = db.scalar(
+            select(func.count(func.distinct(AvaliacaoRelacionamento.avaliador_id)))
+            .join(
+                AvaliacaoResposta,
+                AvaliacaoResposta.relacionamento_id == AvaliacaoRelacionamento.id,
+            )
+            .where(
+                AvaliacaoRelacionamento.ciclo_id == ciclo_id,
+                AvaliacaoRelacionamento.avaliado_id == avaliado_id,
+                AvaliacaoRelacionamento.tipo_relacao == "SUBORDINADO",
+                AvaliacaoRelacionamento.deleted_at.is_(None),
+            )
+        )
+        if (respondentes or 0) < K_ANONIMATO:
+            por_perspectiva = {
+                tipo: media
+                for tipo, media in por_perspectiva.items()
+                if tipo != "SUBORDINADO"
+            }
+            suprimidas.append("SUBORDINADO")
     return {
         "resultado": round(resultado, 2),
         "por_perspectiva": por_perspectiva,
+        "perspectivas_suprimidas": suprimidas,
     }

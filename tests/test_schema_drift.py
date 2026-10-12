@@ -38,6 +38,9 @@ def test_sem_drift() -> None:
 
     engine = create_engine(os.environ["TEST_DATABASE_URL_PG"])
     with engine.connect() as conexao:
-        contexto = MigrationContext.configure(conexao)
+        contexto = MigrationContext.configure(
+            conexao,
+            opts={"compare_type": True, "compare_server_default": True},
+        )
         diferencas = compare_metadata(contexto, Base.metadata)
     assert diferencas == []

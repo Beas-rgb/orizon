@@ -20,6 +20,7 @@ from app.models.organizacao import Organizacao
 from app.models.projeto import Projeto, ProjetoUsuario, RotuloProjeto
 from app.models.sessao import Sessao
 from app.models.setor import Setor
+from app.models.tarefa import Tarefa
 from app.models.token_redefinicao import TokenRedefinicao
 from app.models.usuario import Usuario
 
@@ -42,6 +43,7 @@ __all__ = [
     "ProjetoUsuario",
     "RotuloProjeto",
     "Sessao",
+    "Tarefa",
     "TokenRedefinicao",
     "Usuario",
 ]

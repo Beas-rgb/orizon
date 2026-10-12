@@ -10,6 +10,11 @@ class SenhaNova(BaseModel):
     senha: str = Field(min_length=8, max_length=200)
 
 
+class TrocarSenhaEntrada(BaseModel):
+    senha_atual: str = Field(min_length=1, max_length=200)
+    senha_nova: str = Field(min_length=8, max_length=200)
+
+
 class BootstrapEntrada(SenhaNova):
     nome: str = Field(min_length=2, max_length=160)
     email: str = Field(min_length=3, max_length=255)
@@ -20,6 +25,11 @@ class ConviteEntrada(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     papel: str
     projeto_id: str | None = None
+
+
+class ConvitesTarefaEntrada(BaseModel):
+    projeto_id: str = Field(min_length=1, max_length=36)
+    convites: list[ConviteEntrada] = Field(min_length=1, max_length=200)
 
 
 class PrimeiroAcessoEntrada(SenhaNova):

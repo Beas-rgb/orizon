@@ -73,7 +73,7 @@ def cadastrar(
     db: Session = Depends(get_db),
 ) -> MensagemSaida:
     """Pedido público. Não cria login e não devolve token."""
-    ip = request.client.host if request.client else None
+    ip = ip_do_cliente(request)
     chamar(lambda: pedir_conta_consultora(db, corpo.nome, corpo.email, ip=ip))
     return MensagemSaida(
         mensagem="Pedido registrado. A conta só nasce depois da autorização."

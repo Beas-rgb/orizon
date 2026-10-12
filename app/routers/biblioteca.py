@@ -4,7 +4,7 @@ Quem só envia o arquivo, sem audiência, recebe PRIVADO. Download e lista
 escondem o que a pessoa não pode ver — o ID sozinho não abre o arquivo.
 """
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -86,10 +86,16 @@ async def criar(
 @router.get("", response_model=list[DocumentoSaida])
 def lista(
     projeto_id: str | None = None,
+    limite: int = Query(100, ge=1, le=200),
+    deslocamento: int = Query(0, ge=0),
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[DocumentoSaida]:
-    docs = chamar(lambda: listar(db, usuario, projeto_id))
+    docs = chamar(
+        lambda: listar(
+            db, usuario, projeto_id, limite=limite, deslocamento=deslocamento
+        )
+    )
     return [_saida(doc) for doc in docs]
 
 

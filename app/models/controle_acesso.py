@@ -17,7 +17,7 @@ class ControleAcesso(Base):
     __tablename__ = "controle_acesso"
 
     chave: Mapped[str] = mapped_column(String(280), primary_key=True)
-    tentativas: Mapped[int] = mapped_column(Integer, default=0)
+    tentativas: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     bloqueado_ate: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

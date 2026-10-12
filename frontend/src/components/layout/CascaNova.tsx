@@ -80,6 +80,18 @@ export function CascaNova({ children }: { children: ReactNode }) {
           marcado: aba === "pesquisas" || partes[2] === "pesquisas",
         },
         {
+          rotulo: "Avaliações",
+          caminho: `/projetos/${trabalhoId}?aba=pesquisas&tipo=DESEMPENHO`,
+          icone: <Star size={16} />,
+          marcado: aba === "pesquisas" && search.includes("tipo=DESEMPENHO"),
+        },
+        {
+          rotulo: "Modelos",
+          caminho: "/consultora/pesquisas?aba=modelos",
+          icone: <Archive size={16} />,
+          marcado: false,
+        },
+        {
           rotulo: "Resultados",
           caminho: `/projetos/${trabalhoId}?aba=resultados`,
           icone: <BarChart2 size={16} />,
@@ -96,6 +108,12 @@ export function CascaNova({ children }: { children: ReactNode }) {
           caminho: `/projetos/${trabalhoId}?aba=biblioteca`,
           icone: <Archive size={16} />,
           marcado: aba === "biblioteca",
+        },
+        {
+          rotulo: "Entregas",
+          caminho: `/projetos/${trabalhoId}?aba=entregas`,
+          icone: <Clock size={16} />,
+          marcado: aba === "entregas",
         },
         {
           rotulo: "Configurações",
@@ -143,6 +161,24 @@ export function CascaNova({ children }: { children: ReactNode }) {
             icone: <BarChart2 size={16} />,
             marcado: aba === "historico",
           },
+          {
+            rotulo: "Documentos",
+            caminho: "/documentos",
+            icone: <Archive size={16} />,
+            marcado: pathname === "/documentos",
+          },
+          {
+            rotulo: "Avisos",
+            caminho: "/notificacoes",
+            icone: <Clock size={16} />,
+            marcado: pathname === "/notificacoes",
+          },
+          {
+            rotulo: "Conta",
+            caminho: "/conta",
+            icone: <Settings size={16} />,
+            marcado: pathname === "/conta",
+          },
         ]
         : painel === "consultora"
         ? [
@@ -188,6 +224,30 @@ export function CascaNova({ children }: { children: ReactNode }) {
               icone: <Users size={16} />,
               marcado: pathname.startsWith("/consultora/pesquisas") && aba === "organizacao",
             },
+            {
+              rotulo: "Biblioteca",
+              caminho: "/biblioteca",
+              icone: <Archive size={16} />,
+              marcado: pathname === "/biblioteca",
+            },
+            {
+              rotulo: "Perguntas",
+              caminho: "/banco-perguntas",
+              icone: <ClipboardList size={16} />,
+              marcado: pathname === "/banco-perguntas",
+            },
+            {
+              rotulo: "Avisos",
+              caminho: "/notificacoes",
+              icone: <Clock size={16} />,
+              marcado: pathname === "/notificacoes",
+            },
+            {
+              rotulo: "Conta",
+              caminho: "/conta",
+              icone: <Settings size={16} />,
+              marcado: pathname === "/conta",
+            },
             ...(usuario?.lab_habilitado
               ? [
                   {
@@ -205,6 +265,10 @@ export function CascaNova({ children }: { children: ReactNode }) {
               { rotulo: "Pendentes", caminho: "/inicio?aba=pendentes", icone: <ClipboardList size={16} />, marcado: aba === "pendentes" },
               { rotulo: "Em andamento", caminho: "/inicio?aba=andamento", icone: <Clock size={16} />, marcado: aba === "andamento" },
               { rotulo: "Concluídas", caminho: "/inicio?aba=concluidas", icone: <Star size={16} />, marcado: aba === "concluidas" },
+              { rotulo: "Minhas notas", caminho: "/minhas-notas", icone: <Star size={16} />, marcado: pathname === "/minhas-notas" },
+              { rotulo: "Documentos", caminho: "/documentos", icone: <Archive size={16} />, marcado: pathname === "/documentos" },
+              { rotulo: "Avisos", caminho: "/notificacoes", icone: <Clock size={16} />, marcado: pathname === "/notificacoes" },
+              { rotulo: "Conta", caminho: "/conta", icone: <Settings size={16} />, marcado: pathname === "/conta" },
             ]
           : painel === "dev"
             ? [

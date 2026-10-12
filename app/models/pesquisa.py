@@ -9,6 +9,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
+    true,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,7 +32,9 @@ class Pesquisa(Base):
     descricao: Mapped[str | None] = mapped_column(Text, nullable=True)
     tipo: Mapped[str] = mapped_column(String(40))
     status: Mapped[str] = mapped_column(String(32), default="RASCUNHO")
-    bloqueada: Mapped[bool] = mapped_column(Boolean, default=False)
+    bloqueada: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false()
+    )
     # Configuração de cálculo (JSON). Nunca código do usuário.
     config_calculo: Mapped[str | None] = mapped_column(Text, nullable=True)
     publicada_em: Mapped[datetime | None] = mapped_column(
@@ -65,8 +69,10 @@ class Pergunta(Base):
     pesquisa_id: Mapped[str] = mapped_column(ForeignKey("pesquisas.id"), index=True)
     texto: Mapped[str] = mapped_column(Text)
     tipo: Mapped[str] = mapped_column(String(40))
-    obrigatoria: Mapped[bool] = mapped_column(Boolean, default=True)
-    ordem: Mapped[int] = mapped_column(SmallInteger, default=1)
+    obrigatoria: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=true()
+    )
+    ordem: Mapped[int] = mapped_column(SmallInteger, default=1, server_default="1")
     midia_tipo: Mapped[str | None] = mapped_column(String(16), nullable=True)
     midia_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -83,7 +89,7 @@ class OpcaoResposta(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     pergunta_id: Mapped[str] = mapped_column(ForeignKey("perguntas.id"), index=True)
     texto: Mapped[str] = mapped_column(String(200))
-    ordem: Mapped[int] = mapped_column(SmallInteger, default=1)
+    ordem: Mapped[int] = mapped_column(SmallInteger, default=1, server_default="1")
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
@@ -96,7 +102,7 @@ class TokenResposta(Base):
     pesquisa_id: Mapped[str] = mapped_column(ForeignKey("pesquisas.id"), index=True)
     setor_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
-    usado: Mapped[bool] = mapped_column(Boolean, default=False)
+    usado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     usado_em: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
@@ -123,7 +129,9 @@ class PesquisaParticipante(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     pesquisa_id: Mapped[str] = mapped_column(ForeignKey("pesquisas.id"), index=True)
     usuario_id: Mapped[str] = mapped_column(ForeignKey("usuarios.id"), index=True)
-    status: Mapped[str] = mapped_column(String(32), default="PENDENTE")
+    status: Mapped[str] = mapped_column(
+        String(32), default="PENDENTE", server_default="PENDENTE"
+    )
     token_id: Mapped[str | None] = mapped_column(
         ForeignKey("tokens_resposta.id"),
         nullable=True,
@@ -136,6 +144,8 @@ class PesquisaParticipante(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    # SHA-256 da Idempotency-Key do envio aceito. Não liga a pessoa às respostas.
+    envio_chave_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(
@@ -154,10 +164,14 @@ class TemplatePesquisa(Base):
     nome: Mapped[str] = mapped_column(String(200))
     descricao: Mapped[str | None] = mapped_column(Text, nullable=True)
     tipo: Mapped[str] = mapped_column(String(40))
-    categoria: Mapped[str] = mapped_column(String(32), default="generico")
-    compartilhado: Mapped[bool] = mapped_column(Boolean, default=False)
-    versao: Mapped[int] = mapped_column(SmallInteger, default=1)
-    ativo: Mapped[bool] = mapped_column(Boolean, default=True)
+    categoria: Mapped[str] = mapped_column(
+        String(32), default="generico", server_default="generico"
+    )
+    compartilhado: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false()
+    )
+    versao: Mapped[int] = mapped_column(SmallInteger, default=1, server_default="1")
+    ativo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     organizacao_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -174,8 +188,10 @@ class TemplatePergunta(Base):
     template_id: Mapped[str] = mapped_column(String(36), index=True)
     texto: Mapped[str] = mapped_column(Text)
     tipo: Mapped[str] = mapped_column(String(40))
-    obrigatoria: Mapped[bool] = mapped_column(Boolean, default=True)
-    ordem: Mapped[int] = mapped_column(SmallInteger, default=1)
+    obrigatoria: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=true()
+    )
+    ordem: Mapped[int] = mapped_column(SmallInteger, default=1, server_default="1")
     midia_tipo: Mapped[str | None] = mapped_column(String(16), nullable=True)
     midia_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -192,7 +208,7 @@ class TemplateOpcao(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     pergunta_template_id: Mapped[str] = mapped_column(String(36), index=True)
     texto: Mapped[str] = mapped_column(String(200))
-    ordem: Mapped[int] = mapped_column(SmallInteger, default=1)
+    ordem: Mapped[int] = mapped_column(SmallInteger, default=1, server_default="1")
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(
