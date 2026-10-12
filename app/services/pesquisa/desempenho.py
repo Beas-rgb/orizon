@@ -4,6 +4,8 @@ Não toca em CLIMA. TIPOS_ANONIMOS continua {"CLIMA"}.
 """
 
 import json
+import threading
+from contextlib import nullcontext
 from datetime import datetime
 
 from sqlalchemy import func, select
@@ -28,6 +30,8 @@ from app.services.identidade import ErroAuth
 ESCOPOS = {"ORGANIZACAO", "SETOR", "CARGO", "MANUAL"}
 TIPOS_RELACAO = {"AUTO", "SUPERIOR", "SUBORDINADO"}
 PESOS_PADRAO = {"AUTO": 1.0, "SUPERIOR": 2.0, "SUBORDINADO": 1.0}
+# O teste usa um único connection do SQLite. Duas threads nele derrubam as duas.
+_TRAVA_SQLITE = threading.Lock()
 
 
 def _projeto_da_consultora(db: Session, consultor: Usuario, projeto_id: str) -> Projeto:
@@ -187,6 +191,21 @@ def gerar_relacoes(
     Idempotente: a unique impede duplicata. Sem superior, não cria SUPERIOR.
     Sem subordinado, não cria SUBORDINADO.
     """
+    ligacao = db.get_bind()
+    trava = (
+        _TRAVA_SQLITE
+        if ligacao is not None and ligacao.dialect.name == "sqlite"
+        else nullcontext()
+    )
+    with trava:
+        return _gerar_relacoes_travado(db, consultor, ciclo_id)
+
+
+def _gerar_relacoes_travado(
+    db: Session,
+    consultor: Usuario,
+    ciclo_id: str,
+) -> dict[str, int]:
     ciclo = db.get(CicloAvaliacao, ciclo_id)
     if ciclo is None or ciclo.deleted_at is not None:
         raise ErroAuth(404, "Ciclo não encontrado.")
@@ -258,7 +277,11 @@ def gerar_relacoes(
             ):
                 criados += 1
     _auditar(db, "RELACOES_GERADAS", consultor.id)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return {"criados": 0, "funcionarios": len(funcionarios)}
     return {"criados": criados, "funcionarios": len(funcionarios)}
 
 
