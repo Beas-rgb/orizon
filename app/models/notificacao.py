@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -17,7 +17,7 @@ class Notificacao(Base):
     tipo: Mapped[str] = mapped_column(String(32))
     titulo: Mapped[str] = mapped_column(String(160))
     mensagem: Mapped[str] = mapped_column(Text)
-    lida: Mapped[bool] = mapped_column(Boolean, default=False)
+    lida: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     lida_em: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
@@ -27,7 +27,11 @@ class Notificacao(Base):
         DateTime(timezone=True),
         nullable=True,
     )
-    prioridade: Mapped[str] = mapped_column(String(16), default="normal")
+    prioridade: Mapped[str] = mapped_column(
+        String(16),
+        default="normal",
+        server_default="normal",
+    )
 
 
 class EntregaMensagem(Base):

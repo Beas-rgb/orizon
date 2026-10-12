@@ -17,7 +17,7 @@ from app.models.base import agora
 from app.models.configuracao import ConfiguracaoProjeto
 from app.models.controle_acesso import ControleAcesso
 from app.models.organizacao import Organizacao
-from app.models.pesquisa import Pergunta, Resposta
+from app.models.pesquisa import Pergunta, PesquisaParticipante, Resposta
 from app.models.projeto import Projeto, ProjetoUsuario, RotuloProjeto
 from app.models.usuario import Usuario
 from app.services.identidade import ErroAuth
@@ -215,6 +215,11 @@ def test_cem_usuarios_e_duplicata() -> None:
             select(func.count())
             .select_from(ControleAcesso)
             .where(ControleAcesso.chave.like("responder:%"))
+            .where(
+                ControleAcesso.chave.in_(
+                    [f"responder:user:{usuario_id}" for usuario_id in ids[:100]]
+                )
+            )
         )
         assert chaves == 0
 
@@ -225,7 +230,8 @@ def test_cem_usuarios_e_duplicata() -> None:
         return _um(fabrica, pesquisa_id, ids[100])
 
     with ThreadPoolExecutor(max_workers=2) as pool:
-        pares = [pool.submit(junto).result(), pool.submit(junto).result()]
+        futuros = [pool.submit(junto) for _ in range(2)]
+        pares = [f.result() for f in futuros]
     status = sorted(item[0] for item in pares)
     assert status == [200, 409]
     assert "deadlock" not in {item[1] for item in pares}
@@ -237,3 +243,37 @@ def test_cem_usuarios_e_duplicata() -> None:
             .where(Pergunta.pesquisa_id == pesquisa_id)
         )
         assert de_novo == 101
+
+
+def test_duas_submissoes_simultaneas_uma_409() -> None:
+    """As duas sessões criam o participante ao mesmo tempo. Só uma grava."""
+    engine = _engine()
+    fabrica = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    pesquisa_id, ids = _montar(fabrica)
+    barreira = threading.Barrier(2)
+
+    def junto() -> tuple[int, str]:
+        barreira.wait(timeout=5)
+        return _um(fabrica, pesquisa_id, ids[0])
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futuros = [pool.submit(junto) for _ in range(2)]
+        pares = [futuro.result() for futuro in futuros]
+    assert sorted(item[0] for item in pares) == [200, 409]
+    with fabrica() as db:
+        participantes = db.scalar(
+            select(func.count())
+            .select_from(PesquisaParticipante)
+            .where(
+                PesquisaParticipante.pesquisa_id == pesquisa_id,
+                PesquisaParticipante.usuario_id == ids[0],
+            )
+        )
+        respostas = db.scalar(
+            select(func.count())
+            .select_from(Resposta)
+            .join(Pergunta, Pergunta.id == Resposta.pergunta_id)
+            .where(Pergunta.pesquisa_id == pesquisa_id)
+        )
+    assert participantes == 1
+    assert respostas == 1

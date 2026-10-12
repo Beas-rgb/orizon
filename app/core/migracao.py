@@ -4,7 +4,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 from app.core.config import settings
 
@@ -50,14 +50,46 @@ def _revisao_esperada() -> str:
 
 
 def _revisao_atual(url: str) -> str | None:
+    """Lê a revisão sem confundir erro de conexão com banco sem versão.
+
+    Um schema não vazio sem `alembic_version` é ambíguo: pode ser legado ou
+    resultado de uma instalação parcialmente concluída. Nesse caso, não inicia
+    uma cadeia histórica de migrations automaticamente.
+    """
     engine = create_engine(url)
-    with engine.connect() as conexao:
-        try:
-            return conexao.execute(
+    try:
+        with engine.connect() as conexao:
+            insp = inspect(conexao)
+            schema = "public" if conexao.dialect.name == "postgresql" else None
+            tabelas = set(insp.get_table_names(schema=schema))
+
+            if "alembic_version" not in tabelas:
+                vistas = set(insp.get_view_names(schema=schema))
+                objetos = sorted(tabelas | vistas)
+                if objetos:
+                    amostra = ", ".join(objetos[:8])
+                    sufixo = ", ..." if len(objetos) > 8 else ""
+                    raise RuntimeError(
+                        "Migração automática bloqueada: o banco contém objetos "
+                        f"({amostra}{sufixo}), mas não possui alembic_version. "
+                        "O schema existente precisa ser identificado e reconciliado "
+                        "em um ambiente isolado antes de executar migrations. "
+                        "Nenhuma alteração no banco foi feita por esta verificação."
+                    )
+                return None
+
+            atual = conexao.execute(
                 text("select version_num from alembic_version")
-            ).scalar()
-        except Exception:
-            return None
+            ).scalar_one_or_none()
+            if not atual:
+                raise RuntimeError(
+                    "Migração automática bloqueada: alembic_version existe, mas "
+                    "não contém uma revisão. Verifique o estado do banco antes "
+                    "de executar migrations."
+                )
+            return str(atual)
+    finally:
+        engine.dispose()
 
 
 def _travar(url: str):
