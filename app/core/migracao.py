@@ -11,6 +11,10 @@ from app.core.config import settings
 TRAVA = 727274
 
 
+class MigracaoAdiada(RuntimeError):
+    """O schema legado permanece. A API sobe e nenhuma migration roda."""
+
+
 def url_direta(database_url: str, direta: str = "") -> str:
     """Prefere a URL direta. Tira `-pooler` do host quando ela não vier pronta."""
     if direta.strip():
@@ -69,12 +73,11 @@ def _revisao_atual(url: str) -> str | None:
                 if objetos:
                     amostra = ", ".join(objetos[:8])
                     sufixo = ", ..." if len(objetos) > 8 else ""
-                    raise RuntimeError(
-                        "Migração automática bloqueada: o banco contém objetos "
+                    raise MigracaoAdiada(
+                        "Migração adiada: o banco contém objetos "
                         f"({amostra}{sufixo}), mas não possui alembic_version. "
-                        "O schema existente precisa ser identificado e reconciliado "
-                        "em um ambiente isolado antes de executar migrations. "
-                        "Nenhuma alteração no banco foi feita por esta verificação."
+                        "Nenhuma migration foi executada. "
+                        "A API segue com o schema atual."
                     )
                 return None
 
@@ -119,7 +122,11 @@ def _upgrade(url: str) -> None:
 def main() -> int:
     esperada = _revisao_esperada()
     url = url_direta(settings.database_url, settings.database_url_direct)
-    atual = _revisao_atual(url)
+    try:
+        atual = _revisao_atual(url)
+    except MigracaoAdiada as exc:
+        print(exc)
+        return 0
     trava = None
 
     def travar() -> None:
