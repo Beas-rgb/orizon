@@ -73,7 +73,10 @@ def exigir_midia_pesquisa(
     usuario: Usuario,
     pesquisa: Pesquisa,
 ) -> str:
-    """Consultora sempre (rascunho incluso). Órgão/funcionário só publicada/encerrada."""
+    """Consultora sempre, inclusive rascunho.
+
+    Órgão e funcionário só veem pesquisa publicada ou encerrada.
+    """
     papel = exigir_papel(
         db,
         usuario,

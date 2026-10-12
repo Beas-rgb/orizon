@@ -4,7 +4,7 @@ Quem só envia o arquivo, sem audiência, recebe PRIVADO. Download e lista
 escondem o que a pessoa não pode ver — o ID sozinho não abre o arquivo.
 """
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session

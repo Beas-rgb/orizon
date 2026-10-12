@@ -7,7 +7,6 @@ from app.core.autorizacao import papel_no_projeto
 from app.models.pesquisa import OpcaoResposta, Pergunta, Resposta
 from app.models.usuario import Usuario
 from app.services.identidade import ErroAuth
-
 from app.services.pesquisa.comum import K_ANONIMATO, TIPOS_ANONIMOS, _pesquisa_viva
 
 

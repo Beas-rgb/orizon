@@ -74,8 +74,9 @@ def test_eu_pesquisas_get_nao_grava_token(client, monkeypatch, db):
     )
     assert client.post(f"/pesquisas/{pid}/publicar", headers=headers).status_code == 200
 
-    from app.models.pesquisa import TokenResposta
     from sqlalchemy import func, select
+
+    from app.models.pesquisa import TokenResposta
 
     antes = db.scalar(select(func.count()).select_from(TokenResposta)) or 0
     lista = client.get("/eu/pesquisas", headers=func_auth)
