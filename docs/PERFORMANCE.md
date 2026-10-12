@@ -1,5 +1,7 @@
 # Desempenho
 
+> Nota 08/10/2026: 689 ms e o pool 5+5 não são capacidade. 10 mil usuários/mês é o primeiro cenário a validar e não é simultaneidade. A tabela de carga abaixo permanece vazia até uma corrida real. Ver `docs/PLANO_ESCALA_VALIDACAO_50K.md`.
+
 ## Baseline do banco
 
 Ainda não medido no Neon. O inventário de staging da Fase 0 não rodou.

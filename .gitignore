@@ -17,3 +17,9 @@ data/biblioteca/
 data/pesquisas/
 *.log
 .DS_Store
+
+# Configurações locais do Cursor
+.cursor/settings.json
+
+# Referências de revisão mantidas fora do repositório
+docs/_referencias_rev_1_1/

@@ -102,7 +102,8 @@ def test_minhas_pesquisas_e_participantes(client, monkeypatch):
     assert "email" not in str(corpo).lower() or "func68" not in str(corpo)
 
     # Funcionário não vê participantes
-    assert client.get(f"/pesquisas/{pid}/participantes", headers=func).status_code == 404
+    resposta = client.get(f"/pesquisas/{pid}/participantes", headers=func)
+    assert resposta.status_code == 404
 
     # Consultora não tem minhas pesquisas
     assert client.get("/eu/pesquisas", headers=headers).json() == []

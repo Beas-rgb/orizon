@@ -162,7 +162,9 @@ def test_t9_checkbox_tres_opcoes_um_participante(client, monkeypatch, db) -> Non
 
     painel = client.get(f"/pesquisas/{pid}/painel", headers=headers)
     assert painel.status_code == 200
-    bloco = next(item for item in painel.json() if item["pergunta_id"] == checkbox["id"])
+    bloco = next(
+        item for item in painel.json() if item["pergunta_id"] == checkbox["id"]
+    )
     assert bloco["respostas"] == 1
     assert bloco["contagem_opcoes"] is not None
     totais = {item["opcao_id"]: item["total"] for item in bloco["contagem_opcoes"]}

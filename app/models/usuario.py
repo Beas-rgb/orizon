@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Integer, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Integer, String, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, IdTempo
@@ -30,8 +30,12 @@ class Usuario(IdTempo, Base):
         default="NORMAL",
         server_default="NORMAL",
     )
-    ativo: Mapped[bool] = mapped_column(Boolean, default=True)
-    tentativas_falhas: Mapped[int] = mapped_column(Integer, default=0)
+    ativo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    tentativas_falhas: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default="0",
+    )
     bloqueado_ate: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

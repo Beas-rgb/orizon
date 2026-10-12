@@ -1,5 +1,7 @@
 # Release Candidate — 10/10
 
+> Nota 08/10/2026: a matriz e os nomes de teste abaixo são o checklist deste RC. Citar o arquivo não é tê-lo rodado no Passo 0. Não tratar CLIMA nem IDOR como fechados sem a data do pytest. Matriz nova: `docs/AUDITORIA_BANCO_SEGURANCA_2026-10.md`.
+
 Checklist da seção 9 de `docs/HORIZON_CONTEXTO_IA.md` para o boot.
 
 ## O que o consultor usa agora

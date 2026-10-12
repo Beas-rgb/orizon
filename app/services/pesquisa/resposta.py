@@ -1,8 +1,9 @@
 """Tokens, formulário, registro de respostas e notas."""
 
+import hashlib
 from datetime import timedelta
 
-from sqlalchemy import func, insert, select
+from sqlalchemy import func, insert, select, text
 from sqlalchemy.orm import Session
 
 from app.core.autorizacao import papel_no_projeto
@@ -235,6 +236,25 @@ def registrar_respostas_da_pesquisa(
     return _com_limite_de_falha(db, usuario, gravar)
 
 
+def _travar_envio(db: Session, pesquisa_id: str, usuario_id: str) -> None:
+    """Serializa o par pesquisa/funcionário até o fim da transação.
+
+    Só no PostgreSQL. A chave sai de SHA-256, não de hash() do processo.
+    O formulário e a mídia não passam por aqui.
+    """
+    ligacao = db.get_bind()
+    if ligacao is None or ligacao.dialect.name != "postgresql":
+        return
+    digest = hashlib.sha256(f"resposta:{pesquisa_id}:{usuario_id}".encode()).digest()
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(:chave_a, :chave_b)"),
+        {
+            "chave_a": int.from_bytes(digest[:4], "big", signed=True),
+            "chave_b": int.from_bytes(digest[4:8], "big", signed=True),
+        },
+    )
+
+
 def _registrar_respostas_em(
     db: Session,
     pesquisa: Pesquisa,
@@ -243,6 +263,7 @@ def _registrar_respostas_em(
     ip: str | None = None,
 ) -> tuple[str, float | None]:
     _ = ip
+    _travar_envio(db, pesquisa.id, usuario.id)
     participante = _participante_da_pesquisa(
         db, usuario, pesquisa, para_envio=True
     )

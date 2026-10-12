@@ -1,5 +1,7 @@
 # Pacote de planos v4 (Cursor)
 
+> Nota 08/10/2026: este índice v4 permanece como histórico (base `86940d3`). O estado vivo da revisão 1.1 é `docs/INDEX_PLANO_MESTRE_50K.md`. Não apague as decisões D1–D12 abaixo.
+
 **Data:** 01/10/2026 · Base histórica do pacote: `86940d3` · Hospedagem: Render Free + Neon Free
 
 Este índice resume o pacote. Os arquivos de cada fase (`00_PLANO_MESTRE.md`, `FASE_0N_*.md`, etc.) entram aqui quando forem colados ou copiados para `docs/plano/`.

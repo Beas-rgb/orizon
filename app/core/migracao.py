@@ -4,11 +4,15 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 from app.core.config import settings
 
 TRAVA = 727274
+
+
+class MigracaoAdiada(RuntimeError):
+    """O schema legado permanece. A API sobe e nenhuma migration roda."""
 
 
 def url_direta(database_url: str, direta: str = "") -> str:
@@ -50,14 +54,45 @@ def _revisao_esperada() -> str:
 
 
 def _revisao_atual(url: str) -> str | None:
+    """Lê a revisão sem confundir erro de conexão com banco sem versão.
+
+    Um schema não vazio sem `alembic_version` é ambíguo: pode ser legado ou
+    resultado de uma instalação parcialmente concluída. Nesse caso, não inicia
+    uma cadeia histórica de migrations automaticamente.
+    """
     engine = create_engine(url)
-    with engine.connect() as conexao:
-        try:
-            return conexao.execute(
+    try:
+        with engine.connect() as conexao:
+            insp = inspect(conexao)
+            schema = "public" if conexao.dialect.name == "postgresql" else None
+            tabelas = set(insp.get_table_names(schema=schema))
+
+            if "alembic_version" not in tabelas:
+                vistas = set(insp.get_view_names(schema=schema))
+                objetos = sorted(tabelas | vistas)
+                if objetos:
+                    amostra = ", ".join(objetos[:8])
+                    sufixo = ", ..." if len(objetos) > 8 else ""
+                    raise MigracaoAdiada(
+                        "Migração adiada: o banco contém objetos "
+                        f"({amostra}{sufixo}), mas não possui alembic_version. "
+                        "Nenhuma migration foi executada. "
+                        "A API segue com o schema atual."
+                    )
+                return None
+
+            atual = conexao.execute(
                 text("select version_num from alembic_version")
-            ).scalar()
-        except Exception:
-            return None
+            ).scalar_one_or_none()
+            if not atual:
+                raise RuntimeError(
+                    "Migração automática bloqueada: alembic_version existe, mas "
+                    "não contém uma revisão. Verifique o estado do banco antes "
+                    "de executar migrations."
+                )
+            return str(atual)
+    finally:
+        engine.dispose()
 
 
 def _travar(url: str):
@@ -87,7 +122,11 @@ def _upgrade(url: str) -> None:
 def main() -> int:
     esperada = _revisao_esperada()
     url = url_direta(settings.database_url, settings.database_url_direct)
-    atual = _revisao_atual(url)
+    try:
+        atual = _revisao_atual(url)
+    except MigracaoAdiada as exc:
+        print(exc)
+        return 0
     trava = None
 
     def travar() -> None:

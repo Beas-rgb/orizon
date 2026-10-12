@@ -4,6 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     DateTime,
+    Float,
     ForeignKey,
     SmallInteger,
     String,
@@ -34,7 +35,11 @@ class CicloAvaliacao(IdTempo, Base):
     escopo: Mapped[str] = mapped_column(String(32), default="ORGANIZACAO")
     # JSON: perspectivas, pesos, ordem, regras. Nunca código do usuário.
     configuracao: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(32), default="RASCUNHO")
+    status: Mapped[str] = mapped_column(
+        String(32),
+        default="RASCUNHO",
+        server_default="RASCUNHO",
+    )
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
@@ -65,8 +70,18 @@ class AvaliacaoRelacionamento(Base):
     # AUTO, SUPERIOR, SUBORDINADO.
     tipo_relacao: Mapped[str] = mapped_column(String(32))
     perspectiva_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    peso: Mapped[float] = mapped_column(default=1.0)
-    status: Mapped[str] = mapped_column(String(32), default="PENDENTE")
+    peso: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=1.0,
+        server_default="1.0",
+    )
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="PENDENTE",
+        server_default="PENDENTE",
+    )
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(

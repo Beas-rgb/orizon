@@ -1,5 +1,7 @@
 # Modelo de dados
 
+> Nota 08/10/2026: a frase abaixo que limita índice a 0018/0019 descreve o momento em que esses índices nasceram. O git já tem `0020_lab`. Os índices quentes desta página continuam válidos como desenho. Não é inventário do banco do Render. Ver `docs/AUDITORIA_BANCO_SEGURANCA_2026-10.md`.
+
 As migrations 0001 a 0017 não são editadas. Índice novo entra em 0018 ou 0019.
 
 ## Índices quentes

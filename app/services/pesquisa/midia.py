@@ -9,7 +9,6 @@ from app.models.pesquisa import Pergunta
 from app.models.usuario import Usuario
 from app.services.auditoria import registrar as _auditar
 from app.services.identidade import ErroAuth
-
 from app.services.pesquisa.crud import _exigir_rascunho_consultor
 
 

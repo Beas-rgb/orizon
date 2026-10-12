@@ -1,5 +1,7 @@
 # HORIZON — CONTEXTO MESTRE PARA IA (Cursor)
 
+> Nota 08/10/2026: este arquivo continua sendo o protocolo e o domínio. Não é o estado vivo do Passo 0. A ordem atual, o P0 do banco e a IA bloqueada estão em `docs/INDEX_PLANO_MESTRE_50K.md`. Até confirmar `DATABASE_URL` / `DATABASE_URL_DIRECT` na tela do Render, não usar `alembic stamp`, `alembic upgrade` em produção nem `scripts/reset_manter_ti.py`. A seção 6 (fases “concluídas”, 21 tabelas, React em `arquivo/frontend/`) e a seção 10 (tarefa de Fase 0, inclusive `alembic stamp head`) são históricas.
+
 > Arquivo de contexto permanente do projeto. Mantenha na raiz do repositório
 > (`docs/HORIZON_CONTEXTO_IA.md`) e referencie com @ nas conversas do Cursor.
 > Combine com regras permanentes em `.cursor/rules/horizon.mdc`.
