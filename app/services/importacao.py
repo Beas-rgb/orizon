@@ -169,6 +169,12 @@ def validar_linhas(
         ).all()
     }
 
+    bloqueados = _emails_de_outras_contas(
+        db,
+        projeto,
+        {email_acesso(linha.get("email", "")) for linha in linhas} - emails_no_projeto,
+    )
+
     vistos: set[str] = set()
     linhas_validadas: list[LinhaImportacao] = []
     setores_novos: set[str] = set()
@@ -195,6 +201,8 @@ def validar_linhas(
             duplicados += 1
         elif email in emails_no_projeto:
             erros.append("email já existe neste projeto")
+        elif email in bloqueados:
+            erros.append("email já tem acesso fora dos seus trabalhos; use convite")
         if setor and setor.lower() not in setores_existentes:
             setores_novos.add(setor.lower())
         if cargo and cargo.lower() not in cargos_existentes:
@@ -252,6 +260,44 @@ def validar_linhas(
         superiores_inexistentes=superiores_inexistentes,
         linhas=linhas_validadas,
     )
+
+
+def _emails_de_outras_contas(
+    db: Session,
+    projeto: Projeto,
+    emails: set[str],
+) -> set[str]:
+    """Contas existentes que a importação não pode vincular sozinha.
+
+    Só reaproveita funcionário cujos vínculos são todos com trabalhos da
+    mesma consultora. Outro papel, outra consultora ou conta sem vínculo
+    ficam de fora: o caminho é o convite.
+    """
+    emails = {email for email in emails if email}
+    if not emails:
+        return set()
+    contas = db.scalars(
+        select(Usuario).where(
+            Usuario.email.in_(emails),
+            Usuario.deleted_at.is_(None),
+        )
+    ).all()
+    if not contas:
+        return set()
+    donos: dict[str, set[str]] = {conta.id: set() for conta in contas}
+    for usuario_id, consultor_id in db.execute(
+        select(ProjetoUsuario.usuario_id, Projeto.consultor_id)
+        .join(Projeto, Projeto.id == ProjetoUsuario.projeto_id)
+        .where(ProjetoUsuario.usuario_id.in_(list(donos)))
+    ).all():
+        donos[usuario_id].add(consultor_id)
+    return {
+        conta.email
+        for conta in contas
+        if conta.papel != "FUNCIONARIO"
+        or not donos[conta.id]
+        or donos[conta.id] != {projeto.consultor_id}
+    }
 
 
 def _niveis_hierarquia(linhas: list[LinhaImportacao]) -> int:

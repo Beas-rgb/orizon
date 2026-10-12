@@ -32,13 +32,22 @@ class ArquivoInvalido(Exception):
     pass
 
 
-def _r2_pronto() -> bool:
+def r2_configurado() -> bool:
     return bool(
         settings.r2_endpoint
         and settings.r2_bucket
         and settings.r2_access_key_id
         and settings.r2_secret_access_key
     )
+
+
+def _r2_pronto() -> bool:
+    """R2 quando configurado. Disco local só fora de produção."""
+    if r2_configurado():
+        return True
+    if settings.app_env == "production":
+        raise ArquivoInvalido("Armazenamento indisponível.")
+    return False
 
 
 def _cliente_r2():

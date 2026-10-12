@@ -130,7 +130,8 @@ def test_t8_faltando_obrigatoria_422(client, monkeypatch) -> None:
     assert "benef" in detalhe or "quais" in detalhe
     # painel ainda sem respostas de participante
     painel = client.get(f"/pesquisas/{pid}/painel", headers=headers)
-    assert painel.json()[0]["respostas"] == 0
+    assert painel.json()[0]["respostas"] is None
+    assert painel.json()[0]["suprimido"] is True
 
 
 def test_t9_checkbox_tres_opcoes_um_participante(client, monkeypatch, db) -> None:

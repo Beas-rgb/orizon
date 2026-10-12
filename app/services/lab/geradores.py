@@ -6,7 +6,7 @@ import random
 
 from app.services.importacao import LinhaImportacao
 
-TAMANHOS = frozenset({100, 250, 500, 1000, 5000})
+TAMANHOS = frozenset({10, 25, 50, 100, 250, 500, 600})
 PERFIS = frozenset({"ALEATORIO", "POSITIVO", "NEUTRO", "NEGATIVO"})
 TIPOS_CENARIO = frozenset({"CLIMA", "DESEMPENHO"})
 DOMINIO = "sintetico.invalid"

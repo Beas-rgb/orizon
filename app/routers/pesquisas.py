@@ -13,8 +13,9 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import Response
-from sqlalchemy import select
+from sqlalchemy import event, select
 from sqlalchemy.orm import Session
+from starlette.responses import Response as CabecalhoResposta
 
 from app.core.cliente import ip_do_cliente
 from app.core.database import get_db
@@ -48,6 +49,7 @@ from app.services.pesquisa import (
     baixar_midia_pelo_token,
     baixar_midia_pergunta,
     calcular_resultado_avaliacao,
+    comprovante_do_envio,
     criar_ciclo,
     criar_de_modelo,
     criar_pesquisa,
@@ -233,6 +235,7 @@ def responder_por_pesquisa(
     db: Session = Depends(get_db),
 ) -> NotaSaida:
     ip = ip_do_cliente(request)
+    chave = request.headers.get("idempotency-key")
     tipo, nota = chamar(
         lambda: registrar_respostas_da_pesquisa(
             db,
@@ -240,18 +243,26 @@ def responder_por_pesquisa(
             [item.model_dump() for item in corpo.respostas],
             usuario,
             ip,
+            chave_envio=chave,
         )
     )
+    return _saida_do_envio(tipo, nota, chave)
+
+
+def _saida_do_envio(tipo: str, nota: float | None, chave: str | None) -> NotaSaida:
+    comprovante = comprovante_do_envio(chave)
     if tipo != "DESEMPENHO":
         return NotaSaida(
             tipo=tipo,
             mensagem="Resposta registrada. Sua identidade não é mostrada.",
             nota=None,
+            comprovante=comprovante,
         )
     return NotaSaida(
         tipo="DESEMPENHO",
         mensagem="Esta é a sua nota. O órgão vê só a média.",
         nota=nota,
+        comprovante=comprovante,
     )
 
 
@@ -572,11 +583,23 @@ def tokens(
 @router.get("/pesquisas/{pesquisa_id}/painel", response_model=list[PainelPergunta])
 def painel_rota(
     pesquisa_id: str,
+    resposta: CabecalhoResposta,
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[PainelPergunta]:
     """Agregado. Sem token, sem nome, sem resposta individual."""
-    linhas = chamar(lambda: painel(db, usuario, pesquisa_id))
+    consultas = {"n": 0}
+    ligacao = db.get_bind()
+
+    def _contar(_conn, _cursor, _statement, _parameters, _context, _many) -> None:
+        consultas["n"] += 1
+
+    event.listen(ligacao, "before_cursor_execute", _contar)
+    try:
+        linhas = chamar(lambda: painel(db, usuario, pesquisa_id))
+    finally:
+        event.remove(ligacao, "before_cursor_execute", _contar)
+    resposta.headers["X-Query-Count"] = str(consultas["n"])
     return [PainelPergunta(**linha) for linha in linhas]
 
 
@@ -616,6 +639,7 @@ def responder(
     db: Session = Depends(get_db),
 ) -> NotaSaida:
     ip = ip_do_cliente(request)
+    chave = request.headers.get("idempotency-key")
     tipo, nota = chamar(
         lambda: registrar_respostas(
             db,
@@ -623,19 +647,10 @@ def responder(
             [item.model_dump() for item in corpo.respostas],
             usuario,
             ip,
+            chave_envio=chave,
         )
     )
-    if tipo != "DESEMPENHO":
-        return NotaSaida(
-            tipo=tipo,
-            mensagem="Resposta registrada. Sua identidade não é mostrada.",
-            nota=None,
-        )
-    return NotaSaida(
-        tipo="DESEMPENHO",
-        mensagem="Esta é a sua nota. O órgão vê só a média.",
-        nota=nota,
-    )
+    return _saida_do_envio(tipo, nota, chave)
 
 
 @router.post("/projetos/{projeto_id}/ciclos")

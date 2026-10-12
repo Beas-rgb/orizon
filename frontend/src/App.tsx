@@ -49,6 +49,24 @@ const ProjetosListaPage = lazy(() =>
 const ResponderPage = lazy(() =>
   import("./pages/ResponderPage").then((m) => ({ default: m.ResponderPage })),
 );
+const Pagina404 = lazy(() =>
+  import("./ui/EstadosTela").then((m) => ({ default: m.Pagina404 })),
+);
+const MinhaContaPage = lazy(() =>
+  import("./pages/ContaNotasPages").then((m) => ({ default: m.MinhaContaPage })),
+);
+const MinhasNotasPage = lazy(() =>
+  import("./pages/ContaNotasPages").then((m) => ({ default: m.MinhasNotasPage })),
+);
+const NotificacoesPage = lazy(() =>
+  import("./pages/ContaNotasPages").then((m) => ({ default: m.NotificacoesPage })),
+);
+const DocumentosPage = lazy(() =>
+  import("./pages/ContaNotasPages").then((m) => ({ default: m.DocumentosPage })),
+);
+const BancoPerguntasPage = lazy(() =>
+  import("./pages/ContaNotasPages").then((m) => ({ default: m.BancoPerguntasPage })),
+);
 
 function Espera({ children }: { children: ReactNode }) {
   return (
@@ -166,7 +184,55 @@ export default function App() {
           </RequireAuth>
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route
+        path="/conta"
+        element={
+          <RequireAuth>
+            <MinhaContaPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/minhas-notas"
+        element={
+          <RequireAuth>
+            <MinhasNotasPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/notificacoes"
+        element={
+          <RequireAuth>
+            <NotificacoesPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/documentos"
+        element={
+          <RequireAuth>
+            <DocumentosPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/biblioteca"
+        element={
+          <RequireAuth>
+            <DocumentosPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/banco-perguntas"
+        element={
+          <RequireAuth>
+            <BancoPerguntasPage />
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Pagina404 />} />
     </Routes>
     </Espera>
   );

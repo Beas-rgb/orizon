@@ -5,6 +5,7 @@ import type { NoArvore } from "../components/estrutura/tipos";
 import { AppShell } from "../components/layout/AppShell";
 import { api, tokenAtual, urlApi } from "../lib/api";
 import { ACCENT, glassStyle } from "../lib/theme";
+import { Dialogo } from "../ui";
 
 type Ciclo = {
   id: string;
@@ -113,6 +114,8 @@ export function PesquisaEditorPage() {
   const [editando, setEditando] = useState<string | null>(null);
   const [arrasto, setArrasto] = useState<string | null>(null);
   const [midias, setMidias] = useState<Record<string, string>>({});
+  const [modeloAberto, setModeloAberto] = useState(false);
+  const [encerrarAberto, setEncerrarAberto] = useState(false);
 
   function aplicarConfig(config: string | null | undefined) {
     if (!config) {
@@ -404,6 +407,34 @@ export function PesquisaEditorPage() {
         { method: "POST" },
       );
       setLinks(resp.links?.length ? resp.links : resp.tokens.map((t) => `/app/responder/${t}`));
+    } catch (exc) {
+      setErro(exc instanceof Error ? exc.message : "Erro");
+    }
+  }
+
+  async function salvarComoModelo(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    const nome = (evento.currentTarget.elements.namedItem("nome") as HTMLInputElement).value;
+    try {
+      await api(`/pesquisas/${pesquisaId}/modelo`, {
+        method: "POST",
+        json: { nome },
+      });
+      setModeloAberto(false);
+      setAviso("Modelo salvo.");
+    } catch (exc) {
+      setErro(exc instanceof Error ? exc.message : "Erro");
+    }
+  }
+
+  async function encerrarPesquisa() {
+    try {
+      const atual = await api<Pesquisa>(`/pesquisas/${pesquisaId}/encerrar`, {
+        method: "POST",
+      });
+      setPesquisa(atual);
+      setEncerrarAberto(false);
+      setAviso("Pesquisa encerrada.");
     } catch (exc) {
       setErro(exc instanceof Error ? exc.message : "Erro");
     }
@@ -939,6 +970,24 @@ export function PesquisaEditorPage() {
               Gerar link de resposta
             </button>
           )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="text-[12px] font-bold text-[var(--hz-accent)]"
+              onClick={() => setModeloAberto(true)}
+            >
+              Salvar como modelo
+            </button>
+            {pesquisa?.status === "PUBLICADA" ? (
+              <button
+                type="button"
+                className="text-[12px] font-bold text-[var(--hz-danger)]"
+                onClick={() => setEncerrarAberto(true)}
+              >
+                Encerrar pesquisa
+              </button>
+            ) : null}
+          </div>
         </div>
       )}
 
@@ -1210,6 +1259,44 @@ export function PesquisaEditorPage() {
           ) : null}
         </div>
       )}
+      {modeloAberto ? (
+        <Dialogo titulo="Salvar como modelo" onFechar={() => setModeloAberto(false)}>
+          <form onSubmit={salvarComoModelo} className="grid gap-3">
+            <label className="text-[12px] font-semibold">
+              Nome do modelo
+              <input
+                name="nome"
+                required
+                minLength={2}
+                defaultValue={pesquisa?.titulo || ""}
+                className={field}
+              />
+            </label>
+            <button
+              type="submit"
+              className="rounded-xl py-2 text-[13px] font-bold text-[var(--hz-surface)]"
+              style={{ background: "var(--hz-ink)" }}
+            >
+              Salvar
+            </button>
+          </form>
+        </Dialogo>
+      ) : null}
+      {encerrarAberto ? (
+        <Dialogo titulo="Encerrar pesquisa" onFechar={() => setEncerrarAberto(false)}>
+          <p className="mb-3 text-[13px] text-[var(--hz-text-2)]">
+            Quem ainda não respondeu não consegue enviar depois do encerramento.
+          </p>
+          <button
+            type="button"
+            className="rounded-xl py-2 px-4 text-[13px] font-bold text-[var(--hz-surface)]"
+            style={{ background: "var(--hz-danger)" }}
+            onClick={() => void encerrarPesquisa()}
+          >
+            Encerrar agora
+          </button>
+        </Dialogo>
+      ) : null}
     </AppShell>
   );
 }

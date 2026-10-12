@@ -16,6 +16,9 @@ class Organizacao(IdTempo, Base):
     nome_fantasia: Mapped[str | None] = mapped_column(String(200), nullable=True)
     municipio: Mapped[str | None] = mapped_column(String(120), nullable=True)
     uf: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    origem: Mapped[str] = mapped_column(
+        String(16), default="NORMAL", server_default="NORMAL"
+    )
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

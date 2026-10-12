@@ -1,7 +1,7 @@
 """Índices que os modelos já pedem com index=True.
 
-Não altera 0001–0020. Não usa CREATE INDEX CONCURRENTLY: o upgrade
-permanece na mesma transação.
+Não altera 0001–0020. No PostgreSQL usa CREATE INDEX CONCURRENTLY fora de
+transação, como a 0018: não bloqueia escrita nas tabelas.
 """
 
 from collections.abc import Sequence
@@ -24,10 +24,23 @@ INDICES = (
 
 
 def upgrade() -> None:
-    for nome, tabela, colunas in INDICES:
-        op.create_index(nome, tabela, colunas)
+    if op.get_bind().dialect.name != "postgresql":
+        for nome, tabela, colunas in INDICES:
+            op.create_index(nome, tabela, colunas)
+        return
+    with op.get_context().autocommit_block():
+        for nome, tabela, colunas in INDICES:
+            op.execute(
+                f"CREATE INDEX CONCURRENTLY IF NOT EXISTS {nome} "
+                f"ON {tabela} ({', '.join(colunas)})"
+            )
 
 
 def downgrade() -> None:
-    for nome, tabela, _colunas in reversed(INDICES):
-        op.drop_index(nome, table_name=tabela)
+    if op.get_bind().dialect.name != "postgresql":
+        for nome, tabela, _colunas in reversed(INDICES):
+            op.drop_index(nome, table_name=tabela)
+        return
+    with op.get_context().autocommit_block():
+        for nome, _tabela, _colunas in reversed(INDICES):
+            op.execute(f"DROP INDEX CONCURRENTLY IF EXISTS {nome}")

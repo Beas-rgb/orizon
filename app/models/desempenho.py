@@ -32,7 +32,9 @@ class CicloAvaliacao(IdTempo, Base):
         nullable=True,
     )
     # Escopo: ORGANIZACAO, SETOR, CARGO, MANUAL.
-    escopo: Mapped[str] = mapped_column(String(32), default="ORGANIZACAO")
+    escopo: Mapped[str] = mapped_column(
+        String(32), default="ORGANIZACAO", server_default="ORGANIZACAO"
+    )
     # JSON: perspectivas, pesos, ordem, regras. Nunca código do usuário.
     configuracao: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(

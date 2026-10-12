@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from time import perf_counter
@@ -8,9 +9,16 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from sqlalchemy.exc import TimeoutError as PoolTimeout
 from starlette.middleware.gzip import GZipMiddleware
 
+from app.core import database
 from app.core.config import conferir_producao, settings
-from app.core.database import SessionLocal, check_db, get_engine
+from app.core.database import check_db, get_engine
 from app.core.observabilidade import LogAcesso
+from app.core.prontidao import (
+    BANCO_INDISPONIVEL,
+    motivos_do_ambiente,
+    motivos_do_schema,
+    revisao_esperada,
+)
 from app.integrations.email import modo_envio
 from app.routers.auth import router as auth_router
 from app.routers.biblioteca import router as biblioteca_router
@@ -18,23 +26,42 @@ from app.routers.dev import router as dev_router
 from app.routers.notificacoes import router as notificacoes_router
 from app.routers.pesquisas import router as pesquisas_router
 from app.routers.projetos import router as projetos_router
+from app.routers.tarefas import router as tarefas_router
 
 conferir_producao()
 
 
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    """Seed de rótulos fora do GET (sem side effect na listagem)."""
+_log_boot = logging.getLogger("horizon.boot")
+
+
+def preparar_banco() -> list[str]:
+    """Rótulos e conta TI do .env. Cada passo falha sozinho e só registra o nome."""
+    from app.services.identidade import garantir_admin
+    from app.services.projeto import garantir_rotulos
+
+    falhas: list[str] = []
     try:
         get_engine()
-        if SessionLocal is not None:
-            from app.services.projeto import garantir_rotulos
-
-            with SessionLocal() as db:
-                garantir_rotulos(db)
     except Exception:
         # Sem DATABASE_URL o /health sobe; seed fica para o 1º criar_projeto.
-        pass
+        return ["banco"]
+    for nome, passo in (("rotulos", garantir_rotulos), ("admin", garantir_admin)):
+        fabrica = database.SessionLocal
+        if fabrica is None:
+            return ["banco"]
+        try:
+            with fabrica() as db:
+                passo(db)
+        except Exception:
+            falhas.append(nome)
+            _log_boot.warning("boot: passo %s falhou", nome)
+    return falhas
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Seed de rótulos e TI fora do GET (sem side effect na listagem)."""
+    preparar_banco()
     yield
 
 
@@ -60,7 +87,7 @@ app.add_middleware(
     allow_origins=_origens,
     allow_origin_regex=_regex or None,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
 )
 
 
@@ -77,6 +104,7 @@ app.include_router(notificacoes_router)
 app.include_router(projetos_router)
 app.include_router(biblioteca_router)
 app.include_router(pesquisas_router)
+app.include_router(tarefas_router)
 
 
 def incluir_lab_se_ligado() -> bool:
@@ -145,6 +173,23 @@ def health_email() -> dict[str, str]:
 def health() -> dict[str, str]:
     """API no ar. Não autentica e não toca no banco."""
     return {"status": "ok"}
+
+
+@app.get("/health/ready")
+def health_ready() -> JSONResponse:
+    """Schema na revisão esperada e com todas as tabelas. Nenhuma escrita."""
+    try:
+        with get_engine().connect() as conexao:
+            motivos = motivos_do_schema(conexao, revisao_esperada())
+    except Exception:
+        motivos = [BANCO_INDISPONIVEL]
+    motivos.extend(motivos_do_ambiente())
+    if motivos:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "indisponivel", "motivos": motivos},
+        )
+    return JSONResponse(content={"status": "ok"})
 
 
 @app.get("/health/db")

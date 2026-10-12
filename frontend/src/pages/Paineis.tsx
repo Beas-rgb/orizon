@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { api } from "../lib/api";
 import { glassStyle } from "../lib/theme";
+import { TelaCarregando, TelaErro, TelaVazia } from "../ui";
 
 type Projeto = {
   id: string;
@@ -31,6 +32,7 @@ export function OrgaoPainel() {
   const [pesquisas, setPesquisas] = useState<Pesquisa[]>([]);
   const [painel, setPainel] = useState<PainelItem[]>([]);
   const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(true);
   const [params, setParams] = useSearchParams();
   const abaUrl = params.get("aba");
   const soTrabalhos = abaUrl === "trabalhos";
@@ -42,7 +44,8 @@ export function OrgaoPainel() {
   useEffect(() => {
     api<Projeto[]>("/projetos")
       .then(setProjetos)
-      .catch((exc) => setErro(exc instanceof Error ? exc.message : "Erro"));
+      .catch((exc) => setErro(exc instanceof Error ? exc.message : "Erro"))
+      .finally(() => setCarregando(false));
   }, []);
 
   async function abrir(id: string) {
@@ -85,7 +88,11 @@ export function OrgaoPainel() {
       <p className="text-[12px] text-gray-500 mb-5">
         Só trabalhos em que você participa. Histórico de pesquisas antigas e novas.
       </p>
-      {erro ? <p className="text-[var(--hz-danger)] text-[13px] mb-3">{erro}</p> : null}
+      {erro ? <TelaErro texto={erro} /> : null}
+      {carregando ? <TelaCarregando /> : null}
+      {!carregando && projetos.length === 0 && !erro ? (
+        <TelaVazia titulo="Nenhum trabalho" texto="Quando a consultora vincular o órgão, ele aparece aqui." />
+      ) : null}
 
       <div className="grid lg:grid-cols-2 gap-5">
         <div className="rounded-3xl p-5" style={glassStyle}>

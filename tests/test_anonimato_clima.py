@@ -105,9 +105,10 @@ def test_painel_k_anonimato_n1_suprimido(client, monkeypatch, db):
     assert envio.status_code == 200
 
     painel = client.get(f"/pesquisas/{pid}/painel", headers=headers).json()
-    assert painel[0]["respostas"] == 1
+    assert painel[0]["respostas"] is None
     assert painel[0]["suprimido"] is True
     assert painel[0]["media"] is None
+    assert painel[0]["contagem_opcoes"] is None
 
     # Resposta não amarra ao participante (token_id limpo).
     part = db.scalar(
@@ -137,6 +138,15 @@ def test_painel_k_anonimato_n1_suprimido(client, monkeypatch, db):
     )
     assert log is not None
     assert log.usuario_id is None
+
+
+def test_painel_suprimido_nao_vaza_n_por_filtro(client, monkeypatch):
+    """Grupo vazio suprimido não devolve N."""
+    headers, _func, pid = _projeto_clima(client, monkeypatch, "kfiltro@orgao.dev")
+    vazio = client.get(f"/pesquisas/{pid}/painel", headers=headers).json()[0]
+    assert vazio["suprimido"] is True
+    assert vazio["respostas"] is None
+    assert vazio["media"] is None
 
 
 def test_cinco_funcionarios_clima_sem_elo_de_identidade(client, monkeypatch, db):

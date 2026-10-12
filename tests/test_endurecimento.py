@@ -43,7 +43,7 @@ def test_login_de_email_abre_o_painel_do_papel(client, monkeypatch) -> None:
         headers=headers,
         json={"nome": "Outro", "email": "outro-dev@horizon.dev", "papel": "TI"},
     )
-    assert outro.status_code == 409
+    assert outro.status_code == 422
     entrada_dev = client.post(
         "/auth/login",
         json={"email": "joao@horizon.dev", "senha": SENHA},

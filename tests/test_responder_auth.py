@@ -251,5 +251,6 @@ def test_t7_funcionario_correto_responde_e_segunda_vez_409(
     # consultora ainda vê agregado anônimo
     painel = client.get(f"/pesquisas/{pid}/painel", headers=headers)
     assert painel.status_code == 200
-    assert painel.json()[0]["respostas"] == 1
+    assert painel.json()[0]["respostas"] is None
+    assert painel.json()[0]["suprimido"] is True
     assert "servidor" not in painel.text.lower()

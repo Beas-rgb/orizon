@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy import Boolean, ForeignKey, String, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, IdTempo
@@ -14,5 +14,9 @@ class ConfiguracaoProjeto(IdTempo, Base):
         ForeignKey("projetos.id"),
         unique=True,
     )
-    pesquisas_habilitadas: Mapped[bool] = mapped_column(Boolean, default=False)
-    ia_modo: Mapped[str] = mapped_column(String(32), default="DESATIVADA")
+    pesquisas_habilitadas: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false()
+    )
+    ia_modo: Mapped[str] = mapped_column(
+        String(32), default="DESATIVADA", server_default="DESATIVADA"
+    )

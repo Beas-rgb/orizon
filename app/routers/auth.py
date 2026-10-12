@@ -16,6 +16,7 @@ from app.routers._erro import chamar
 from app.schemas.auth import (
     BootstrapEntrada,
     ConviteEntrada,
+    ConvitesTarefaEntrada,
     LoginEntrada,
     MensagemSaida,
     PrimeiroAcessoEntrada,
@@ -23,6 +24,7 @@ from app.schemas.auth import (
     RedefinirEntrada,
     RefreshEntrada,
     TokensSaida,
+    TrocarSenhaEntrada,
     UsuarioSaida,
 )
 from app.services.identidade import (
@@ -36,6 +38,7 @@ from app.services.identidade import (
     redefinir_senha,
     refresh,
     sair,
+    trocar_senha,
 )
 
 router = APIRouter(prefix="/auth", tags=["identidade"])
@@ -133,6 +136,30 @@ def convidar(
     )
 
 
+@router.post("/convites/tarefa", status_code=202)
+def convidar_em_lote(
+    corpo: ConvitesTarefaEntrada,
+    background: BackgroundTasks,
+    consultor: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Cada convite commita sozinho. O lote não fica numa transação só."""
+    from app.services.jobs import agendar_convites, executar_convites
+
+    itens = [item.model_dump() for item in corpo.convites]
+    tarefa = chamar(
+        lambda: agendar_convites(db, consultor, corpo.projeto_id, itens)
+    )
+    background.add_task(
+        executar_convites,
+        tarefa.id,
+        consultor.id,
+        corpo.projeto_id,
+        itens,
+    )
+    return {"id": tarefa.id, "status": tarefa.status}
+
+
 @router.post("/primeiro-acesso", response_model=TokensSaida)
 def ativar(
     corpo: PrimeiroAcessoEntrada,
@@ -164,3 +191,15 @@ def gravar_senha_nova(
         lambda: redefinir_senha(db, corpo.token, corpo.senha, ip=_ip(request))
     )
     return MensagemSaida(mensagem="Senha redefinida. Entre de novo com a senha nova.")
+
+
+@router.post("/senha", response_model=MensagemSaida)
+def trocar(
+    corpo: TrocarSenhaEntrada,
+    usuario: Usuario = Depends(usuario_atual),
+    db: Session = Depends(get_db),
+) -> MensagemSaida:
+    chamar(
+        lambda: trocar_senha(db, usuario, corpo.senha_atual, corpo.senha_nova)
+    )
+    return MensagemSaida(mensagem="Senha atualizada.")

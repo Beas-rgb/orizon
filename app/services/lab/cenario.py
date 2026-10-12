@@ -33,6 +33,13 @@ LOTE = 500
 LIMITE_CRIACOES_HORA = 6
 
 
+def _staging_isolado() -> bool:
+    """Volume alto só numa URL diferente da aplicação."""
+    isolada = settings.staging_database_url.strip()
+    atual = settings.database_url.strip()
+    return bool(isolada) and isolada != atual
+
+
 def _ciente(valor):
     from datetime import UTC
 
@@ -118,6 +125,11 @@ def solicitar_cenario(
         raise ErroAuth(422, "Tamanho inválido.")
     if tamanho > settings.lab_max_participantes:
         raise ErroAuth(422, "Tamanho acima do limite do ambiente.")
+    if tamanho > 100 and not _staging_isolado():
+        raise ErroAuth(
+            422,
+            "Acima de 100 pessoas, defina STAGING_DATABASE_URL numa base isolada.",
+        )
     if perfil not in PERFIS:
         raise ErroAuth(422, "Perfil inválido.")
     if com_senha and not settings.lab_tokens_permitidos:
@@ -186,6 +198,7 @@ def _criar_projeto_lab(
         nome_fantasia=None,
         municipio="Lab",
         uf="DF",
+        origem="SINTETICO",
         criado_em=agora_,
         atualizado_em=agora_,
         deleted_at=None,
@@ -200,6 +213,7 @@ def _criar_projeto_lab(
         estado="ABERTO",
         vinculo_tipo="EDITAL",
         vinculo_titulo=f"Lab {cenario.id[:8]}",
+        origem="SINTETICO",
         criado_em=agora_,
         atualizado_em=agora_,
         deleted_at=None,
@@ -293,10 +307,105 @@ def _montar_pesquisa_clima(
     publicar(db, dono, pesquisa.id, tarefas=None)
 
 
-def executar_criacao(cenario_id: str, com_senha: bool) -> None:
-    """Roda fora do request, com sessão própria."""
-    from app.core.database import SessionLocal, get_engine
+def _concluir_criacao(db: Session, cenario_id: str, com_senha: bool) -> None:
     from app.core.security import hash_senha
+
+    cenario = db.get(CenarioLab, cenario_id)
+    if cenario is None or cenario.status != "CRIANDO":
+        return
+    dono = db.get(Usuario, cenario.dono_id)
+    if dono is None:
+        _marcar(db, cenario_id, 0, status="ERRO", erro="Dono ausente.")
+        return
+    try:
+        _marcar(db, cenario_id, 5)
+        projeto = _criar_projeto_lab(db, dono, cenario)
+        cenario = db.get(CenarioLab, cenario_id)
+        if cenario is None:
+            return
+        cenario.projeto_id = projeto.id
+        db.commit()
+        _marcar(db, cenario_id, 15)
+        linhas = montar_linhas(cenario.tamanho, cenario.seed, cenario.id)
+        _importar_em_lotes(db, dono, projeto.id, linhas, cenario_id)
+        senha_hash = None
+        if com_senha:
+            senha_hash = hash_senha("Senha-lab-teste1!")
+        _marcar_sinteticos(db, cenario_id, senha_hash)
+        _marcar(db, cenario_id, 85)
+        _montar_pesquisa_clima(db, dono, projeto.id)
+        _marcar(db, cenario_id, 100, status="PRONTO", erro=None)
+    except ErroAuth as exc:
+        _marcar(db, cenario_id, 0, status="ERRO", erro=str(exc.detalhe)[:160])
+    except Exception as exc:
+        _marcar(db, cenario_id, 0, status="ERRO", erro=type(exc).__name__[:160])
+
+
+def _copiar_para_isolada(db: Session, cenario: CenarioLab) -> Session:
+    """Abre a base de volume e leva só o dono e o registro do cenário."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    engine = create_engine(settings.staging_database_url.strip())
+    isolada = sessionmaker(bind=engine, autoflush=False, autocommit=False)()
+    dono = db.get(Usuario, cenario.dono_id)
+    if dono is None:
+        isolada.close()
+        raise ErroAuth(422, "Dono ausente.")
+    if isolada.get(Usuario, dono.id) is None:
+        isolada.add(
+            Usuario(
+                id=dono.id,
+                nome=dono.nome,
+                email=dono.email,
+                senha_hash=dono.senha_hash,
+                papel=dono.papel,
+                tipo_conta=dono.tipo_conta,
+                ativo=True,
+                tentativas_falhas=0,
+                criado_em=dono.criado_em,
+                atualizado_em=dono.atualizado_em,
+            )
+        )
+        isolada.commit()
+    if isolada.get(CenarioLab, cenario.id) is None:
+        isolada.add(
+            CenarioLab(
+                id=cenario.id,
+                dono_id=cenario.dono_id,
+                nome=cenario.nome,
+                tipo=cenario.tipo,
+                tamanho=cenario.tamanho,
+                seed=cenario.seed,
+                perfil=cenario.perfil,
+                status="CRIANDO",
+                projeto_id=None,
+                progresso=0,
+                erro=None,
+                criado_em=cenario.criado_em,
+                atualizado_em=cenario.atualizado_em,
+            )
+        )
+        isolada.commit()
+    return isolada
+
+
+def _espelhar_status(origem: Session, destino: Session, cenario_id: str) -> None:
+    remoto = origem.get(CenarioLab, cenario_id)
+    local = destino.get(CenarioLab, cenario_id)
+    if remoto is None or local is None:
+        return
+    local.status = remoto.status
+    local.progresso = remoto.progresso
+    local.erro = remoto.erro
+    local.projeto_id = None
+    local.atualizado_em = agora()
+    destino.commit()
+
+
+def executar_criacao(cenario_id: str, com_senha: bool) -> None:
+    """Roda fora do request. Acima de 100 pessoas, só na base isolada."""
+    from app.core.database import SessionLocal, get_engine
 
     get_engine()
     if SessionLocal is None:
@@ -305,54 +414,16 @@ def executar_criacao(cenario_id: str, com_senha: bool) -> None:
         cenario = db.get(CenarioLab, cenario_id)
         if cenario is None or cenario.status != "CRIANDO":
             return
-        dono = db.get(Usuario, cenario.dono_id)
-        if dono is None:
-            _marcar(
-                db,
-                cenario_id,
-                0,
-                status="ERRO",
-                erro="Dono ausente.",
-            )
+        if cenario.tamanho <= 100:
+            _concluir_criacao(db, cenario_id, com_senha)
             return
-        try:
-            _marcar(db, cenario_id, 5)
-            projeto = _criar_projeto_lab(db, dono, cenario)
-            cenario = db.get(CenarioLab, cenario_id)
-            if cenario is None:
-                return
-            cenario.projeto_id = projeto.id
-            db.commit()
-            _marcar(db, cenario_id, 15)
-            linhas = montar_linhas(cenario.tamanho, cenario.seed, cenario.id)
-            _importar_em_lotes(db, dono, projeto.id, linhas, cenario_id)
-            senha_hash = None
-            if com_senha:
-                # Um único hash para todos — evita 5.000 Argon2.
-                senha_hash = hash_senha("Senha-lab-teste1!")
-            _marcar_sinteticos(db, cenario_id, senha_hash)
-            _marcar(db, cenario_id, 85)
-            if cenario.tipo == "CLIMA":
-                _montar_pesquisa_clima(db, dono, projeto.id)
-            else:
-                _montar_pesquisa_clima(db, dono, projeto.id)
-            _marcar(db, cenario_id, 100, status="PRONTO", erro=None)
-        except ErroAuth as exc:
-            _marcar(
-                db,
-                cenario_id,
-                0,
-                status="ERRO",
-                erro=str(exc.detalhe)[:500],
-            )
-        except Exception as exc:
-            _marcar(
-                db,
-                cenario_id,
-                0,
-                status="ERRO",
-                erro=type(exc).__name__[:500],
-            )
+        isolada = _copiar_para_isolada(db, cenario)
+    try:
+        _concluir_criacao(isolada, cenario_id, com_senha)
+        with SessionLocal() as db:
+            _espelhar_status(isolada, db, cenario_id)
+    finally:
+        isolada.close()
 
 
 def cenario_saida(linha: CenarioLab) -> dict[str, object]:

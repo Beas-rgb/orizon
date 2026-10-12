@@ -29,3 +29,11 @@ class RespostasLabEntrada(BaseModel):
     perfil: str = "ALEATORIO"
     taxa: float = Field(ge=0, le=1, default=1.0)
     seed: int | None = None
+
+
+class ConviteLabEntrada(BaseModel):
+    nome: str = Field(min_length=2, max_length=160)
+    email: str = Field(min_length=3, max_length=255)
+    papel: str = "FUNCIONARIO"
+    modo: str = "SIMULADO"
+    autorizo_envio: bool = False

@@ -3,11 +3,17 @@
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.lab import exigir_lab
 from app.models.usuario import Usuario
 from app.routers._erro import chamar
-from app.schemas.lab import CenarioCriar, CenarioSaida, RespostasLabEntrada
+from app.schemas.lab import (
+    CenarioCriar,
+    CenarioSaida,
+    ConviteLabEntrada,
+    RespostasLabEntrada,
+)
 from app.services.lab import (
     cenario_saida,
     emitir_tokens_carga,
@@ -20,6 +26,8 @@ from app.services.lab import (
     solicitar_exclusao,
     solicitar_respostas,
 )
+from app.services.lab.acesso import convidar_no_cenario, entrar_como_orgao
+from app.services.lab.exclusao import prever_exclusao
 
 router = APIRouter(prefix="/lab", tags=["lab"])
 
@@ -132,3 +140,53 @@ def post_tokens(
 @router.get("/saude")
 def saude_lab(_dono: Usuario = Depends(exigir_lab)) -> dict[str, str]:
     return {"status": "ok"}
+
+
+@router.get("/limites")
+def limites_lab(_dono: Usuario = Depends(exigir_lab)) -> dict[str, int | bool]:
+    return {
+        "max_participantes": settings.lab_max_participantes,
+        "limite_banco_mb": settings.lab_limite_banco_mb,
+        "tokens_permitidos": settings.lab_tokens_permitidos,
+        "tamanho_min": 10,
+        "tamanho_max": 600,
+    }
+
+
+@router.get("/cenarios/{cenario_id}/exclusao-previa")
+def exclusao_previa(
+    cenario_id: str,
+    dono: Usuario = Depends(exigir_lab),
+    db: Session = Depends(get_db),
+) -> dict:
+    return chamar(lambda: prever_exclusao(db, dono, cenario_id))
+
+
+@router.post("/cenarios/{cenario_id}/entrar-como-orgao")
+def post_orgao(
+    cenario_id: str,
+    dono: Usuario = Depends(exigir_lab),
+    db: Session = Depends(get_db),
+) -> dict:
+    return chamar(lambda: entrar_como_orgao(db, dono, cenario_id))
+
+
+@router.post("/cenarios/{cenario_id}/convites")
+def post_convite(
+    cenario_id: str,
+    corpo: ConviteLabEntrada,
+    dono: Usuario = Depends(exigir_lab),
+    db: Session = Depends(get_db),
+) -> dict:
+    return chamar(
+        lambda: convidar_no_cenario(
+            db,
+            dono,
+            cenario_id,
+            corpo.nome,
+            corpo.email,
+            corpo.papel,
+            corpo.modo,
+            corpo.autorizo_envio,
+        )
+    )

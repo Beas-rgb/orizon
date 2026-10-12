@@ -29,3 +29,22 @@ Três senhas erradas no mesmo e-mail esperam 5 minutos. Trinta senhas erradas no
 ## O que não entra em log
 
 Senha, hash, token e URL do banco não são escritos em log nem na resposta de erro.
+
+## Correções de 12/10/2026 (locais, com teste)
+
+- `scripts/reset_manter_ti.py` recusa `APP_ENV=production`, host fora de `localhost`/`127.0.0.1`/`HORIZON_RESET_HOSTS` e falta de `HORIZON_RESET_CONFIRMA=APAGAR_DADOS_LOCAIS`. A recusa acontece antes de abrir conexão (`tests/test_reset_e_admin.py`).
+- Convite não concede TI, nem quando não existe TI. A conta TI nasce de `ADMIN_*` no boot (`garantir_admin`) ou do bootstrap local.
+- A importação não vincula conta existente de outro papel nem funcionário de trabalho de outra consultora. A linha aparece com erro na prévia; o caminho é o convite (`tests/test_importacao.py`).
+- Em produção sem R2, upload e mídia falham em vez de gravar em disco efêmero, e `/health/ready` responde `armazenamento_ausente`. O boot ainda sobe sem R2: falta confirmar no painel do Render se as variáveis existem.
+- Resultado da avaliação de desempenho: a média dos subordinados some para o avaliado e para o órgão quando menos de 5 pessoas responderam (`perspectivas_suprimidas`). A consultora continua vendo. A nota final ainda inclui o grupo; esconder também os pesos ou redistribuir é decisão pendente.
+- `/auth/cadastro-consultora` usa o mesmo IP de cliente que as outras rotas.
+- Biblioteca, setores e cargos têm teto de página.
+- Timeouts por transação disponíveis em `DB_STATEMENT_TIMEOUT_MS` e `DB_LOCK_TIMEOUT_MS` (zero desliga). Testado no PostgreSQL local.
+- O container roda como usuário `horizon` (uid 10001).
+
+## Triagem de ferramentas (12/10/2026, máquina local)
+
+- Bandit `-ll`: 4 médios, nenhum alto. `urlopen` em `cnpj.py` e `email.py` usa URL fixa `https`; o CNPJ entra só depois de `normalizar_cnpj`. `manutencao.py` monta SQL só com nomes de uma lista interna. Os quatro são falsos positivos.
+- `pip-audit` no `.venv`: `urllib3` 2.7.0 (transitivo do `botocore`) com correção em 2.8.0. `python-jose` e `ecdsa` aparecem no `.venv` local, mas não estão no `pyproject.toml`. Fixar `urllib3` entra com o lockfile.
+- `npm audit --omit=dev`: 0 vulnerabilidades. Com dev: 1 alta em `source-map-js`, só no build.
+- Varredura de segredos no working tree e no histórico: as URLs do Neon encontradas são placeholders (`USER:PASSWORD@HOST`).

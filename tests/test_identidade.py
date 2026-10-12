@@ -223,6 +223,35 @@ def test_recuperacao_no_email_de_acesso(client) -> None:
     assert reuso.status_code == 400
 
 
+def test_trocar_senha_logado(client) -> None:
+    criado = client.post(
+        "/auth/bootstrap",
+        json={"nome": "Tia", "email": "tia@horizon.dev", "senha": SENHA},
+    )
+    token = criado.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    recusa = client.post(
+        "/auth/senha",
+        headers=headers,
+        json={"senha_atual": "errada-X1", "senha_nova": OUTRA},
+    )
+    assert recusa.status_code == 400
+    ok = client.post(
+        "/auth/senha",
+        headers=headers,
+        json={"senha_atual": SENHA, "senha_nova": OUTRA},
+    )
+    assert ok.status_code == 200
+    velha = client.post(
+        "/auth/login", json={"email": "tia@horizon.dev", "senha": SENHA}
+    )
+    assert velha.status_code == 401
+    nova = client.post(
+        "/auth/login", json={"email": "tia@horizon.dev", "senha": OUTRA}
+    )
+    assert nova.status_code == 200
+
+
 def test_auditoria_sem_senha(client, db) -> None:
     client.post(
         "/auth/bootstrap",

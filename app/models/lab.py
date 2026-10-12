@@ -28,7 +28,7 @@ class CenarioLab(Base):
         ForeignKey("projetos.id"),
         nullable=True,
     )
-    progresso: Mapped[int] = mapped_column(Integer, default=0)
+    progresso: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     erro: Mapped[str | None] = mapped_column(Text, nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))

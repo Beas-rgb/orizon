@@ -22,7 +22,9 @@ class Documento(IdTempo, Base):
         index=True,
     )
     camada: Mapped[str] = mapped_column(String(32))
-    visibilidade: Mapped[str] = mapped_column(String(32), default="PRIVADO")
+    visibilidade: Mapped[str] = mapped_column(
+        String(32), default="PRIVADO", server_default="PRIVADO"
+    )
     nome: Mapped[str] = mapped_column(String(200))
     mime: Mapped[str] = mapped_column(String(120))
     tamanho: Mapped[int] = mapped_column(Integer)

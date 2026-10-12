@@ -4,9 +4,11 @@ Setor segmenta. Superior define a árvore. Um ciclo (A→B→A) é rejeitado.
 """
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.autorizacao import exigir_papel
+from app.core.database import serializar_no_sqlite
 from app.core.tokens import novo_id
 from app.models.base import agora
 from app.models.estrutura import Cargo, PerfilFuncionario
@@ -61,13 +63,22 @@ def criar_cargo(
     return cargo
 
 
-def listar_cargos(db: Session, usuario: Usuario, projeto_id: str) -> list[Cargo]:
+def listar_cargos(
+    db: Session,
+    usuario: Usuario,
+    projeto_id: str,
+    *,
+    limite: int = 500,
+    deslocamento: int = 0,
+) -> list[Cargo]:
     exigir_papel(db, usuario, projeto_id, {"CONSULTOR", "ORGAO"})
     return list(
         db.scalars(
             select(Cargo)
             .where(Cargo.projeto_id == projeto_id, Cargo.deleted_at.is_(None))
-            .order_by(Cargo.nome)
+            .order_by(Cargo.nome, Cargo.id)
+            .limit(min(max(limite, 1), 500))
+            .offset(max(deslocamento, 0))
         ).all()
     )
 
@@ -167,11 +178,27 @@ def definir_perfil_funcionario(
         ):
             raise ErroAuth(422, "Cargo não pertence a este projeto.")
     _superior_valido(db, projeto_id, usuario_id, superior_id)
+    dados = {"setor_id": setor_id, "cargo_id": cargo_id, "superior_id": superior_id}
+    with serializar_no_sqlite(db):
+        try:
+            return _gravar_perfil(db, projeto_id, usuario_id, dados)
+        except IntegrityError:
+            # Outra sessão criou o perfil entre a leitura e o commit.
+            db.rollback()
+            return _gravar_perfil(db, projeto_id, usuario_id, dados)
+
+
+def _gravar_perfil(
+    db: Session,
+    projeto_id: str,
+    usuario_id: str,
+    dados: dict[str, str | None],
+) -> PerfilFuncionario:
+    """A unique (projeto, usuário) vale também para perfil apagado: reativa."""
     perfil = db.scalar(
         select(PerfilFuncionario).where(
             PerfilFuncionario.projeto_id == projeto_id,
             PerfilFuncionario.usuario_id == usuario_id,
-            PerfilFuncionario.deleted_at.is_(None),
         )
     )
     agora_ = agora()
@@ -180,19 +207,16 @@ def definir_perfil_funcionario(
             id=novo_id(),
             projeto_id=projeto_id,
             usuario_id=usuario_id,
-            setor_id=setor_id,
-            cargo_id=cargo_id,
-            superior_id=superior_id,
             criado_em=agora_,
-            atualizado_em=agora_,
             deleted_at=None,
+            **dados,
         )
         db.add(perfil)
     else:
-        perfil.setor_id = setor_id
-        perfil.cargo_id = cargo_id
-        perfil.superior_id = superior_id
-        perfil.atualizado_em = agora_
+        for campo, valor in dados.items():
+            setattr(perfil, campo, valor)
+        perfil.deleted_at = None
+    perfil.atualizado_em = agora_
     db.commit()
     return perfil
 

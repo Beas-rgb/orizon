@@ -10,6 +10,11 @@ COPY migrations ./migrations
 RUN pip install --no-cache-dir .
 RUN alembic heads | awk '{print $1}' > /app/ALEMBIC_HEAD
 
+RUN useradd --system --uid 10001 --home-dir /app horizon \
+    && mkdir -p /app/data \
+    && chown -R horizon:horizon /app/data
+USER horizon
+
 ENV APP_ENV=production
 EXPOSE 8000
 

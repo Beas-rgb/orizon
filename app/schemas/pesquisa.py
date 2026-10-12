@@ -103,6 +103,7 @@ class NotaSaida(BaseModel):
     tipo: str
     mensagem: str
     nota: float | None = None
+    comprovante: str | None = None
 
 
 class PainelPergunta(BaseModel):
@@ -110,7 +111,8 @@ class PainelPergunta(BaseModel):
     texto: str
     tipo: str
     # Participantes distintos (não linhas soltas de checkbox).
-    respostas: int
+    # None quando o grupo está suprimido (K-anonimato): o N baixo não vaza.
+    respostas: int | None
     media: float | None = None
     contagem_opcoes: list[dict[str, str | int]] | None = None
     # k-anonimato: True quando N < K (média/distribuição omitidas).
