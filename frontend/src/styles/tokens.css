@@ -96,3 +96,49 @@
   --hz-mist-88: rgb(240 244 250 / 0.88);
   --hz-mist-92: rgb(244 247 252 / 0.92);
 }
+
+/* ===== v7 (13/10/2026) — única fonte de cor do visual v7. Troque o azul só em --hz-brand. ===== */
+:root {
+  --hz-brand: #1d5faf;
+  --hz-brand-600: color-mix(in srgb, var(--hz-brand) 86%, #000000);
+  --hz-brand-50: color-mix(in srgb, var(--hz-brand) 7%, #ffffff);
+  --hz-brand-ring: color-mix(in srgb, var(--hz-brand) 35%, transparent);
+  --hz-night-950: #04070d;
+  --hz-night-900: #070c17;
+  --hz-night-800: #0e1628;
+  --hz-night-700: #17213a;
+  --hz-on-night: #f3f6fb;
+  --hz-on-night-2: #b9c3d6;
+  --hz-on-night-3: #8f9bb3;
+  --hz-night-line: rgb(255 255 255 / 0.08);
+  --hz-night-hover: rgb(255 255 255 / 0.06);
+  --hz-v7-bg: #f5f6f8;
+  --hz-v7-surface: #ffffff;
+  --hz-v7-ink: #0a0e17;
+  --hz-v7-ink-2: #1b2230;
+  --hz-v7-muted: #58637a;
+  --hz-v7-faint: #8791a6;
+  --hz-v7-line: #e3e6ec;
+  --hz-v7-line-2: #eef0f4;
+  --hz-v7-head: #fafbfc;
+  --hz-v7-ok: #17714a;
+  --hz-v7-ok-50: #e9f5ee;
+  --hz-v7-ok-bar: #1f8a5b;
+  --hz-v7-warn: #8a5300;
+  --hz-v7-warn-50: #fdf3e1;
+  --hz-v7-warn-bar: #c27c0a;
+  --hz-v7-crit: #b3261e;
+  --hz-v7-crit-50: #fdecea;
+  --hz-v7-crit-bar: #d0382f;
+  --hz-v7-scrim: rgb(4 7 13 / 0.28);
+  --hz-v7-shadow: 0 1px 2px rgb(10 14 23 / 0.04);
+  --hz-v7-shadow-pop: 0 18px 50px rgb(4 7 13 / 0.28);
+  --hz-v7-shimmer: rgb(255 255 255 / 0.6);
+  --hz-v7-blur: 6px;
+  --hz-v7-dur: 200ms;
+  --hz-v7-rail: 72px;
+  --hz-v7-menu: 248px;
+  --hz-v7-r-lg: 14px;
+  --hz-v7-r-md: 10px;
+  --hz-v7-r-sm: 6px;
+}
