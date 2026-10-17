@@ -34,7 +34,7 @@ describe("travas de lógica, e-mail e proibições", () => {
   });
 
   it("reprova eval, Function, html inseguro, serviço, push, manifesto e console da ação", () => {
-    const regras = new Set(regrasDe("proibidos.ts").achados.map((item) => item.regra));
+    const regras = new Set(regrasDe("proibidos.tsx").achados.map((item) => item.regra));
     for (const regra of ["eval", "new-function", "localStorage", "axios", "service-worker", "push", "pwa", "console-acao", "html-inseguro"]) {
       expect(regras.has(regra)).toBe(true);
     }
