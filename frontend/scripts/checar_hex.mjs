@@ -30,7 +30,7 @@ const legado = new Set(
 const achados = [];
 for (const arquivo of arquivos(src)) {
   const rel = relative(raiz, arquivo).replaceAll("\\", "/");
-  if (rel === "src/styles/tokens.css" || legado.has(rel)) continue;
+  if (rel === "src/styles/tokens.css" || rel.startsWith("src/v7/tokens/") || legado.has(rel)) continue;
   const linhas = readFileSync(arquivo, "utf8").split(/\r?\n/);
   linhas.forEach((texto, indice) => {
     if (cor.test(texto)) achados.push(`${rel}:${indice + 1}`);

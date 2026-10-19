@@ -12,6 +12,9 @@
     "lint": "oxlint && npm run checar:hex",
     "checar:hex": "node scripts/checar_hex.mjs",
     "test": "vitest run",
+    "test:v7": "vitest run tests/v7",
+    "test:v7:hashes": "node tests/v7/conferir-hashes.mjs",
+    "varredura:v7": "node scripts/v7/varredura.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
