@@ -116,6 +116,21 @@ function normalizar(nome, valor) {
   return { nome: n, valor: v };
 }
 
+function partesDeElemento(nome, valor) {
+  const elementos = nome.endsWith("-status-hint-peso")
+    ? ["status", "hint"]
+    : nome.endsWith("-migalha-link-cor") || nome.endsWith("-migalha-link-peso")
+      ? ["migalha", "link"]
+      : null;
+  if (!elementos) return null;
+  const pedacos = valor.split(/\s*\/\s*/);
+  if (pedacos.length !== 2) return null;
+  return [
+    { nome: `${nome}-${elementos[0]}`, valor: pedacos[0] },
+    { nome: `${nome}-${elementos[1]}`, valor: pedacos[1] },
+  ];
+}
+
 function separar(nome, valor) {
   const semDescricao = valor.replace(/\s+\([^)]*\)$/, "").trim();
   const doisLados = semDescricao.match(/^([\d.]+)(px|em|rem)–([\d.]+)(px|em|rem)$/);
@@ -134,27 +149,8 @@ function separar(nome, valor) {
       regras: valor === semDescricao ? [] : [{ nome, original: valor }],
     };
   }
-  const pesos = semDescricao.match(/^(\d+)\s+\/\s+(\d+)$/);
-  if (pesos) {
-    return {
-      saida: [
-        { nome: `${nome}-padrao`, valor: pesos[1] },
-        { nome: `${nome}-hover`, valor: pesos[2] },
-      ],
-      regras: [],
-    };
-  }
-  const vars = semDescricao.match(/^(var\(--hz-[\w-]+\))\s+\/\s+(var\(--hz-[\w-]+\))$/);
-  if (vars) {
-    const sufixo = (token) => token.slice("var(--hz-".length, -1);
-    return {
-      saida: [
-        { nome: `${nome}-${sufixo(vars[1])}`, valor: vars[1] },
-        { nome: `${nome}-${sufixo(vars[2])}`, valor: vars[2] },
-      ],
-      regras: [],
-    };
-  }
+  const partido = partesDeElemento(nome, semDescricao);
+  if (partido) return { saida: partido, regras: [] };
   if (semDescricao === "-webkit-font-smoothing:antialiased") {
     return { saida: [{ nome, valor: "antialiased" }], regras: [] };
   }
@@ -166,8 +162,8 @@ export function separadoresProibidos(entradas) {
   for (const { nome, valor } of entradas) {
     const motivos = [];
     if (String(valor).includes("–")) motivos.push("travessao");
-    if (String(valor).includes(" / ")) motivos.push("barra");
     const foraDeFuncao = String(valor).replace(/var\([^)]*\)/g, "").replace(/url\([^)]*\)/g, "");
+    if (foraDeFuncao.includes("/")) motivos.push("barra");
     if (foraDeFuncao.includes(":")) motivos.push("dois-pontos");
     if (motivos.length) culpados.push({ nome, valor, motivos });
   }
@@ -180,14 +176,28 @@ function limpar(nome, valor) {
   if (partido) return partido;
   const regras = [];
   const celular = atual.valor.match(/^(.*)\s+\(celular\s+([^)]+)\)$/);
-  if (celular && valido(atual.nome, celular[1].trim()) && valido(`${atual.nome}-celular`, celular[2].trim())) {
-    return {
-      saida: [
-        { nome: atual.nome, valor: celular[1].trim() },
-        { nome: `${atual.nome}-celular`, valor: celular[2].trim() },
-      ],
-      regras,
-    };
+  if (celular && valido(atual.nome, celular[1].trim())) {
+    const interno = celular[2].trim();
+    const tamanhoPeso = interno.match(/^([\d.]+px)\/(\d+)$/);
+    if (tamanhoPeso && atual.nome.endsWith("-tamanho")) {
+      return {
+        saida: [
+          { nome: atual.nome, valor: celular[1].trim() },
+          { nome: `${atual.nome}-celular`, valor: tamanhoPeso[1] },
+          { nome: `${atual.nome.replace(/-tamanho$/, "-peso")}-celular`, valor: tamanhoPeso[2] },
+        ],
+        regras,
+      };
+    }
+    if (valido(`${atual.nome}-celular`, interno)) {
+      return {
+        saida: [
+          { nome: atual.nome, valor: celular[1].trim() },
+          { nome: `${atual.nome}-celular`, valor: interno },
+        ],
+        regras,
+      };
+    }
   }
   const paren = atual.valor.match(/^(.*)\s+\(([^)]+)\)$/);
   if (paren && valido(atual.nome, paren[1].trim())) {

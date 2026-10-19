@@ -35,13 +35,15 @@ describe("validade dos tokens", () => {
     expect(separadoresProibidos(entradas)).toEqual([]);
   });
 
-  it("reprova travessão, barra com espaços e dois-pontos fora de var() ou url()", () => {
+  it("reprova travessão, barra fora de url() e var(), e dois-pontos fora dessas funções", () => {
     const plantado = [
       { nome: "--hz-faixa", valor: "761–1023px" },
       { nome: "--hz-espaco", valor: "0.34em–0.42em" },
       { nome: "--hz-peso", valor: "500 / 400" },
       { nome: "--hz-cor", valor: "var(--hz-muted) / var(--hz-ink-2)" },
       { nome: "--hz-suave", valor: "-webkit-font-smoothing:antialiased" },
+      { nome: "--hz-peso-junto", valor: "500/600" },
+      { nome: "--hz-tamanho-peso", valor: "11.5px/500" },
     ];
     expect(separadoresProibidos(plantado).map((item) => item.nome)).toEqual([
       "--hz-faixa",
@@ -49,6 +51,8 @@ describe("validade dos tokens", () => {
       "--hz-peso",
       "--hz-cor",
       "--hz-suave",
+      "--hz-peso-junto",
+      "--hz-tamanho-peso",
     ]);
     expect(separadoresProibidos([{ nome: "--hz-ok", valor: "var(--hz-ink)" }])).toEqual([]);
   });
