@@ -43,10 +43,17 @@ export async function fontesFaltando(page: Page, exigidas = FONTES_EXIGIDAS) {
   }, exigidas);
 }
 
+export function origemPermitida(url: string) {
+  try {
+    return new URL(url).origin === "http://127.0.0.1:4173";
+  } catch {
+    return false;
+  }
+}
+
 export async function bloquearRedeExterna(page: Page) {
   await page.route("**/*", (route) => {
-    const url = route.request().url();
-    if (url.startsWith("http://127.0.0.1")) {
+    if (origemPermitida(route.request().url())) {
       route.continue();
       return;
     }

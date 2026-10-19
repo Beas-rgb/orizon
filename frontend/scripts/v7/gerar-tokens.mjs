@@ -116,8 +116,68 @@ function normalizar(nome, valor) {
   return { nome: n, valor: v };
 }
 
+function separar(nome, valor) {
+  const semDescricao = valor.replace(/\s+\([^)]*\)$/, "").trim();
+  const doisLados = semDescricao.match(/^([\d.]+)(px|em|rem)–([\d.]+)(px|em|rem)$/);
+  const unidadeNoFim = semDescricao.match(/^([\d.]+)–([\d.]+)(px|em|rem)$/);
+  const faixa = doisLados
+    ? [doisLados[1], doisLados[2], doisLados[3], doisLados[4]]
+    : unidadeNoFim
+      ? [unidadeNoFim[1], unidadeNoFim[3], unidadeNoFim[2], unidadeNoFim[3]]
+      : null;
+  if (faixa) {
+    return {
+      saida: [
+        { nome: `${nome}-min`, valor: `${faixa[0]}${faixa[1]}` },
+        { nome: `${nome}-max`, valor: `${faixa[2]}${faixa[3]}` },
+      ],
+      regras: valor === semDescricao ? [] : [{ nome, original: valor }],
+    };
+  }
+  const pesos = semDescricao.match(/^(\d+)\s+\/\s+(\d+)$/);
+  if (pesos) {
+    return {
+      saida: [
+        { nome: `${nome}-padrao`, valor: pesos[1] },
+        { nome: `${nome}-hover`, valor: pesos[2] },
+      ],
+      regras: [],
+    };
+  }
+  const vars = semDescricao.match(/^(var\(--hz-[\w-]+\))\s+\/\s+(var\(--hz-[\w-]+\))$/);
+  if (vars) {
+    const sufixo = (token) => token.slice("var(--hz-".length, -1);
+    return {
+      saida: [
+        { nome: `${nome}-${sufixo(vars[1])}`, valor: vars[1] },
+        { nome: `${nome}-${sufixo(vars[2])}`, valor: vars[2] },
+      ],
+      regras: [],
+    };
+  }
+  if (semDescricao === "-webkit-font-smoothing:antialiased") {
+    return { saida: [{ nome, valor: "antialiased" }], regras: [] };
+  }
+  return null;
+}
+
+export function separadoresProibidos(entradas) {
+  const culpados = [];
+  for (const { nome, valor } of entradas) {
+    const motivos = [];
+    if (String(valor).includes("–")) motivos.push("travessao");
+    if (String(valor).includes(" / ")) motivos.push("barra");
+    const foraDeFuncao = String(valor).replace(/var\([^)]*\)/g, "").replace(/url\([^)]*\)/g, "");
+    if (foraDeFuncao.includes(":")) motivos.push("dois-pontos");
+    if (motivos.length) culpados.push({ nome, valor, motivos });
+  }
+  return culpados;
+}
+
 function limpar(nome, valor) {
   const atual = normalizar(nome, valor);
+  const partido = separar(atual.nome, atual.valor);
+  if (partido) return partido;
   const regras = [];
   const celular = atual.valor.match(/^(.*)\s+\(celular\s+([^)]+)\)$/);
   if (celular && valido(atual.nome, celular[1].trim()) && valido(`${atual.nome}-celular`, celular[2].trim())) {

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { tokensInvalidos } from "../../scripts/v7/gerar-tokens.mjs";
+import { separadoresProibidos, tokensInvalidos } from "../../scripts/v7/gerar-tokens.mjs";
 import { raizFront } from "./ajuda";
 
 function nomes(entradas: { nome: string; valor: string }[]) {
@@ -32,5 +32,24 @@ describe("validade dos tokens", () => {
       if (match) entradas.push({ nome: match[1], valor: match[2] });
     }
     expect(tokensInvalidos(entradas)).toEqual([]);
+    expect(separadoresProibidos(entradas)).toEqual([]);
+  });
+
+  it("reprova travessão, barra com espaços e dois-pontos fora de var() ou url()", () => {
+    const plantado = [
+      { nome: "--hz-faixa", valor: "761–1023px" },
+      { nome: "--hz-espaco", valor: "0.34em–0.42em" },
+      { nome: "--hz-peso", valor: "500 / 400" },
+      { nome: "--hz-cor", valor: "var(--hz-muted) / var(--hz-ink-2)" },
+      { nome: "--hz-suave", valor: "-webkit-font-smoothing:antialiased" },
+    ];
+    expect(separadoresProibidos(plantado).map((item) => item.nome)).toEqual([
+      "--hz-faixa",
+      "--hz-espaco",
+      "--hz-peso",
+      "--hz-cor",
+      "--hz-suave",
+    ]);
+    expect(separadoresProibidos([{ nome: "--hz-ok", valor: "var(--hz-ink)" }])).toEqual([]);
   });
 });
