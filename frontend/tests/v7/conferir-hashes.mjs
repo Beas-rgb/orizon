@@ -4,11 +4,12 @@
  * Cada arquivo se chama <tela>-<largura>.png.
  */
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { validarManifesto } from "../../scripts/v7/manifesto.mjs";
 
-const pasta = process.env.HZ_REFERENCIAS_DIR;
+const local = path.resolve(process.cwd(), "tests/v7/referencias");
+const pasta = process.env.HZ_REFERENCIAS_DIR || (existsSync(local) ? local : "");
 
 if (!pasta) {
   console.error(

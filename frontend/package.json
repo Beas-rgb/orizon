@@ -14,6 +14,9 @@
     "test": "vitest run",
     "test:v7": "vitest run tests/v7",
     "test:v7:hashes": "node tests/v7/conferir-hashes.mjs",
+    "test:v7:visual": "playwright test --project=celular --project=desktop",
+    "calibrar:v7": "playwright test --project=calibracao",
+    "gerar:tokens:v7": "node scripts/v7/gerar-tokens.mjs",
     "varredura:v7": "node scripts/v7/varredura.mjs",
     "preview": "vite preview"
   },
@@ -28,6 +31,7 @@
     "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
@@ -35,6 +39,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "happy-dom": "^20.14.5",
     "oxlint": "^1.81.0",
+    "pngjs": "7.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",

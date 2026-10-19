@@ -1,0 +1,565 @@
+{
+ "fonte_da_verdade": "CSS do design que gerou os SVG (horizon.css + horizon-v7.css, que sobrescreve). Quando o código v7 (tokens.css/v7.css) difere, vale o design.",
+ "cores": [
+  {
+   "token": "--brand",
+   "design": "#1D5FAF",
+   "codigo_v7": "--hz-brand",
+   "valor_codigo": "#1d5faf",
+   "diverge": false
+  },
+  {
+   "token": "--glow",
+   "design": "#B4B5BA",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--brand-50",
+   "design": "color-mix(in srgb,var(--brand) 6%,#fff)",
+   "codigo_v7": "--hz-brand-50",
+   "valor_codigo": "color-mix(in srgb, var(--hz-brand) 7%, #ffffff)",
+   "diverge": true
+  },
+  {
+   "token": "--brand-100",
+   "design": "color-mix(in srgb,var(--brand) 12%,#fff)",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--brand-200",
+   "design": "color-mix(in srgb,var(--brand) 24%,#fff)",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--brand-300",
+   "design": "color-mix(in srgb,var(--brand) 44%,#fff)",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--brand-400",
+   "design": "color-mix(in srgb,var(--brand) 70%,#fff)",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--brand-500",
+   "design": "var(--brand)",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--brand-600",
+   "design": "color-mix(in srgb,var(--brand) 86%,#000)",
+   "codigo_v7": "--hz-brand-600",
+   "valor_codigo": "color-mix(in srgb, var(--hz-brand) 86%, #000000)",
+   "diverge": false
+  },
+  {
+   "token": "--brand-700",
+   "design": "color-mix(in srgb,var(--brand) 72%,#000)",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--brand-800",
+   "design": "color-mix(in srgb,var(--brand) 56%,#000)",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--brand-900",
+   "design": "color-mix(in srgb,var(--brand) 40%,#000)",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--night-950",
+   "design": "#070708",
+   "codigo_v7": "--hz-night-950",
+   "valor_codigo": "#04070d",
+   "diverge": true
+  },
+  {
+   "token": "--night-900",
+   "design": "#0B0B0D",
+   "codigo_v7": "--hz-night-900",
+   "valor_codigo": "#070c17",
+   "diverge": true
+  },
+  {
+   "token": "--night-850",
+   "design": "#101012",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--night-800",
+   "design": "#151518",
+   "codigo_v7": "--hz-night-800",
+   "valor_codigo": "#0e1628",
+   "diverge": true
+  },
+  {
+   "token": "--night-700",
+   "design": "#212126",
+   "codigo_v7": "--hz-night-700",
+   "valor_codigo": "#17213a",
+   "diverge": true
+  },
+  {
+   "token": "--on-night",
+   "design": "#F5F5F6",
+   "codigo_v7": "--hz-on-night",
+   "valor_codigo": "#f3f6fb",
+   "diverge": true
+  },
+  {
+   "token": "--on-night-2",
+   "design": "#BDBEC4",
+   "codigo_v7": "--hz-on-night-2",
+   "valor_codigo": "#b9c3d6",
+   "diverge": true
+  },
+  {
+   "token": "--on-night-3",
+   "design": "#8E9097",
+   "codigo_v7": "--hz-on-night-3",
+   "valor_codigo": "#8f9bb3",
+   "diverge": true
+  },
+  {
+   "token": "--night-line",
+   "design": "rgba(255,255,255,.08)",
+   "codigo_v7": "--hz-night-line",
+   "valor_codigo": "rgb(255 255 255 / 0.08)",
+   "diverge": false
+  },
+  {
+   "token": "--bg",
+   "design": "#F4F4F5",
+   "codigo_v7": "--hz-v7-bg",
+   "valor_codigo": "#f5f6f8",
+   "diverge": true
+  },
+  {
+   "token": "--surface",
+   "design": "#FFFFFF",
+   "codigo_v7": "--hz-v7-surface",
+   "valor_codigo": "#ffffff",
+   "diverge": false
+  },
+  {
+   "token": "--ink",
+   "design": "#0B0B0D",
+   "codigo_v7": "--hz-v7-ink",
+   "valor_codigo": "#0a0e17",
+   "diverge": true
+  },
+  {
+   "token": "--ink-2",
+   "design": "#1D1E22",
+   "codigo_v7": "--hz-v7-ink-2",
+   "valor_codigo": "#1b2230",
+   "diverge": true
+  },
+  {
+   "token": "--ink-3",
+   "design": "#3D3F46",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--muted",
+   "design": "#5C5E66",
+   "codigo_v7": "--hz-v7-muted",
+   "valor_codigo": "#58637a",
+   "diverge": true
+  },
+  {
+   "token": "--faint",
+   "design": "#8C8E96",
+   "codigo_v7": "--hz-v7-faint",
+   "valor_codigo": "#8791a6",
+   "diverge": true
+  },
+  {
+   "token": "--line",
+   "design": "#E3E3E6",
+   "codigo_v7": "--hz-v7-line",
+   "valor_codigo": "#e3e6ec",
+   "diverge": true
+  },
+  {
+   "token": "--line-2",
+   "design": "#EEEEF0",
+   "codigo_v7": "--hz-v7-line-2",
+   "valor_codigo": "#eef0f4",
+   "diverge": true
+  },
+  {
+   "token": "--hover",
+   "design": "#F2F2F4",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  },
+  {
+   "token": "--head",
+   "design": "#FAFAFB",
+   "codigo_v7": "--hz-v7-head",
+   "valor_codigo": "#fafbfc",
+   "diverge": true
+  },
+  {
+   "token": "--ok",
+   "design": "#17714A",
+   "codigo_v7": "--hz-v7-ok",
+   "valor_codigo": "#17714a",
+   "diverge": false
+  },
+  {
+   "token": "--ok-50",
+   "design": "#E9F5EE",
+   "codigo_v7": "--hz-v7-ok-50",
+   "valor_codigo": "#e9f5ee",
+   "diverge": false
+  },
+  {
+   "token": "--ok-bar",
+   "design": "#1F8A5B",
+   "codigo_v7": "--hz-v7-ok-bar",
+   "valor_codigo": "#1f8a5b",
+   "diverge": false
+  },
+  {
+   "token": "--warn",
+   "design": "#8A5300",
+   "codigo_v7": "--hz-v7-warn",
+   "valor_codigo": "#8a5300",
+   "diverge": false
+  },
+  {
+   "token": "--warn-50",
+   "design": "#FDF3E1",
+   "codigo_v7": "--hz-v7-warn-50",
+   "valor_codigo": "#fdf3e1",
+   "diverge": false
+  },
+  {
+   "token": "--warn-bar",
+   "design": "#C27C0A",
+   "codigo_v7": "--hz-v7-warn-bar",
+   "valor_codigo": "#c27c0a",
+   "diverge": false
+  },
+  {
+   "token": "--crit",
+   "design": "#B3261E",
+   "codigo_v7": "--hz-v7-crit",
+   "valor_codigo": "#b3261e",
+   "diverge": false
+  },
+  {
+   "token": "--crit-50",
+   "design": "#FDECEA",
+   "codigo_v7": "--hz-v7-crit-50",
+   "valor_codigo": "#fdecea",
+   "diverge": false
+  },
+  {
+   "token": "--crit-bar",
+   "design": "#D0382F",
+   "codigo_v7": "--hz-v7-crit-bar",
+   "valor_codigo": "#d0382f",
+   "diverge": false
+  },
+  {
+   "token": "--bar-neutral",
+   "design": "#2A2B30",
+   "codigo_v7": null,
+   "valor_codigo": null,
+   "diverge": true
+  }
+ ],
+ "tipografia": {
+  "familias": {
+   "texto": "\"Inter\",-apple-system,\"SF Pro Text\",BlinkMacSystemFont,\"Helvetica Neue\",Arial,sans-serif",
+   "marca": "\"Montserrat\",\"Inter\",sans-serif",
+   "codigo_v7_hoje": "\"DM Sans Variable\", system-ui, \"Segoe UI\", sans-serif",
+   "diverge": true,
+   "font_feature_settings": "\"cv11\",\"ss03\"",
+   "suavizacao": "-webkit-font-smoothing:antialiased",
+   "carregamento": "Inter local (arquivo do app, sem Google Fonts/CDN)"
+  },
+  "escala": [
+   {
+    "uso": "h1 (título de página, desktop)",
+    "tamanho": "26px",
+    "peso": 600,
+    "altura_linha": 1.15,
+    "espacamento": "-0.022em",
+    "cor": "--ink"
+   },
+   {
+    "uso": "h1 (celular, até 760px)",
+    "tamanho": "22px",
+    "peso": 600,
+    "altura_linha": 1.15,
+    "espacamento": "-0.022em",
+    "cor": "--ink"
+   },
+   {
+    "uso": "h2 do painel (.panel-head h2)",
+    "tamanho": "15px",
+    "peso": 600,
+    "altura_linha": 1.45,
+    "espacamento": "-0.01em",
+    "cor": "--ink"
+   },
+   {
+    "uso": "h2 do diálogo",
+    "tamanho": "17px",
+    "peso": 600,
+    "altura_linha": 1.45,
+    "espacamento": "-0.01em",
+    "cor": "--ink"
+   },
+   {
+    "uso": "pergunta (.qcard .qt)",
+    "tamanho": "14.5px",
+    "peso": 600,
+    "altura_linha": 1.45,
+    "cor": "--ink"
+   },
+   {
+    "uso": "corpo (body)",
+    "tamanho": "14px",
+    "peso": 400,
+    "altura_linha": 1.45,
+    "cor": "--ink-2"
+   },
+   {
+    "uso": "lede (subtítulo)",
+    "tamanho": "14px",
+    "peso": 400,
+    "altura_linha": 1.45,
+    "cor": "--muted"
+   },
+   {
+    "uso": "item de menu",
+    "tamanho": "13.5px",
+    "peso": 500,
+    "altura_linha": 1.45,
+    "cor": "--on-night-2"
+   },
+   {
+    "uso": "botão",
+    "tamanho": "13.5px (sm 12.5px; lg 14px)",
+    "peso": 600,
+    "altura_linha": 1,
+    "cor": "conforme variante"
+   },
+   {
+    "uso": "campo (.in)",
+    "tamanho": "13.5px (celular 13px)",
+    "peso": 400,
+    "altura_linha": 1,
+    "cor": "--ink"
+   },
+   {
+    "uso": "rótulo de campo",
+    "tamanho": "12.5px (celular 11.5px/500)",
+    "peso": 600,
+    "cor": "--ink-3"
+   },
+   {
+    "uso": "migalha / link",
+    "tamanho": "12.5px",
+    "peso": "500/600",
+    "cor": "--muted / --ink-2"
+   },
+   {
+    "uso": "eyebrow",
+    "tamanho": "12px",
+    "peso": 600,
+    "espacamento": "0.06em",
+    "transformacao": "uppercase",
+    "cor": "--muted"
+   },
+   {
+    "uso": "status / hint",
+    "tamanho": "12px",
+    "peso": "500 / 400",
+    "altura_linha": 1.4,
+    "cor": "--muted"
+   },
+   {
+    "uso": "cabeçalho de tabela (th)",
+    "tamanho": "11px",
+    "peso": 600,
+    "espacamento": "0.06em",
+    "transformacao": "uppercase",
+    "cor": "--muted"
+   },
+   {
+    "uso": "rótulo da barra inferior (celular)",
+    "tamanho": "10.5px",
+    "peso": 500,
+    "cor": "--on-night-3"
+   },
+   {
+    "uso": "palavra HORIZON (marca)",
+    "familia": "--font-brand",
+    "tamanho": "13px (celular) / 30px (acesso)",
+    "espacamento": "0.34em–0.42em",
+    "peso": 500
+   }
+  ],
+  "numeros": "font-variant-numeric: tabular-nums em contagens e notas"
+ },
+ "espacamentos": {
+  "escala_px": [
+   2,
+   4,
+   6,
+   8,
+   10,
+   12,
+   14,
+   16,
+   18,
+   20,
+   22,
+   24,
+   28,
+   32,
+   36,
+   40
+  ],
+  "pagina_desktop": "28px 36px 48px",
+  "pagina_celular": "16px 16px 108px (espaço da barra inferior)",
+  "card": "18px 20px (celular 16px)",
+  "panel_head": "16px 20px 12px (celular 14px 16px 10px)",
+  "gap_grade": "16px",
+  "modal": "h 20px 22px 6px · corpo 12px 22px 6px · rodapé 16px 22px 18px"
+ },
+ "raios": {
+  "sm": "6px",
+  "md": "10px",
+  "lg": "14px",
+  "modal": "18px (celular 20px 20px 0 0)",
+  "chip/seg": "9px",
+  "seg-botao": "7px",
+  "toast": "12px",
+  "barra_inferior": "20px",
+  "pilula": "999px",
+  "checkbox": "4px"
+ },
+ "sombras": {
+  "card": "0 1px 2px rgba(10,14,23,.04)",
+  "menu_aberto": "24px 0 60px rgba(4,7,13,.32)",
+  "modal": "0 24px 60px rgba(11,11,13,.28)",
+  "popover_?": "0 24px 60px rgba(10,14,23,.22), 0 2px 6px rgba(10,14,23,.08)",
+  "card_expandido_organograma": "0 18px 44px rgba(10,14,23,.14), 0 2px 6px rgba(10,14,23,.06)",
+  "toast": "0 16px 40px rgba(10,14,23,.28)",
+  "barra_inferior": "0 6px 16px rgba(4,7,13,.22)",
+  "sheet_celular": "0 -12px 40px rgba(10,14,23,.25)",
+  "seg_ativo": "0 0 0 1px var(--line), 0 1px 1px rgba(0,0,0,.04)"
+ },
+ "breakpoints": {
+  "media_celular": "@media (max-width:1023px)",
+  "celular": "0–1023px inclusive (celular e tablet usam o layout do celular)",
+  "desktop": ">=1024px",
+  "768": "tablet = layout do celular",
+  "testes_borda": {
+   "1023": "celular/tablet",
+   "1024": "desktop",
+   "1025": "desktop"
+  },
+  "prints_comparacao": [
+   "1440x900",
+   "390x844",
+   "768x1024 (tablet)"
+  ],
+  "sem_quebra": [
+   "1280x800"
+  ],
+  "codigo_v7_hoje": "900px (errado)",
+  "diverge": true,
+  "tablet": {
+   "faixa": "761–1023px (layout do celular)",
+   "conteudo_max": "720px, centralizado",
+   "cards_2_colunas_min": "600px",
+   "menu": "tela cheia",
+   "alvo_toque_min": "44px",
+   "rolagem_horizontal": "proibida"
+  }
+ },
+ "z_index": {
+  "conteudo": 0,
+  "popover_?": 5,
+  "menu_lateral": 30,
+  "pop_scrim": 39,
+  "barra_inferior / notificacoes": 40,
+  "menu_aberto_veu (codigo v7)": 45,
+  "sheet_scrim": 50,
+  "sheet": 51,
+  "menu_celular (overlay)": 60,
+  "scrim_modal": 60,
+  "modal": 61,
+  "toast": 70
+ },
+ "menu": {
+  "fechado": "72px (trilho fixo)",
+  "aberto": "248px (painel sobreposto; conteúdo não se move)",
+  "item_altura": "40px",
+  "item_raio": "10px",
+  "icone": "18px",
+  "barra_inferior_altura": "64px",
+  "alvo_toque_min": "44px",
+  "transicao": "transform 280ms cubic-bezier(.2,.7,.2,1) — painel translateX(-100%) → 0; nunca width/margin",
+  "rotulos": "opacity 200ms cubic-bezier(.2,.7,.2,1), atraso +60ms",
+  "veu": "rgba(0,0,0,.2) + backdrop-filter: blur(6px); opacity 280ms cubic-bezier(.2,.7,.2,1); véu irmão do conteúdo",
+  "abre_hover_atraso": "80ms",
+  "celular": "tela cheia (aprovado 16/10 20:20)",
+  "veu_sem_backdrop_filter": "@supports not → rgba(11,11,13,.45)",
+  "movimento_reduzido": "sem deslizar, sem blur; véu sólido rgba(11,11,13,.45); sem transição",
+  "teclado": "Esc fecha e devolve o foco; foco preso no painel; fundo inert; aria-modal"
+ },
+ "curva": {
+  "--ease": "cubic-bezier(.2,.7,.2,1)",
+  "ease": "cubic-bezier(.25,.1,.25,1)",
+  "ease-in-out": "cubic-bezier(.42,0,.58,1)",
+  "ease-out": "cubic-bezier(0,0,.58,1)",
+  "linear": "linear"
+ },
+ "changelog": [
+  "15/10 20:55: breakpoint celular <=760 inclusive (max-width:760px), desktop >=761, 768 = desktop, testes 759/760/761; menu 280ms cubic-bezier(.2,.7,.2,1); Inter local.",
+  "16/10 20:20 (aprovado pelo João): corte 1024; tablet = celular até 1023 (720/600/44); menu 72/248 sobreposto por transform 280ms; rótulos +60ms; véu blur(6px)+20%; reduced-motion sem blur; menu celular tela cheia; logo caminho único; telas 98–106; tolerância 0,5%/8×8; horário removido de 02/86/94."
+ ],
+ "logo": {
+  "arquivo_unico": "assets/logo/horizon-logo.png",
+  "classe": "logo-horizon",
+  "regra": "toda tela (inclusive carregamento) referencia este caminho; trocar a logo = trocar só este arquivo; sem base64 embutido"
+ },
+ "tolerancia_comparacao": {
+  "aprovado": "0,5% / 8×8 (16/10 20:20)",
+  "leitura_uxdx": "diferença média ≤0,5% e ≤0,5% de blocos 8×8 com diferença média >24"
+ },
+ "_status": "FINAL 16/10/2026 — cópia; tokens.json original intacto"
+}

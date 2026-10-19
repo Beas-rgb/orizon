@@ -2,3 +2,4 @@
 !.env.example
 data/outbox/
 data/biblioteca/
+frontend/tests/v7/referencias/
