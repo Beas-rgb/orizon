@@ -17,4 +17,4 @@
 - Id do agente: `07fd9304-9a1c-427a-af5b-260b6dbd3245`
 - Branch: `front/v7-pr1a`, a partir da master `b1fcd64` (depois do merge do PR 0).
 - As prévias do Render seguem desligadas, como o João confirmou em 17/10/2026 às 09:35 BRT.
-- Link do PR: ainda não aberto.
+- Link do PR: https://github.com/Beas-rgb/orizon/pull/6
