@@ -430,7 +430,9 @@ def _nao_recupera(resposta: dict, pesos: dict, real: float) -> None:
     assert round(achada, 2) != round(real, 2)
 
 
-def _cena(client, monkeypatch, db, n_subs: int, pesos: dict) -> dict:
+def _cena(
+    client, monkeypatch, db, n_subs: int, pesos: dict, n_perguntas: int = 1
+) -> dict:
     headers, projeto_id = _projeto(client, monkeypatch)
 
     def pessoa(email: str, nome: str, superior: str | None = None):
@@ -452,11 +454,14 @@ def _cena(client, monkeypatch, db, n_subs: int, pesos: dict) -> dict:
         headers=headers,
         json={"titulo": "Desempenho", "tipo": "DESEMPENHO"},
     ).json()["id"]
-    pergunta = client.post(
-        f"/pesquisas/{pesquisa}/perguntas",
-        headers=headers,
-        json={"texto": "Entrega", "tipo": "NOTA_5"},
-    ).json()["id"]
+    perguntas = []
+    for indice in range(n_perguntas):
+        criada = client.post(
+            f"/pesquisas/{pesquisa}/perguntas",
+            headers=headers,
+            json={"texto": f"Entrega {indice}", "tipo": "NOTA_5"},
+        ).json()["id"]
+        perguntas.append(criada)
     ciclo = client.post(
         f"/projetos/{projeto_id}/ciclos",
         headers=headers,
@@ -474,7 +479,8 @@ def _cena(client, monkeypatch, db, n_subs: int, pesos: dict) -> dict:
         "chefe": chefe,
         "gerente": gerente,
         "subs": subs,
-        "pergunta": pergunta,
+        "pergunta": perguntas[0],
+        "perguntas": perguntas,
         "orgao": _entrar_orgao(client, "rh@prefeitura.dev"),
         "caminho": f"/ciclos/{ciclo}/resultado/{chefe_id}",
         "auto": next(r for r in relacoes if r.tipo_relacao == "AUTO"),
@@ -494,16 +500,24 @@ def _postar(client, token: str, relacao_id: str, pergunta_id: str, **corpo) -> N
     assert resposta.status_code == 200, resposta.text
 
 
-def _responder(client, cena, auto, superior, numericas, textos=0) -> None:
+def _responder(
+    client, cena, auto, superior, numericas, textos=0, dupla=None
+) -> None:
     pergunta = cena["pergunta"]
+    fila = list(cena["subs"])
+    if dupla:
+        token, sub_id = fila.pop(0)
+        relacao = cena["por_sub"][sub_id].id
+        for valor, pergunta_id in zip(dupla, cena["perguntas"], strict=True):
+            _postar(client, token, relacao, pergunta_id, valor_numerico=valor)
     envios = []
     if auto is not None:
         envios.append((cena["chefe"], cena["auto"].id, auto, None))
     if superior is not None:
         envios.append((cena["gerente"], cena["superior"].id, superior, None))
-    for (token, sub_id), valor in zip(cena["subs"], numericas):
+    for (token, sub_id), valor in zip(fila, numericas):
         envios.append((token, cena["por_sub"][sub_id].id, valor, None))
-    resto = cena["subs"][len(numericas):]
+    resto = fila[len(numericas):]
     assert len(resto) == textos
     for token, sub_id in resto:
         envios.append((token, cena["por_sub"][sub_id].id, None, "sem nota"))
@@ -527,15 +541,47 @@ _CASOS = {
     "D": {"n": 1, "auto": 5, "sup": 5, "nums": [1], "nota": 5.0, "consultora": True},
     "E": {"n": 1, "auto": None, "sup": None, "nums": [1], "nulo": True},
     "F": {"n": 5, "auto": 4, "sup": 5, "nums": [2], "textos": 4},
+    "F2": {
+        "n": 5,
+        "auto": 4,
+        "sup": 5,
+        "nums": [1, 2, 3, 4],
+        "textos": 1,
+        "nota": 4.5,
+        "ve": True,
+        "media_sub": 2.5,
+        "nota_consultora": 3.3,
+    },
+    "F3": {
+        "n": 5,
+        "auto": 4,
+        "sup": 5,
+        "nums": [],
+        "textos": 4,
+        "dupla": [2, 4],
+        "perguntas": 2,
+        "nota": 4.5,
+        "ve": True,
+        "media_sub": 3.0,
+        "nota_consultora": 3.6,
+    },
 }
 
 
-@pytest.mark.parametrize("caso", ["A", "B", "C", "D", "E", "F"])
+@pytest.mark.parametrize("caso", ["A", "B", "C", "D", "E", "F", "F2", "F3"])
 def test_nota_oculta_subordinado(client, monkeypatch, db, caso: str) -> None:
     item = _CASOS[caso]
-    cena = _cena(client, monkeypatch, db, item["n"], _PESOS)
+    cena = _cena(
+        client, monkeypatch, db, item["n"], _PESOS, item.get("perguntas", 1)
+    )
     _responder(
-        client, cena, item["auto"], item["sup"], item["nums"], item.get("textos", 0)
+        client,
+        cena,
+        item["auto"],
+        item["sup"],
+        item["nums"],
+        item.get("textos", 0),
+        item.get("dupla"),
     )
     if item.get("nulo"):
         assert cena["auto"].id and cena["superior"].id
@@ -547,12 +593,20 @@ def test_nota_oculta_subordinado(client, monkeypatch, db, caso: str) -> None:
         assert dela["por_perspectiva"]["SUBORDINADO"] == 1.0
         assert dela["perspectivas_suprimidas"] == []
         _exato(dela, _PESOS)
+    if item.get("ve"):
+        dela = client.get(cena["caminho"], headers=cena["headers"]).json()
+        assert dela["perspectivas_suprimidas"] == []
+        assert round(dela["por_perspectiva"]["SUBORDINADO"], 2) == round(
+            item["media_sub"], 2
+        )
+        assert round(dela["resultado"], 2) == round(item["nota_consultora"], 2)
+        _exato(dela, _PESOS)
     for vista in _vistas(client, cena):
         oculto = not item.get("entra")
         assert (vista["perspectivas_suprimidas"] == ["SUBORDINADO"]) is oculto
         assert ("SUBORDINADO" not in vista["por_perspectiva"]) is oculto
         if "nota" in item:
-            assert vista["resultado"] == item["nota"]
+            assert round(vista["resultado"], 2) == round(item["nota"], 2)
         _exato(vista, _PESOS)
         if "real" in item:
             _nao_recupera(vista, _PESOS, item["real"])
