@@ -429,6 +429,7 @@ def calcular_resultado_avaliacao(
     """Média da relação → média da perspectiva → pesos.
 
     Consultora e órgão do projeto veem. O avaliado vê a própria nota.
+    Fora da consultora, perspectiva oculta não entra na nota.
     """
     ciclo = db.get(CicloAvaliacao, ciclo_id)
     if ciclo is None or ciclo.deleted_at is not None:
@@ -470,13 +471,6 @@ def calcular_resultado_avaliacao(
     }
     if not por_perspectiva:
         return {"resultado": None, "por_perspectiva": {}}
-    soma_pesos = sum(pesos.get(tipo, PESOS_PADRAO[tipo]) for tipo in por_perspectiva)
-    if soma_pesos == 0:
-        return {"resultado": None, "por_perspectiva": por_perspectiva}
-    resultado = sum(
-        por_perspectiva[tipo] * pesos.get(tipo, PESOS_PADRAO[tipo])
-        for tipo in por_perspectiva
-    ) / soma_pesos
     suprimidas: list[str] = []
     if papel != "CONSULTOR" and "SUBORDINADO" in por_perspectiva:
         respondentes = db.scalar(
@@ -490,6 +484,7 @@ def calcular_resultado_avaliacao(
                 AvaliacaoRelacionamento.avaliado_id == avaliado_id,
                 AvaliacaoRelacionamento.tipo_relacao == "SUBORDINADO",
                 AvaliacaoRelacionamento.deleted_at.is_(None),
+                AvaliacaoResposta.valor_numerico.is_not(None),
             )
         )
         if (respondentes or 0) < K_ANONIMATO:
@@ -499,6 +494,17 @@ def calcular_resultado_avaliacao(
                 if tipo != "SUBORDINADO"
             }
             suprimidas.append("SUBORDINADO")
+    soma_pesos = sum(pesos.get(tipo, PESOS_PADRAO[tipo]) for tipo in por_perspectiva)
+    if soma_pesos == 0:
+        return {
+            "resultado": None,
+            "por_perspectiva": por_perspectiva,
+            "perspectivas_suprimidas": suprimidas,
+        }
+    resultado = sum(
+        por_perspectiva[tipo] * pesos.get(tipo, PESOS_PADRAO[tipo])
+        for tipo in por_perspectiva
+    ) / soma_pesos
     return {
         "resultado": round(resultado, 2),
         "por_perspectiva": por_perspectiva,
