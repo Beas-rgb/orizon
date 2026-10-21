@@ -83,6 +83,20 @@ def listar_cargos(
     )
 
 
+def _membro_funcionario(db: Session, projeto_id: str, usuario_id: str) -> bool:
+    """True só se a pessoa é FUNCIONARIO deste projeto."""
+    return (
+        db.scalar(
+            select(ProjetoUsuario.id).where(
+                ProjetoUsuario.projeto_id == projeto_id,
+                ProjetoUsuario.usuario_id == usuario_id,
+                ProjetoUsuario.papel == "FUNCIONARIO",
+            )
+        )
+        is not None
+    )
+
+
 def _superior_valido(
     db: Session,
     projeto_id: str,
@@ -97,14 +111,7 @@ def _superior_valido(
     superior = db.get(Usuario, superior_id)
     if superior is None or superior.deleted_at is not None or not superior.ativo:
         raise ErroAuth(404, "Superior não encontrado.")
-    membro = db.scalar(
-        select(ProjetoUsuario).where(
-            ProjetoUsuario.projeto_id == projeto_id,
-            ProjetoUsuario.usuario_id == superior_id,
-            ProjetoUsuario.papel == "FUNCIONARIO",
-        )
-    )
-    if membro is None:
+    if not _membro_funcionario(db, projeto_id, superior_id):
         raise ErroAuth(404, "Superior não encontrado.")
     vinculo = db.scalar(
         select(PerfilFuncionario).where(
@@ -177,6 +184,10 @@ def definir_perfil_funcionario(
             or cargo.projeto_id != projeto_id
         ):
             raise ErroAuth(422, "Cargo não pertence a este projeto.")
+    # Depois de setor/cargo: um cargo de outro projeto continua 422.
+    # Antes de gravar: sem vínculo FUNCIONARIO, nada é persistido.
+    if not _membro_funcionario(db, projeto_id, usuario_id):
+        raise ErroAuth(404, "Funcionário não encontrado.")
     _superior_valido(db, projeto_id, usuario_id, superior_id)
     dados = {"setor_id": setor_id, "cargo_id": cargo_id, "superior_id": superior_id}
     with serializar_no_sqlite(db):
@@ -261,8 +272,22 @@ def arvore_hierarquica(
     usuario: Usuario,
     projeto_id: str,
 ) -> list[dict[str, object]]:
-    """Raízes e subordinados, derivados de superior_id."""
+    """Raízes e subordinados, derivados de superior_id.
+
+    Perfil sem ProjetoUsuario neste projeto não entra: esconde dado já
+    gravado de outro órgão, sem migration.
+    """
     perfis = listar_perfis(db, usuario, projeto_id)
+    if perfis:
+        membros = set(
+            db.scalars(
+                select(ProjetoUsuario.usuario_id).where(
+                    ProjetoUsuario.projeto_id == projeto_id,
+                    ProjetoUsuario.usuario_id.in_([p.usuario_id for p in perfis]),
+                )
+            ).all()
+        )
+        perfis = [p for p in perfis if p.usuario_id in membros]
     por_superior: dict[str | None, list[PerfilFuncionario]] = {}
     for perfil in perfis:
         por_superior.setdefault(perfil.superior_id, []).append(perfil)
