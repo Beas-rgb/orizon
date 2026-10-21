@@ -1,11 +1,15 @@
 """Ciclo de avaliação de desempenho: criação, relações e cálculo."""
 
+import json
+
+import pytest
 from sqlalchemy import select
 
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
 from app.models.desempenho import AvaliacaoRelacionamento
 from tests.contas import SENHA_FUNC, abrir_consultora
+from tests.test_orgao_acesso import _entrar_orgao
 
 
 def _cnpj_falso(_cnpj: str) -> DadosCnpj:
@@ -402,3 +406,207 @@ def test_relacao_nao_existente_404(client, monkeypatch) -> None:
         headers=headers,
     )
     assert resp.status_code == 404
+
+
+_PESOS = {"AUTO": 1, "SUPERIOR": 1, "SUBORDINADO": 3}
+
+
+def recalcular(resposta: dict, pesos: dict) -> float:
+    medias = resposta["por_perspectiva"]
+    soma = sum(pesos[tipo] for tipo in medias)
+    return sum(medias[tipo] * pesos[tipo] for tipo in medias) / soma
+
+
+def _exato(resposta: dict, pesos: dict) -> None:
+    assert resposta["resultado"] is not None
+    assert round(resposta["resultado"], 2) == round(recalcular(resposta, pesos), 2)
+
+
+def _nao_recupera(resposta: dict, pesos: dict, real: float) -> None:
+    medias = resposta["por_perspectiva"]
+    parcial = sum(medias[tipo] * pesos[tipo] for tipo in medias)
+    soma = sum(pesos.values())
+    achada = (resposta["resultado"] * soma - parcial) / pesos["SUBORDINADO"]
+    assert round(achada, 2) != round(real, 2)
+
+
+def _cena(
+    client, monkeypatch, db, n_subs: int, pesos: dict, n_perguntas: int = 1
+) -> dict:
+    headers, projeto_id = _projeto(client, monkeypatch)
+
+    def pessoa(email: str, nome: str, superior: str | None = None):
+        token = _funcionario(client, headers, projeto_id, email, nome)
+        uid = _usuario_id(client, headers, projeto_id, email)
+        if superior:
+            client.put(
+                f"/projetos/{projeto_id}/perfis",
+                headers=headers,
+                json={"usuario_id": uid, "superior_id": superior},
+            )
+        return token, uid
+
+    gerente, gerente_id = pessoa("gerente@p.dev", "Gerente")
+    chefe, chefe_id = pessoa("chefe@p.dev", "Chefe", gerente_id)
+    subs = [pessoa(f"sub{i}@p.dev", f"Sub {i}", chefe_id) for i in range(n_subs)]
+    pesquisa = client.post(
+        f"/projetos/{projeto_id}/pesquisas",
+        headers=headers,
+        json={"titulo": "Desempenho", "tipo": "DESEMPENHO"},
+    ).json()["id"]
+    perguntas = []
+    for indice in range(n_perguntas):
+        criada = client.post(
+            f"/pesquisas/{pesquisa}/perguntas",
+            headers=headers,
+            json={"texto": f"Entrega {indice}", "tipo": "NOTA_5"},
+        ).json()["id"]
+        perguntas.append(criada)
+    ciclo = client.post(
+        f"/projetos/{projeto_id}/ciclos",
+        headers=headers,
+        json={"nome": "Ciclo", "configuracao": json.dumps({"pesos": pesos})},
+    ).json()["id"]
+    client.post(f"/ciclos/{ciclo}/gerar-relacoes", headers=headers)
+    relacoes = db.scalars(
+        select(AvaliacaoRelacionamento).where(
+            AvaliacaoRelacionamento.ciclo_id == ciclo,
+            AvaliacaoRelacionamento.avaliado_id == chefe_id,
+        )
+    ).all()
+    return {
+        "headers": headers,
+        "chefe": chefe,
+        "gerente": gerente,
+        "subs": subs,
+        "pergunta": perguntas[0],
+        "perguntas": perguntas,
+        "orgao": _entrar_orgao(client, "rh@prefeitura.dev"),
+        "caminho": f"/ciclos/{ciclo}/resultado/{chefe_id}",
+        "auto": next(r for r in relacoes if r.tipo_relacao == "AUTO"),
+        "superior": next(r for r in relacoes if r.tipo_relacao == "SUPERIOR"),
+        "por_sub": {
+            r.avaliador_id: r for r in relacoes if r.tipo_relacao == "SUBORDINADO"
+        },
+    }
+
+
+def _postar(client, token: str, relacao_id: str, pergunta_id: str, **corpo) -> None:
+    resposta = client.post(
+        f"/relacionamentos/{relacao_id}/respostas",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"pergunta_id": pergunta_id, **corpo},
+    )
+    assert resposta.status_code == 200, resposta.text
+
+
+def _responder(
+    client, cena, auto, superior, numericas, textos=0, dupla=None
+) -> None:
+    pergunta = cena["pergunta"]
+    fila = list(cena["subs"])
+    if dupla:
+        token, sub_id = fila.pop(0)
+        relacao = cena["por_sub"][sub_id].id
+        for valor, pergunta_id in zip(dupla, cena["perguntas"], strict=True):
+            _postar(client, token, relacao, pergunta_id, valor_numerico=valor)
+    envios = []
+    if auto is not None:
+        envios.append((cena["chefe"], cena["auto"].id, auto, None))
+    if superior is not None:
+        envios.append((cena["gerente"], cena["superior"].id, superior, None))
+    for (token, sub_id), valor in zip(fila, numericas):
+        envios.append((token, cena["por_sub"][sub_id].id, valor, None))
+    resto = fila[len(numericas):]
+    assert len(resto) == textos
+    for token, sub_id in resto:
+        envios.append((token, cena["por_sub"][sub_id].id, None, "sem nota"))
+    for token, relacao, numero, texto in envios:
+        corpo = {"valor_texto": texto} if texto else {"valor_numerico": numero}
+        _postar(client, token, relacao, pergunta, **corpo)
+
+
+def _vistas(client, cena) -> list[dict]:
+    chefe = {"Authorization": f"Bearer {cena['chefe']}"}
+    return [
+        client.get(cena["caminho"], headers=chefe).json(),
+        client.get(cena["caminho"], headers=cena["orgao"]).json(),
+    ]
+
+
+_CASOS = {
+    "A": {"n": 1, "auto": 5, "sup": 5, "nums": [1], "nota": 5.0, "real": 1},
+    "B": {"n": 4, "auto": 4, "sup": 5, "nums": [1, 2, 1, 2], "nota": 4.5, "real": 1.5},
+    "C": {"n": 5, "auto": 4, "sup": 5, "nums": [3, 3, 3, 3, 3], "entra": True},
+    "D": {"n": 1, "auto": 5, "sup": 5, "nums": [1], "nota": 5.0, "consultora": True},
+    "E": {"n": 1, "auto": None, "sup": None, "nums": [1], "nulo": True},
+    "F": {"n": 5, "auto": 4, "sup": 5, "nums": [2], "textos": 4},
+    "F2": {
+        "n": 5,
+        "auto": 4,
+        "sup": 5,
+        "nums": [1, 2, 3, 4],
+        "textos": 1,
+        "nota": 4.5,
+        "ve": True,
+        "media_sub": 2.5,
+        "nota_consultora": 3.3,
+    },
+    "F3": {
+        "n": 5,
+        "auto": 4,
+        "sup": 5,
+        "nums": [],
+        "textos": 4,
+        "dupla": [2, 4],
+        "perguntas": 2,
+        "nota": 4.5,
+        "ve": True,
+        "media_sub": 3.0,
+        "nota_consultora": 3.6,
+    },
+}
+
+
+@pytest.mark.parametrize("caso", ["A", "B", "C", "D", "E", "F", "F2", "F3"])
+def test_nota_oculta_subordinado(client, monkeypatch, db, caso: str) -> None:
+    item = _CASOS[caso]
+    cena = _cena(
+        client, monkeypatch, db, item["n"], _PESOS, item.get("perguntas", 1)
+    )
+    _responder(
+        client,
+        cena,
+        item["auto"],
+        item["sup"],
+        item["nums"],
+        item.get("textos", 0),
+        item.get("dupla"),
+    )
+    if item.get("nulo"):
+        assert cena["auto"].id and cena["superior"].id
+        for vista in _vistas(client, cena):
+            assert vista["resultado"] is None and vista["por_perspectiva"] == {}
+        return
+    if item.get("consultora"):
+        dela = client.get(cena["caminho"], headers=cena["headers"]).json()
+        assert dela["por_perspectiva"]["SUBORDINADO"] == 1.0
+        assert dela["perspectivas_suprimidas"] == []
+        _exato(dela, _PESOS)
+    if item.get("ve"):
+        dela = client.get(cena["caminho"], headers=cena["headers"]).json()
+        assert dela["perspectivas_suprimidas"] == []
+        assert round(dela["por_perspectiva"]["SUBORDINADO"], 2) == round(
+            item["media_sub"], 2
+        )
+        assert round(dela["resultado"], 2) == round(item["nota_consultora"], 2)
+        _exato(dela, _PESOS)
+    for vista in _vistas(client, cena):
+        oculto = not item.get("entra")
+        assert (vista["perspectivas_suprimidas"] == ["SUBORDINADO"]) is oculto
+        assert ("SUBORDINADO" not in vista["por_perspectiva"]) is oculto
+        if "nota" in item:
+            assert round(vista["resultado"], 2) == round(item["nota"], 2)
+        _exato(vista, _PESOS)
+        if "real" in item:
+            _nao_recupera(vista, _PESOS, item["real"])
