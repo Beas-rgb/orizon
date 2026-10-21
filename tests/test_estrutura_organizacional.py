@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
 from app.models.estrutura import PerfilFuncionario
-from tests.contas import SENHA_FUNC, abrir_consultora
+from tests.contas import SENHA, SENHA_FUNC, SENHA_ORGAO, abrir_consultora
 
 
 def _cnpj_falso(cnpj: str) -> DadosCnpj:
@@ -285,3 +285,161 @@ def test_cargo_nao_existe_em_outro_projeto(client, monkeypatch) -> None:
     )
     # O cargo existe, mas não neste projeto. O funcionário também não está lá.
     assert erro.status_code == 422
+
+
+def _outro_projeto(client, headers) -> str:
+    rotulo = client.get("/projetos/rotulos", headers=headers).json()[0]["id"]
+    outro = client.post(
+        "/projetos",
+        headers=headers,
+        json={
+            "rotulo_id": rotulo,
+            "cnpj": "00000000000191",
+            "email_orgao": "outro@camara.dev",
+            "vinculo_tipo": "EDITAL",
+            "vinculo_titulo": "Outro",
+        },
+    )
+    assert outro.status_code == 200, outro.text
+    return outro.json()["id"]
+
+
+def _sem_perfil(db, projeto_id: str, usuario_id: str) -> None:
+    gravado = db.scalar(
+        select(PerfilFuncionario).where(
+            PerfilFuncionario.projeto_id == projeto_id,
+            PerfilFuncionario.usuario_id == usuario_id,
+        )
+    )
+    assert gravado is None
+
+
+def test_put_pessoa_de_outro_orgao_nao_grava(client, monkeypatch, db) -> None:
+    """1. Pessoa de outro órgão: 404 e nenhum perfil neste projeto."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    outro_id = _outro_projeto(client, headers)
+    _funcionario(client, headers, outro_id, "bruno@camara.dev", "Bruno")
+    bruno_id = _usuario_id(client, headers, outro_id, "bruno@camara.dev")
+    erro = client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": bruno_id},
+    )
+    assert erro.status_code == 404
+    assert erro.json()["detail"] == "Funcionário não encontrado."
+    _sem_perfil(db, projeto_id, bruno_id)
+
+
+def test_put_pessoa_fora_do_projeto_nao_grava(client, monkeypatch, db) -> None:
+    """2. Conta existente que não é membro deste projeto."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    dev = client.post(
+        "/auth/login",
+        json={"email": "joao@horizon.dev", "senha": SENHA},
+    )
+    assert dev.status_code == 200, dev.text
+    pessoa_id = client.get(
+        "/auth/eu",
+        headers={"Authorization": f"Bearer {dev.json()['access_token']}"},
+    ).json()["id"]
+    erro = client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": pessoa_id},
+    )
+    assert erro.status_code == 404
+    assert erro.json()["detail"] == "Funcionário não encontrado."
+    _sem_perfil(db, projeto_id, pessoa_id)
+
+
+def test_put_membro_sem_papel_funcionario_nao_grava(client, monkeypatch, db) -> None:
+    """3. Membro do projeto com papel diferente de FUNCIONARIO."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    corpo = next(
+        item["corpo"]
+        for item in reversed(caixa_email.mensagens)
+        if item["destino"] == "rh@prefeitura.dev"
+    )
+    acesso = client.post(
+        "/auth/primeiro-acesso",
+        json={"token": corpo.strip().split()[-1], "senha": SENHA_ORGAO},
+    )
+    assert acesso.status_code == 200, acesso.text
+    equipe = client.get(f"/projetos/{projeto_id}/equipe", headers=headers).json()
+    orgao_id = next(
+        item["id"] for item in equipe if item["papel"] == "ORGAO" and item["id"]
+    )
+    erro = client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": orgao_id},
+    )
+    assert erro.status_code == 404
+    assert erro.json()["detail"] == "Funcionário não encontrado."
+    _sem_perfil(db, projeto_id, orgao_id)
+
+
+def test_superior_de_outro_orgao_continua_404(client, monkeypatch, db) -> None:
+    """4. Controle: superior de outro órgão continua 404, sem gravação."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    _funcionario(client, headers, projeto_id, "ana@prefeitura.dev", "Ana")
+    ana_id = _usuario_id(client, headers, projeto_id, "ana@prefeitura.dev")
+    outro_id = _outro_projeto(client, headers)
+    _funcionario(client, headers, outro_id, "bruno@camara.dev", "Bruno")
+    bruno_id = _usuario_id(client, headers, outro_id, "bruno@camara.dev")
+    erro = client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": ana_id, "superior_id": bruno_id},
+    )
+    assert erro.status_code == 404
+    assert erro.json()["detail"] == "Superior não encontrado."
+    _sem_perfil(db, projeto_id, bruno_id)
+
+
+def test_arvore_mostra_so_membros_do_projeto(client, monkeypatch, db) -> None:
+    """5. /arvore só lista membros deste projeto."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    _funcionario(client, headers, projeto_id, "ana@prefeitura.dev", "Ana")
+    ana_id = _usuario_id(client, headers, projeto_id, "ana@prefeitura.dev")
+    ok = client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": ana_id},
+    )
+    assert ok.status_code == 200, ok.text
+    outro_id = _outro_projeto(client, headers)
+    _funcionario(client, headers, outro_id, "bruno@camara.dev", "Bruno")
+    bruno_id = _usuario_id(client, headers, outro_id, "bruno@camara.dev")
+    db.add(PerfilFuncionario(projeto_id=projeto_id, usuario_id=bruno_id))
+    db.commit()
+    arvore = client.get(f"/projetos/{projeto_id}/arvore", headers=headers)
+    assert arvore.status_code == 200, arvore.text
+    texto = arvore.text
+    assert "Bruno" not in texto
+    assert "bruno@camara.dev" not in texto
+    assert bruno_id not in texto
+    assert ana_id in texto
+
+
+def test_funcionario_do_projeto_com_superior_e_salvo(client, monkeypatch, db) -> None:
+    """6. Caminho feliz: funcionário e superior são do mesmo projeto."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    _funcionario(client, headers, projeto_id, "gerente@prefeitura.dev", "Gerente")
+    _funcionario(client, headers, projeto_id, "func@prefeitura.dev", "Funcionario")
+    gerente_id = _usuario_id(client, headers, projeto_id, "gerente@prefeitura.dev")
+    func_id = _usuario_id(client, headers, projeto_id, "func@prefeitura.dev")
+    salvo = client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": func_id, "superior_id": gerente_id},
+    )
+    assert salvo.status_code == 200, salvo.text
+    perfil = db.scalar(
+        select(PerfilFuncionario).where(
+            PerfilFuncionario.projeto_id == projeto_id,
+            PerfilFuncionario.usuario_id == func_id,
+        )
+    )
+    assert perfil is not None
+    assert perfil.superior_id == gerente_id
