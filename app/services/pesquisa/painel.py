@@ -15,6 +15,22 @@ def painel(db: Session, usuario: Usuario, pesquisa_id: str) -> list[dict]:
     papel = papel_no_projeto(db, usuario, pesquisa.projeto_id)
     if papel not in {"CONSULTOR", "ORGAO"}:
         raise ErroAuth(404, "Pesquisa não encontrada.")
+    if pesquisa.tipo in TIPOS_ANONIMOS and pesquisa.status == "RASCUNHO":
+        return []
+    clima = pesquisa.tipo in TIPOS_ANONIMOS
+    respondidas = 0
+    if clima:
+        respondidas = int(
+            db.scalar(
+                select(func.count(func.distinct(Resposta.token_id)))
+                .join(Pergunta, Pergunta.id == Resposta.pergunta_id)
+                .where(
+                    Pergunta.pesquisa_id == pesquisa.id,
+                    Pergunta.deleted_at.is_(None),
+                )
+            )
+            or 0
+        )
     perguntas = list(
         db.scalars(
             select(Pergunta)
@@ -85,7 +101,14 @@ def painel(db: Session, usuario: Usuario, pesquisa_id: str) -> list[dict]:
     saida = []
     for pergunta in perguntas:
         total = totais.get(pergunta.id, 0)
-        suprimido = pesquisa.tipo in TIPOS_ANONIMOS and total < K_ANONIMATO
+        if clima:
+            suprimido = (
+                pesquisa.status != "ENCERRADA"
+                or respondidas < K_ANONIMATO
+                or total < K_ANONIMATO
+            )
+        else:
+            suprimido = False
         media = None
         contagem_opcoes = None
         if not suprimido:

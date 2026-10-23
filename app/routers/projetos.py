@@ -495,7 +495,7 @@ def resumo(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Dashboard do trabalho. K-anonimato já aplicado em cada pesquisa."""
+    """CLIMA aberto entra sem número. O piso de 5 segue o painel."""
     from app.services.pesquisa.resumo import resumo_do_projeto
 
     return chamar(lambda: resumo_do_projeto(db, usuario, projeto_id))

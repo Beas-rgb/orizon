@@ -77,6 +77,10 @@ def test_oraculo_bate_com_painel_nota5(client, db, monkeypatch) -> None:
         select(Pesquisa).where(Pesquisa.projeto_id == cenario.projeto_id)
     )
     assert pesquisa and dono
+    assert client.post(
+        f"/pesquisas/{pesquisa.id}/encerrar", headers=headers
+    ).status_code == 200
+    db.expire_all()
     painel_itens = painel(db, dono, pesquisa.id)
     nota5 = next(item for item in painel_itens if item["tipo"] == "NOTA_5")
     pergunta = db.get(Pergunta, nota5["pergunta_id"])
