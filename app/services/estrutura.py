@@ -3,7 +3,7 @@
 Setor segmenta. Superior define a árvore. Um ciclo (A→B→A) é rejeitado.
 """
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -95,6 +95,33 @@ def _membro_funcionario(db: Session, projeto_id: str, usuario_id: str) -> bool:
         )
         is not None
     )
+
+
+def membros_ativos(
+    db: Session, projeto_id: str, *, so_com_acesso: bool = False
+) -> set[str]:
+    """FUNCIONARIO do projeto, fora conta apagada.
+
+    A geração pede so_com_acesso: só quem já pode entrar.
+    Árvore e lista escondem quem foi desligado (inativo e já tem senha)
+    e mantêm o importado que ainda não fez o primeiro acesso.
+    """
+    consulta = (
+        select(Usuario.id)
+        .join(ProjetoUsuario, ProjetoUsuario.usuario_id == Usuario.id)
+        .where(
+            ProjetoUsuario.projeto_id == projeto_id,
+            ProjetoUsuario.papel == "FUNCIONARIO",
+            Usuario.deleted_at.is_(None),
+        )
+    )
+    if so_com_acesso:
+        consulta = consulta.where(Usuario.ativo.is_(True))
+    else:
+        consulta = consulta.where(
+            or_(Usuario.ativo.is_(True), Usuario.senha_hash.is_(None))
+        )
+    return set(db.scalars(consulta).all())
 
 
 def _superior_valido(
@@ -241,11 +268,15 @@ def listar_perfis(
     deslocamento: int = 0,
 ) -> list[PerfilFuncionario]:
     exigir_papel(db, usuario, projeto_id, {"CONSULTOR", "ORGAO"})
+    ativos = membros_ativos(db, projeto_id)
+    if not ativos:
+        return []
     consulta = (
         select(PerfilFuncionario)
         .where(
             PerfilFuncionario.projeto_id == projeto_id,
             PerfilFuncionario.deleted_at.is_(None),
+            PerfilFuncionario.usuario_id.in_(ativos),
         )
         .order_by(PerfilFuncionario.criado_em)
     )
@@ -256,12 +287,16 @@ def listar_perfis(
 
 def contar_perfis(db: Session, usuario: Usuario, projeto_id: str) -> int:
     exigir_papel(db, usuario, projeto_id, {"CONSULTOR", "ORGAO"})
+    ativos = membros_ativos(db, projeto_id)
+    if not ativos:
+        return 0
     total = db.scalar(
         select(func.count())
         .select_from(PerfilFuncionario)
         .where(
             PerfilFuncionario.projeto_id == projeto_id,
             PerfilFuncionario.deleted_at.is_(None),
+            PerfilFuncionario.usuario_id.in_(ativos),
         )
     )
     return int(total or 0)
@@ -274,23 +309,16 @@ def arvore_hierarquica(
 ) -> list[dict[str, object]]:
     """Raízes e subordinados, derivados de superior_id.
 
-    Perfil sem ProjetoUsuario neste projeto não entra: esconde dado já
-    gravado de outro órgão, sem migration.
+    Só entra FUNCIONARIO ativo. Superior fora desse conjunto não segura
+    o nó: ele sobe à raiz com chefia_fora_do_orgao.
     """
     perfis = listar_perfis(db, usuario, projeto_id)
-    if perfis:
-        membros = set(
-            db.scalars(
-                select(ProjetoUsuario.usuario_id).where(
-                    ProjetoUsuario.projeto_id == projeto_id,
-                    ProjetoUsuario.usuario_id.in_([p.usuario_id for p in perfis]),
-                )
-            ).all()
-        )
-        perfis = [p for p in perfis if p.usuario_id in membros]
+    ativos = membros_ativos(db, projeto_id)
+    perfis = [p for p in perfis if p.usuario_id in ativos]
     por_superior: dict[str | None, list[PerfilFuncionario]] = {}
     for perfil in perfis:
-        por_superior.setdefault(perfil.superior_id, []).append(perfil)
+        superior = perfil.superior_id if perfil.superior_id in ativos else None
+        por_superior.setdefault(superior, []).append(perfil)
     ids = [p.usuario_id for p in perfis]
     pessoas = {
         u.id: u
@@ -337,6 +365,8 @@ def arvore_hierarquica(
             "email": pessoa.email if pessoa else "",
             "cargo": cargo.nome if cargo else None,
             "setor": setor.nome if setor else None,
+            "chefia_fora_do_orgao": bool(perfil.superior_id)
+            and perfil.superior_id not in ativos,
             "subordinados": [
                 montar(filho)
                 for filho in por_superior.get(perfil.usuario_id, [])

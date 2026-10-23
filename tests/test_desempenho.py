@@ -3,11 +3,13 @@
 import json
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
 from app.models.desempenho import AvaliacaoRelacionamento
+from app.models.projeto import ProjetoUsuario
+from app.models.usuario import Usuario
 from tests.contas import SENHA_FUNC, abrir_consultora
 from tests.test_orgao_acesso import _entrar_orgao
 
@@ -422,14 +424,6 @@ def _exato(resposta: dict, pesos: dict) -> None:
     assert round(resposta["resultado"], 2) == round(recalcular(resposta, pesos), 2)
 
 
-def _nao_recupera(resposta: dict, pesos: dict, real: float) -> None:
-    medias = resposta["por_perspectiva"]
-    parcial = sum(medias[tipo] * pesos[tipo] for tipo in medias)
-    soma = sum(pesos.values())
-    achada = (resposta["resultado"] * soma - parcial) / pesos["SUBORDINADO"]
-    assert round(achada, 2) != round(real, 2)
-
-
 def _cena(
     client, monkeypatch, db, n_subs: int, pesos: dict, n_perguntas: int = 1
 ) -> dict:
@@ -602,11 +596,256 @@ def test_nota_oculta_subordinado(client, monkeypatch, db, caso: str) -> None:
         assert round(dela["resultado"], 2) == round(item["nota_consultora"], 2)
         _exato(dela, _PESOS)
     for vista in _vistas(client, cena):
-        oculto = not item.get("entra")
-        assert (vista["perspectivas_suprimidas"] == ["SUBORDINADO"]) is oculto
-        assert ("SUBORDINADO" not in vista["por_perspectiva"]) is oculto
-        if "nota" in item:
-            assert round(vista["resultado"], 2) == round(item["nota"], 2)
-        _exato(vista, _PESOS)
-        if "real" in item:
-            _nao_recupera(vista, _PESOS, item["real"])
+        if item.get("entra"):
+            assert "SUBORDINADO" in vista["por_perspectiva"]
+            _exato(vista, _PESOS)
+            continue
+        assert vista["resultado"] is None
+        assert vista["por_perspectiva"] == {}
+        assert "SUBORDINADO" in vista["perspectivas_suprimidas"]
+
+
+def _hierarquia_cs(client, monkeypatch):
+    headers, projeto_id = _projeto(client, monkeypatch)
+    chefe_token = _funcionario(client, headers, projeto_id, "chefe@p.dev", "Chefe")
+    _funcionario(client, headers, projeto_id, "sub@p.dev", "Sub")
+    chefe = _usuario_id(client, headers, projeto_id, "chefe@p.dev")
+    sub = _usuario_id(client, headers, projeto_id, "sub@p.dev")
+    perfil = client.put(
+        f"/projetos/{projeto_id}/perfis",
+        headers=headers,
+        json={"usuario_id": sub, "superior_id": chefe},
+    )
+    assert perfil.status_code == 200, perfil.text
+    return headers, projeto_id, chefe_token, chefe, sub
+
+
+def _remover_membro(db, projeto_id: str, usuario_id: str) -> None:
+    db.execute(
+        delete(ProjetoUsuario).where(
+            ProjetoUsuario.projeto_id == projeto_id,
+            ProjetoUsuario.usuario_id == usuario_id,
+        )
+    )
+    db.commit()
+
+
+def _relacoes_novas(client, headers, projeto_id: str) -> tuple[str, list[dict]]:
+    ciclo = client.post(
+        f"/projetos/{projeto_id}/ciclos",
+        headers=headers,
+        json={"nome": "Ciclo novo"},
+    )
+    assert ciclo.status_code == 200, ciclo.text
+    ciclo_id = ciclo.json()["id"]
+    gerou = client.post(f"/ciclos/{ciclo_id}/gerar-relacoes", headers=headers)
+    assert gerou.status_code == 200, gerou.text
+    lista = client.get(f"/ciclos/{ciclo_id}/relacoes", headers=headers)
+    assert lista.status_code == 200, lista.text
+    return ciclo_id, lista.json()
+
+
+def test_chefe_e_sub_ativos_geram_relacoes_de_hoje(client, monkeypatch, db) -> None:
+    """Controle: com os dois ativos, SUPERIOR e SUBORDINADO continuam iguais."""
+    headers, projeto_id, _token, chefe, sub = _hierarquia_cs(client, monkeypatch)
+    _ciclo, relacoes = _relacoes_novas(client, headers, projeto_id)
+    tipos = {
+        (item["avaliador_id"], item["avaliado_id"], item["tipo_relacao"])
+        for item in relacoes
+    }
+    assert (chefe, sub, "SUPERIOR") in tipos
+    assert (sub, chefe, "SUBORDINADO") in tipos
+    assert (chefe, chefe, "AUTO") in tipos
+    assert (sub, sub, "AUTO") in tipos
+
+
+def test_chefe_removido_nao_avalia_subordinado(client, monkeypatch, db) -> None:
+    """1. Chefe que saiu não é avaliador e o subordinado não tem SUPERIOR."""
+    headers, projeto_id, _token, chefe, sub = _hierarquia_cs(client, monkeypatch)
+    _remover_membro(db, projeto_id, chefe)
+    _ciclo, relacoes = _relacoes_novas(client, headers, projeto_id)
+    assert all(item["avaliador_id"] != chefe for item in relacoes)
+    assert not any(
+        item["avaliado_id"] == sub and item["tipo_relacao"] == "SUPERIOR"
+        for item in relacoes
+    )
+
+
+def test_subordinado_removido_nao_avalia_chefe(client, monkeypatch, db) -> None:
+    """2. Subordinado que saiu não avalia o chefe."""
+    headers, projeto_id, _token, chefe, sub = _hierarquia_cs(client, monkeypatch)
+    _remover_membro(db, projeto_id, sub)
+    _ciclo, relacoes = _relacoes_novas(client, headers, projeto_id)
+    assert not any(
+        item["tipo_relacao"] == "SUBORDINADO" and item["avaliador_id"] == sub
+        for item in relacoes
+    )
+
+
+def test_inativo_ou_outro_papel_sai_da_360(client, monkeypatch, db) -> None:
+    """4. ativo=False ou papel diferente de FUNCIONARIO sai dos três lugares."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    ids: dict[str, str] = {}
+    for email, nome in (
+        ("ana@p.dev", "Ana"),
+        ("bruno@p.dev", "Bruno"),
+        ("carla@p.dev", "Carla"),
+    ):
+        _funcionario(client, headers, projeto_id, email, nome)
+        ids[nome] = _usuario_id(client, headers, projeto_id, email)
+        perfil = client.put(
+            f"/projetos/{projeto_id}/perfis",
+            headers=headers,
+            json={"usuario_id": ids[nome]},
+        )
+        assert perfil.status_code == 200, perfil.text
+    pessoa = db.get(Usuario, ids["Bruno"])
+    assert pessoa is not None
+    pessoa.ativo = False
+    vinculo = db.scalar(
+        select(ProjetoUsuario).where(
+            ProjetoUsuario.projeto_id == projeto_id,
+            ProjetoUsuario.usuario_id == ids["Carla"],
+        )
+    )
+    assert vinculo is not None
+    vinculo.papel = "ORGAO"
+    db.commit()
+    _ciclo, relacoes = _relacoes_novas(client, headers, projeto_id)
+    avaliadores = {item["avaliador_id"] for item in relacoes}
+    assert ids["Ana"] in avaliadores
+    assert ids["Bruno"] not in avaliadores
+    assert ids["Carla"] not in avaliadores
+    arvore = client.get(f"/projetos/{projeto_id}/arvore", headers=headers)
+    assert arvore.status_code == 200, arvore.text
+    assert ids["Ana"] in arvore.text
+    assert ids["Bruno"] not in arvore.text
+    assert ids["Carla"] not in arvore.text
+    assert "Bruno" not in arvore.text
+    assert "Carla" not in arvore.text
+    lista = client.get(f"/projetos/{projeto_id}/perfis", headers=headers)
+    assert lista.status_code == 200, lista.text
+    assert {item["usuario_id"] for item in lista.json()} == {ids["Ana"]}
+
+
+def test_chefe_removido_nao_le_relacao_nem_resultado(client, monkeypatch, db) -> None:
+    """5. Chefe removido leva 404 na relação e no resultado de um ciclo novo."""
+    headers, projeto_id, chefe_token, chefe, sub = _hierarquia_cs(client, monkeypatch)
+    _remover_membro(db, projeto_id, chefe)
+    ciclo_id, _relacoes = _relacoes_novas(client, headers, projeto_id)
+    dele = {"Authorization": f"Bearer {chefe_token}"}
+    relacao = client.get(f"/ciclos/{ciclo_id}/relacao/{sub}", headers=dele)
+    resultado = client.get(f"/ciclos/{ciclo_id}/resultado/{sub}", headers=dele)
+    assert relacao.status_code == 404
+    assert resultado.status_code == 404
+
+
+def test_nota_some_quando_so_resta_grupo_identificavel(client, monkeypatch, db) -> None:
+    """6. AUTO mais um avaliador só: a nota some para quem não é a consultora."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    gerente_token = _funcionario(
+        client, headers, projeto_id, "gerente@p.dev", "Gerente"
+    )
+    func_token = _funcionario(client, headers, projeto_id, "func@p.dev", "Func")
+    gerente = _usuario_id(client, headers, projeto_id, "gerente@p.dev")
+    func = _usuario_id(client, headers, projeto_id, "func@p.dev")
+    assert (
+        client.put(
+            f"/projetos/{projeto_id}/perfis",
+            headers=headers,
+            json={"usuario_id": func, "superior_id": gerente},
+        ).status_code
+        == 200
+    )
+    pesquisa = client.post(
+        f"/projetos/{projeto_id}/pesquisas",
+        headers=headers,
+        json={"titulo": "Desempenho", "tipo": "DESEMPENHO"},
+    ).json()["id"]
+    pergunta = client.post(
+        f"/pesquisas/{pesquisa}/perguntas",
+        headers=headers,
+        json={"texto": "Entrega", "tipo": "NOTA_5"},
+    ).json()["id"]
+    ciclo_id, relacoes = _relacoes_novas(client, headers, projeto_id)
+    auto = next(
+        item
+        for item in relacoes
+        if item["tipo_relacao"] == "AUTO" and item["avaliado_id"] == func
+    )
+    superior = next(item for item in relacoes if item["tipo_relacao"] == "SUPERIOR")
+    assert _nota(client, func_token, auto["id"], pergunta, 4).status_code == 200
+    assert _nota(client, gerente_token, superior["id"], pergunta, 5).status_code == 200
+    caminho = f"/ciclos/{ciclo_id}/resultado/{func}"
+    for cabecalho in (
+        {"Authorization": f"Bearer {func_token}"},
+        _entrar_orgao(client, "rh@prefeitura.dev"),
+    ):
+        vista = client.get(caminho, headers=cabecalho)
+        assert vista.status_code == 200, vista.text
+        assert vista.json()["resultado"] is None
+        assert vista.json()["por_perspectiva"] == {}
+    consultora = client.get(caminho, headers=headers).json()
+    assert consultora["resultado"] == 4.67
+    assert consultora["por_perspectiva"]["AUTO"] == 4.0
+    assert consultora["por_perspectiva"]["SUPERIOR"] == 5.0
+
+
+def test_orfao_sem_superior_mantem_piso_do_subordinado(client, monkeypatch, db) -> None:
+    """6b. Sem SUPERIOR, subordinado abaixo de 5 continua suprimido."""
+    headers, projeto_id, _token, chefe, sub = _hierarquia_cs(client, monkeypatch)
+    neto_token = _funcionario(client, headers, projeto_id, "neto@p.dev", "Neto")
+    neto = _usuario_id(client, headers, projeto_id, "neto@p.dev")
+    assert (
+        client.put(
+            f"/projetos/{projeto_id}/perfis",
+            headers=headers,
+            json={"usuario_id": neto, "superior_id": sub},
+        ).status_code
+        == 200
+    )
+    _remover_membro(db, projeto_id, chefe)
+    ciclo_id, relacoes = _relacoes_novas(client, headers, projeto_id)
+    assert not any(
+        item["avaliado_id"] == sub and item["tipo_relacao"] == "SUPERIOR"
+        for item in relacoes
+    )
+    sub_token = client.post(
+        "/auth/login",
+        json={"email": "sub@p.dev", "senha": SENHA_FUNC},
+    )
+    assert sub_token.status_code == 200, sub_token.text
+    auto = next(
+        item
+        for item in relacoes
+        if item["tipo_relacao"] == "AUTO" and item["avaliado_id"] == sub
+    )
+    subordinado = next(
+        item
+        for item in relacoes
+        if item["tipo_relacao"] == "SUBORDINADO" and item["avaliador_id"] == neto
+    )
+    pesquisa = client.post(
+        f"/projetos/{projeto_id}/pesquisas",
+        headers=headers,
+        json={"titulo": "Desempenho", "tipo": "DESEMPENHO"},
+    ).json()["id"]
+    pergunta = client.post(
+        f"/pesquisas/{pesquisa}/perguntas",
+        headers=headers,
+        json={"texto": "Entrega", "tipo": "NOTA_5"},
+    ).json()["id"]
+    token_sub = sub_token.json()["access_token"]
+    assert _nota(client, token_sub, auto["id"], pergunta, 4).status_code == 200
+    assert _nota(client, neto_token, subordinado["id"], pergunta, 1).status_code == 200
+    bearer = {"Authorization": f"Bearer {token_sub}"}
+    vista = client.get(f"/ciclos/{ciclo_id}/resultado/{sub}", headers=bearer).json()
+    assert "SUPERIOR" not in vista["por_perspectiva"]
+    assert "SUBORDINADO" not in vista["por_perspectiva"]
+    assert "SUBORDINADO" in vista["perspectivas_suprimidas"]
+    assert vista["por_perspectiva"]["AUTO"] == 4.0
+    consultora = client.get(
+        f"/ciclos/{ciclo_id}/resultado/{sub}", headers=headers
+    ).json()
+    assert consultora["por_perspectiva"]["SUBORDINADO"] == 1.0
+    assert "SUPERIOR" not in consultora["por_perspectiva"]
