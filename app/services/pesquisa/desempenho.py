@@ -21,9 +21,10 @@ from app.models.desempenho import (
 )
 from app.models.estrutura import PerfilFuncionario
 from app.models.pesquisa import Pergunta, Pesquisa
-from app.models.projeto import Projeto, ProjetoUsuario
+from app.models.projeto import Projeto
 from app.models.usuario import Usuario
 from app.services.auditoria import registrar as _auditar
+from app.services.estrutura import membros_ativos
 from app.services.identidade import ErroAuth
 from app.services.pesquisa.comum import K_ANONIMATO
 
@@ -165,18 +166,10 @@ def listar_ciclos(
 
 
 def _funcionarios_do_projeto(db: Session, projeto_id: str) -> list[Usuario]:
-    return list(
-        db.scalars(
-            select(Usuario)
-            .join(ProjetoUsuario, ProjetoUsuario.usuario_id == Usuario.id)
-            .where(
-                ProjetoUsuario.projeto_id == projeto_id,
-                ProjetoUsuario.papel == "FUNCIONARIO",
-                Usuario.deleted_at.is_(None),
-                Usuario.ativo.is_(True),
-            )
-        ).all()
-    )
+    ids = membros_ativos(db, projeto_id, so_com_acesso=True)
+    if not ids:
+        return []
+    return list(db.scalars(select(Usuario).where(Usuario.id.in_(ids))).all())
 
 
 def gerar_relacoes(
@@ -206,6 +199,7 @@ def _gerar_relacoes_travado(
         raise ErroAuth(422, "Só rascunho pode gerar relações.")
 
     funcionarios = _funcionarios_do_projeto(db, ciclo.projeto_id)
+    ativos = {f.id for f in funcionarios}
     perfis = {
         p.usuario_id: p
         for p in db.scalars(
@@ -214,10 +208,11 @@ def _gerar_relacoes_travado(
                 PerfilFuncionario.deleted_at.is_(None),
             )
         ).all()
+        if p.usuario_id in ativos
     }
     subordinados: dict[str, list[str]] = {}
     for perfil in perfis.values():
-        if perfil.superior_id:
+        if perfil.superior_id in ativos:
             subordinados.setdefault(perfil.superior_id, []).append(perfil.usuario_id)
 
     agora_ = agora()
@@ -244,7 +239,7 @@ def _gerar_relacoes_travado(
             existentes,
         ):
             criados += 1
-        if perfil and perfil.superior_id:
+        if perfil and perfil.superior_id in ativos:
             if _criar_relacao(
                 db,
                 ciclo.id,
@@ -257,6 +252,8 @@ def _gerar_relacoes_travado(
             ):
                 criados += 1
         for subordinado_id in subordinados.get(funcionario.id, []):
+            if subordinado_id not in ativos:
+                continue
             if _criar_relacao(
                 db,
                 ciclo.id,
@@ -471,9 +468,9 @@ def calcular_resultado_avaliacao(
     }
     if not por_perspectiva:
         return {"resultado": None, "por_perspectiva": {}}
-    suprimidas: list[str] = []
-    if papel != "CONSULTOR" and "SUBORDINADO" in por_perspectiva:
-        respondentes = db.scalar(
+
+    def respondentes_de(tipo: str) -> int:
+        total = db.scalar(
             select(func.count(func.distinct(AvaliacaoRelacionamento.avaliador_id)))
             .join(
                 AvaliacaoResposta,
@@ -482,18 +479,37 @@ def calcular_resultado_avaliacao(
             .where(
                 AvaliacaoRelacionamento.ciclo_id == ciclo_id,
                 AvaliacaoRelacionamento.avaliado_id == avaliado_id,
-                AvaliacaoRelacionamento.tipo_relacao == "SUBORDINADO",
+                AvaliacaoRelacionamento.tipo_relacao == tipo,
                 AvaliacaoRelacionamento.deleted_at.is_(None),
                 AvaliacaoResposta.valor_numerico.is_not(None),
             )
         )
-        if (respondentes or 0) < K_ANONIMATO:
+        return int(total or 0)
+
+    suprimidas: list[str] = []
+    if papel != "CONSULTOR" and "SUBORDINADO" in por_perspectiva:
+        if respondentes_de("SUBORDINADO") < K_ANONIMATO:
             por_perspectiva = {
                 tipo: media
                 for tipo, media in por_perspectiva.items()
                 if tipo != "SUBORDINADO"
             }
             suprimidas.append("SUBORDINADO")
+    if (
+        papel != "CONSULTOR"
+        and por_perspectiva
+        and set(por_perspectiva) != {"AUTO"}
+        and all(
+            tipo == "AUTO" or (respondentes_de(tipo) < K_ANONIMATO)
+            for tipo in por_perspectiva
+        )
+    ):
+        suprimidas.extend(sorted(por_perspectiva))
+        return {
+            "resultado": None,
+            "por_perspectiva": {},
+            "perspectivas_suprimidas": suprimidas,
+        }
     soma_pesos = sum(pesos.get(tipo, PESOS_PADRAO[tipo]) for tipo in por_perspectiva)
     if soma_pesos == 0:
         return {

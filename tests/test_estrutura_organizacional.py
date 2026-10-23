@@ -1,10 +1,12 @@
 """Estrutura organizacional: cargo, setor e hierarquia sem ciclo."""
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.integrations.cnpj import DadosCnpj
 from app.integrations.email import caixa_email
 from app.models.estrutura import PerfilFuncionario
+from app.models.projeto import ProjetoUsuario
+from app.models.usuario import Usuario
 from tests.contas import SENHA, SENHA_FUNC, SENHA_ORGAO, abrir_consultora
 
 
@@ -443,3 +445,54 @@ def test_funcionario_do_projeto_com_superior_e_salvo(client, monkeypatch, db) ->
     )
     assert perfil is not None
     assert perfil.superior_id == gerente_id
+
+
+def _nos(arvore: list[dict]) -> int:
+    return sum(1 + _nos(no.get("subordinados") or []) for no in arvore)
+
+
+def test_arvore_orfao_sobe_a_raiz(client, monkeypatch, db) -> None:
+    """3. Subordinado do chefe que saiu vira raiz e a árvore só tem ativos."""
+    headers, projeto_id = _projeto(client, monkeypatch)
+    _funcionario(client, headers, projeto_id, "chefe@prefeitura.dev", "Chefe")
+    _funcionario(client, headers, projeto_id, "sub@prefeitura.dev", "Sub")
+    chefe_id = _usuario_id(client, headers, projeto_id, "chefe@prefeitura.dev")
+    sub_id = _usuario_id(client, headers, projeto_id, "sub@prefeitura.dev")
+    for usuario_id, superior_id in ((chefe_id, None), (sub_id, chefe_id)):
+        corpo: dict[str, str] = {"usuario_id": usuario_id}
+        if superior_id:
+            corpo["superior_id"] = superior_id
+        perfil = client.put(
+            f"/projetos/{projeto_id}/perfis",
+            headers=headers,
+            json=corpo,
+        )
+        assert perfil.status_code == 200, perfil.text
+    db.execute(
+        delete(ProjetoUsuario).where(
+            ProjetoUsuario.projeto_id == projeto_id,
+            ProjetoUsuario.usuario_id == chefe_id,
+        )
+    )
+    db.commit()
+    arvore = client.get(f"/projetos/{projeto_id}/arvore", headers=headers)
+    assert arvore.status_code == 200, arvore.text
+    nos = arvore.json()
+    assert [no["usuario_id"] for no in nos] == [sub_id]
+    assert nos[0]["chefia_fora_do_orgao"] is True
+    assert nos[0]["subordinados"] == []
+    assert chefe_id not in arvore.text
+    assert "Chefe" not in arvore.text
+    ativos = set(
+        db.scalars(
+            select(ProjetoUsuario.usuario_id)
+            .join(Usuario, Usuario.id == ProjetoUsuario.usuario_id)
+            .where(
+                ProjetoUsuario.projeto_id == projeto_id,
+                ProjetoUsuario.papel == "FUNCIONARIO",
+                Usuario.ativo.is_(True),
+                Usuario.deleted_at.is_(None),
+            )
+        ).all()
+    )
+    assert _nos(nos) == len(ativos)
