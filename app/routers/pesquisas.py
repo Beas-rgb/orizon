@@ -293,7 +293,7 @@ def participantes(
     limite: int = Query(default=50, ge=1, le=100),
     deslocamento: int = Query(default=0, ge=0),
 ) -> ParticipantesSaida:
-    """CLIMA: só totais. Demais tipos: status nominal — sem conteúdo de resposta."""
+    """CLIMA: consultora e órgão veem só X de Y, sem nomes."""
     dados = chamar(
         lambda: listar_participantes_status(
             db,
@@ -587,7 +587,7 @@ def painel_rota(
     usuario: Usuario = Depends(usuario_atual),
     db: Session = Depends(get_db),
 ) -> list[PainelPergunta]:
-    """Agregado. Sem token, sem nome, sem resposta individual."""
+    """CLIMA aberto não devolve número. Encerrado pede piso de 5."""
     consultas = {"n": 0}
     ligacao = db.get_bind()
 

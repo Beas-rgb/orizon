@@ -638,11 +638,13 @@ def listar_participantes_status(
     limite: int = 50,
     deslocamento: int = 0,
 ) -> dict:
-    """CLIMA: só totais. Demais tipos: página de status, sem o texto da resposta."""
+    """CLIMA: consultora e órgão veem só a taxa. Demais tipos: só a consultora."""
     limite = max(1, min(limite, 100))
     deslocamento = max(0, deslocamento)
     pesquisa = _pesquisa_viva(db, pesquisa_id)
-    if papel_no_projeto(db, consultor, pesquisa.projeto_id) != "CONSULTOR":
+    papel = papel_no_projeto(db, consultor, pesquisa.projeto_id)
+    clima = pesquisa.tipo in TIPOS_ANONIMOS
+    if papel != "CONSULTOR" and not (papel == "ORGAO" and clima):
         raise ErroAuth(404, "Pesquisa não encontrada.")
     vinculos = list(
         db.scalars(
