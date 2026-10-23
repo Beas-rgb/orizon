@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Página fixa</title>
+    <link rel="stylesheet" href="/src/v7/tokens/tokens.css">
+    <style>
+      body {
+        margin: 0;
+        background: var(--hz-bg);
+        color: var(--hz-ink);
+        font-family: var(--hz-tipo-familias-texto);
+        font-size: var(--hz-tipo-escala-corpo-body-tamanho);
+        line-height: var(--hz-tipo-escala-corpo-body-altura-linha);
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--hz-tipo-familias-marca);
+        font-size: var(--hz-tipo-escala-h1-titulo-de-pagina-desktop-tamanho);
+        font-weight: var(--hz-tipo-escala-h1-titulo-de-pagina-desktop-peso);
+      }
+      button {
+        font-family: var(--hz-tipo-familias-texto);
+        font-size: var(--hz-tipo-escala-botao-tamanho);
+        font-weight: var(--hz-tipo-escala-botao-peso);
+        background: var(--hz-brand);
+        color: var(--hz-surface);
+        border-radius: var(--hz-raio-md);
+      }
+      table { border-collapse: collapse; }
+      th, td { border: 1px solid var(--hz-line); }
+      .bloco {
+        background: var(--hz-surface);
+        border-radius: var(--hz-raio-lg);
+        box-shadow: var(--hz-sombra-card);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Horizon</h1>
+    <p>Texto de corpo para a captura estável.</p>
+    <button type="button">Salvar</button>
+    <table>
+      <thead><tr><th>Pessoa</th><th>Nota</th></tr></thead>
+      <tbody><tr><td>Ana</td><td>82</td></tr></tbody>
+    </table>
+    <div class="bloco">Bloco com sombra e raio.</div>
+  </body>
+</html>
