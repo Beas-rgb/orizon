@@ -28,6 +28,7 @@ from app.services.pesquisa.comum import (
     _pesquisa_viva,
     opcoes_da,
 )
+from app.services.pesquisa.horario_clima import instante_fixo
 
 
 def criar_pesquisa(
@@ -460,6 +461,12 @@ def _criar_token_resposta(
     """Grava só o hash. Devolve (id, plaintext) — plaintext só na criação."""
     plain = novo_token_opaco()
     tid = novo_id()
+    if pesquisa.tipo in TIPOS_ANONIMOS:
+        quando = instante_fixo(pesquisa.publicada_em or pesquisa.criado_em)
+        marca_uso = None
+    else:
+        quando = agora()
+        marca_uso = usado_em
     db.add(
         TokenResposta(
             id=tid,
@@ -467,9 +474,9 @@ def _criar_token_resposta(
             setor_id=None,
             token_hash=hash_token(plain),
             usado=usado,
-            usado_em=usado_em,
+            usado_em=marca_uso,
             expira_em=pesquisa.disponivel_ate,
-            criado_em=agora(),
+            criado_em=quando,
         )
     )
     return tid, plain
@@ -563,8 +570,16 @@ def _sincronizar_participantes(db: Session, pesquisa: Pesquisa) -> None:
         )
     existe_entrada = db.scalar(
         select(TokenResposta.id)
-        .where(TokenResposta.pesquisa_id == pesquisa.id)
-        .order_by(TokenResposta.criado_em.asc())
+        .where(
+            TokenResposta.pesquisa_id == pesquisa.id,
+            TokenResposta.usado.is_(False),
+            TokenResposta.id.not_in(
+                select(PesquisaParticipante.token_id).where(
+                    PesquisaParticipante.pesquisa_id == pesquisa.id,
+                    PesquisaParticipante.token_id.is_not(None),
+                )
+            ),
+        )
         .limit(1)
     )
     if existe_entrada is None:

@@ -7,12 +7,14 @@ from app.models.auditoria import LogAuditoria
 from app.models.base import agora
 
 
-def registrar(db: Session, acao: str, usuario_id: str | None) -> None:
+def registrar(
+    db: Session, acao: str, usuario_id: str | None, *, quando=None
+) -> None:
     db.add(
         LogAuditoria(
             id=novo_id(),
             usuario_id=usuario_id,
             acao=acao,
-            criado_em=agora(),
+            criado_em=quando or agora(),
         )
     )
