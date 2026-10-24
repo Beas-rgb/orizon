@@ -113,7 +113,7 @@ def _aplicar(atual: str | None, chamadas: list[str], **extras) -> str:
 
 def test_grafo_local_tem_um_head() -> None:
     head, conhecidas, ancestrais = mapa_revisoes()
-    assert head == "0023_origem_sintetica"
+    assert head == "0024_clima_sem_horario"
     assert "0020_lab" in ancestrais
     assert "0021_indices_modelo" in ancestrais
     assert head in conhecidas and head not in ancestrais

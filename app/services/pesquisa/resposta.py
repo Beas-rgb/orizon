@@ -30,6 +30,7 @@ from app.services.pesquisa.comum import (
     _pesquisa_viva,
 )
 from app.services.pesquisa.crud import _criar_token_resposta
+from app.services.pesquisa.horario_clima import instante_fixo
 
 
 def gerar_tokens(
@@ -137,15 +138,17 @@ def _participante_da_pesquisa(
         raise ErroAuth(409, "Você já respondeu esta pesquisa.")
     if participante.status in {"EXPIRADA", "CANCELADA"}:
         raise ErroAuth(404, "Link inválido ou já usado.")
+    clima = pesquisa.tipo in TIPOS_ANONIMOS
     if participante.token_id is None:
         tid, _plain = _criar_token_resposta(db, pesquisa)
         db.flush()
         participante.token_id = tid
     if participante.status == "PENDENTE":
         participante.status = "EM_ANDAMENTO"
-        participante.iniciado_em = agora_
-        participante.atualizado_em = agora_
-    elif para_envio and participante.status == "EM_ANDAMENTO":
+        if not clima:
+            participante.iniciado_em = agora_
+            participante.atualizado_em = agora_
+    elif para_envio and participante.status == "EM_ANDAMENTO" and not clima:
         participante.atualizado_em = agora_
     db.flush()
     return participante
@@ -336,17 +339,21 @@ def _registrar_respostas_em(
         raise ErroAuth(422, "Envie as respostas.")
     _validar_obrigatorias(perguntas, itens)
     agora_ = agora()
+    clima = pesquisa.tipo in TIPOS_ANONIMOS
+    fixa = instante_fixo(pesquisa.publicada_em or pesquisa.criado_em)
     # CLIMA: respostas em token anônimo (sem FK para participante/usuário).
-    if pesquisa.tipo in TIPOS_ANONIMOS:
-        token_resposta_id, _plain = _criar_token_resposta(
-            db, pesquisa, usado=True, usado_em=agora_
-        )
+    if clima:
+        token_resposta_id, _plain = _criar_token_resposta(db, pesquisa, usado=True)
         db.flush()
         participante.token_id = None
+        db.flush()
+        db.delete(linha)
+        quando = fixa
     else:
         token_resposta_id = linha.id
         linha.usado = True
         linha.usado_em = agora_
+        quando = agora_
 
     linhas: list[dict] = []
     for item in itens:
@@ -358,7 +365,7 @@ def _registrar_respostas_em(
             for opcao_id in opcoes:
                 linhas.append(
                     _linha_resposta(
-                        token_resposta_id, pergunta.id, None, None, opcao_id, agora_
+                        token_resposta_id, pergunta.id, None, None, opcao_id, quando
                     )
                 )
         else:
@@ -369,18 +376,21 @@ def _registrar_respostas_em(
                     texto,
                     numerico,
                     opcoes if isinstance(opcoes, str) else None,
-                    agora_,
+                    quando,
                 )
             )
     if linhas:
         db.execute(insert(Resposta), linhas)
     participante.status = "RESPONDIDA"
-    participante.respondido_em = agora_
-    participante.atualizado_em = agora_
+    if clima:
+        participante.respondido_em = None
+    else:
+        participante.respondido_em = agora_
+        participante.atualizado_em = agora_
     participante.envio_chave_hash = hash_chave
-    # CLIMA: auditoria sem usuario_id (não amarra quem respondeu).
-    if pesquisa.tipo in TIPOS_ANONIMOS:
-        _auditar(db, "PESQUISA_RESPONDIDA", None)
+    # CLIMA: o log usa a data da pesquisa, não o instante do envio.
+    if clima:
+        _auditar(db, "PESQUISA_RESPONDIDA", None, quando=fixa)
     else:
         _auditar(db, "PESQUISA_RESPONDIDA", usuario.id)
     db.commit()

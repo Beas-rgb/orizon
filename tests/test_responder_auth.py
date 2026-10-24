@@ -238,7 +238,7 @@ def test_t7_funcionario_correto_responde_e_segunda_vez_409(
         .one()
     )
     assert participante.status == "RESPONDIDA"
-    assert participante.respondido_em is not None
+    assert participante.respondido_em is None
 
     segunda = client.post(
         f"/responder/{token}",

@@ -13,7 +13,7 @@ from app.core.migracao import mapa_revisoes
 from app.models.base import Base
 
 OK = rec.CONFIRMACAO
-HEAD = "0023_origem_sintetica"
+HEAD = "0024_clima_sem_horario"
 
 
 def _url(tmp_path) -> str:
