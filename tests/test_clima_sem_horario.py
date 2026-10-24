@@ -235,3 +235,32 @@ def test_limpeza_reescreve_horario_antigo_de_clima(client, monkeypatch, db) -> N
     assert de_novo.respondido_em.date() == pesquisa.publicada_em.date()
     assert _e_meia_noite(token_de_novo.criado_em)
     assert token_de_novo.usado_em is None
+
+
+def test_formulario_depois_do_clima_responde_409(client, monkeypatch, db) -> None:
+    """Tela 107: depois do envio, o formulário e o reenvio respondem 409."""
+    _headers, func, pid = _projeto_clima(client, monkeypatch, "usado@hora.dev")
+    formulario = client.get(f"/eu/pesquisas/{pid}/formulario", headers=func)
+    assert formulario.status_code == 200, formulario.text
+    pergunta = formulario.json()[0]["id"]
+    envio = client.post(
+        f"/eu/pesquisas/{pid}/responder",
+        headers=func,
+        json={"respostas": [{"pergunta_id": pergunta, "valor_numerico": 3}]},
+    )
+    assert envio.status_code == 200, envio.text
+    de_novo = client.get(f"/eu/pesquisas/{pid}/formulario", headers=func)
+    assert de_novo.status_code == 409, de_novo.text
+    repetido = client.post(
+        f"/eu/pesquisas/{pid}/responder",
+        headers=func,
+        json={"respostas": [{"pergunta_id": pergunta, "valor_numerico": 1}]},
+    )
+    assert repetido.status_code == 409, repetido.text
+    db.expire_all()
+    parte = db.scalar(
+        select(PesquisaParticipante).where(PesquisaParticipante.pesquisa_id == pid)
+    )
+    assert parte is not None
+    assert parte.status == "RESPONDIDA"
+    assert parte.token_id is None
